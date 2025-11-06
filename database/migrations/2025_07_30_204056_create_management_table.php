@@ -15,13 +15,13 @@ return new class extends Migration
             $table->id();
             $table->string('state');
             $table->string('substate');
-            $table->text('observation');
+            $table->text('observation')->nullable();
             $table->timestamp('promise_date');
-            $table->float('promise_amount');
+            $table->float('promise_amount')->nullable();
             $table->integer('created_by');
             
-            $table->integer('call_id');
-            $table->integer('call_collection');
+            $table->integer('call_id')->nullable();
+            $table->integer('call_collection')->nullable();
             $table->integer('days_past_due');
             $table->integer('paid_fees');
             $table->integer('pending_fees');

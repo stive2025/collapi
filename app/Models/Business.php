@@ -15,4 +15,9 @@ class Business extends Model
         'state',
         'prelation_order'
     ];
+
+    public function credits()
+    {
+        return $this->hasMany(Credit::class);
+    }
 }

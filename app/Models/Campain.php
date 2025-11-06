@@ -9,4 +9,15 @@ class Campain extends Model
 {
     /** @use HasFactory<\Database\Factories\CampainFactory> */
     use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'state',
+        'type',
+        'begin_time',
+        'end_time',
+        'agents',
+        'business_id'
+    ];
+
 }

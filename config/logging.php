@@ -126,7 +126,25 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
-
-    ],
-
+        'calls' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/calls.log'),
+            'level' => 'info'
+        ],
+        'payments' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/credits.log'),
+            'level' => 'info'
+        ],
+        'managements' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/managements.log'),
+            'level' => 'info'
+        ],
+        'syncs' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/managements.log'),
+            'level' => 'info'
+        ]
+    ]
 ];

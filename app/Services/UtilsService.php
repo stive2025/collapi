@@ -9,10 +9,7 @@ class UtilsService
     /**
      * Create a new class instance.
      */
-    public function __construct()
-    {
-        //
-    }
+    public function __construct(){}
     
     public function setState(string $value){
         if(
@@ -49,7 +46,7 @@ class UtilsService
             return strval("0");
         }
     }
-
+    
     public function setRango(int $dias_mora){
         if($dias_mora<2){
             return "A) Preventiva";

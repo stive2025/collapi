@@ -13,6 +13,18 @@ return new class extends Migration
     {
         Schema::create('collection_directions', function (Blueprint $table) {
             $table->id();
+            $table->string('type');
+            $table->string('direction');
+            $table->string('province');
+            $table->string('canton');
+            $table->string('parish');
+            $table->string('neighborhood');
+            $table->string('latitude');
+            $table->string('longitude');
+            $table->foreignId('client_id');
+            $table->foreign('client_id')
+                ->references('id')
+                ->on('clients');
             $table->timestamps();
         });
     }

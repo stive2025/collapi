@@ -45,7 +45,7 @@ class AsteriskService
         string $data,
         int $timeout,
         string $caller_id,
-        string $variables,
+        array $variables,
         string $account,
         string $async,
         string $action_id
@@ -94,25 +94,28 @@ class AsteriskService
             $this->username,
             $this->password
         )){
-
             $response = $manager->Command('core show channels concise');
             $srt=$response['data'];
             $group_channels=explode("\nSIP/",$srt);
+            $found_ch='';
 
             foreach($group_channels as $group){
-                $ch_exten=explode('-',$group)[0];
                 $ch_sip=explode('!',$group)[0];
                 $ch_state=explode('!',$group)[5];
+                $ch_exten=(str_contains($ch_sip, 'SIP')) ? explode('/',$ch_sip)[1] : explode('-',$ch_sip)[0];
 
-                ($ch_exten==$channel | $ch_state==='BUSY' | $ch_state==='Congestion') ? $manager->Hangup($ch_sip) : "";
+                //|| $ch_state=='BUSY' || $ch_state=='Congestion'
+                if(intval($ch_exten)==intval($channel)){ 
+                    $manager->Hangup((str_contains($ch_sip, 'SIP')) ? $ch_sip : "SIP/$ch_sip");
+                    $found_ch=$ch_exten;
+                    break;
+                }
             }
-
+            
             return [
                 "status"=>200,
-                "data"=>$group_channels,
-                "channel"=>$channel
+                "channel"=>$found_ch
             ];
-            
         }else{
             return false;
         }   

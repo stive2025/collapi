@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -14,15 +13,28 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
+        // Usuario administrador
         User::create([
-            'name'=>'STEVEN CESEN',
+            'name'=>'Administrador',
             'username'=>'steven_cesen',
             'extension'=>"SIP/110",
             'permission'=>"[]",
             'password'=>Hash::make('Sefil2025@'),
             'role'=>'admin'
+        ]);
+
+        // Usuario EN ESPERA
+        User::create([
+            'name'=>'EN ESPERA',
+            'username'=>'en_espera',
+            'extension'=>"N/D",
+            'permission'=>"[]",
+            'password'=>Hash::make('Sefil2025@'),
+            'role'=>'user'
+        ]);
+
+        $this->call([
+            BusinessSeeder::class,
         ]);
     }
 }

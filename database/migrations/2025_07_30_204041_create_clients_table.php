@@ -19,10 +19,6 @@ return new class extends Migration
             $table->string('gender');
             $table->string('civil_status')->nullable();
             $table->string('economic_activity')->nullable();
-            $table->foreignId('credit_id');
-            $table->foreign('credit_id')
-                ->references('id')
-                ->on('credits');
             $table->timestamps();
         });
     }

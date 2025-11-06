@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('username');
             $table->string('extension')->nullable();
             $table->string('permission')->nullable();
+            $table->string('phone')->nullable();
             $table->string('password');
             $table->string('role');
             $table->integer('created_by')->nullable();
