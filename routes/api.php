@@ -12,26 +12,22 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ImportController;
 use Illuminate\Support\Facades\Route;
 
-// Authentication
-Route::post('/login',[LoginController::class,'login']);
+Route::post('login', [LoginController::class, 'login']);
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    Route::apiResource('users',UserController::class);
-    Route::apiResource('credits',CreditController::class);
-    Route::apiResource('clients',ClientController::class);
-    Route::apiResource('managements',ManagementController::class);
-    Route::apiResource('payments',CollectionPaymentController::class);
-    Route::apiResource('businesses',BusinessController::class);
-    Route::apiResource('campains',CampainController::class);
+Route::middleware(['check.token'])->group(function () {
+    Route::apiResource('users', UserController::class);
+    Route::apiResource('credits', CreditController::class);
+    Route::apiResource('clients', ClientController::class);
+    Route::apiResource('managements', ManagementController::class);
+    Route::apiResource('payments', CollectionPaymentController::class);
+    Route::apiResource('businesses', BusinessController::class);
+    Route::apiResource('campains', CampainController::class);
 
-    // Para utilidades asignación de campaña
-    // Route::post('/assign',[CampainAssignController::class,'assign']);
-    // Route::post('/assign',[CampainAssignController::class,'assign']);
-
-    Route::get('calls',[CallController::class,'index']);
-    Route::post('calls/dial',[CallController::class,'dial']);
-    Route::post('calls/hangup',[CallController::class,'hangup']);
-    Route::post('calls/store',[CallController::class,'store']);
+    Route::post('calls/dial', [CallController::class, 'dial']);
+    Route::post('calls/hangup', [CallController::class, 'hangup']);
+    Route::get('calls', [CallController::class, 'index']);
+    Route::post('calls', [CallController::class, 'store']);
+    
     Route::post('ImportCredits', [ImportController::class, 'importCredits']);
     Route::post('ImportClients', [ImportController::class, 'importClients']);
 });

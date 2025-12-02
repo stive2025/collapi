@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('ci');
-            $table->string('type');
             $table->string('gender');
             $table->string('civil_status')->nullable();
             $table->string('economic_activity')->nullable();

@@ -48,4 +48,19 @@ class Credit extends Model
     {
         return $this->belongsToMany(Client::class, 'client_credit');
     }
+
+    public function collectionCalls()
+    {
+        return $this->hasMany(CollectionCall::class);
+    }
+
+    public function collectionManagements()
+    {
+        return $this->hasMany(Management::class);
+    }
+
+    public function collectionPayments()
+    {
+        return $this->hasMany(CollectionPayment::class);
+    }
 }

@@ -9,4 +9,5 @@ class CollectionCredit extends Model
 {
     /** @use HasFactory<\Database\Factories\CollectionCreditFactory> */
     use HasFactory;
+    
 }

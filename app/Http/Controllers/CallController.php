@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Auth\AuthenticationException;
+use App\Http\Requests\StoreCallRequest;
+use App\Http\Responses\ResponseBase;
 use App\Models\CollectionCall;
 use App\Services\AsteriskService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 
 class CallController extends Controller
 {
@@ -16,124 +18,147 @@ class CallController extends Controller
      */
     public function index()
     {
-        $calls=CollectionCall::paginate(request('per_page'));
-        return response()->json($calls,200);
+        $calls = CollectionCall::paginate(request('per_page', 15));
+        
+        return ResponseBase::success(
+            $calls,
+            'Llamadas obtenidas correctamente'
+        );
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreCallRequest $request)
     {
-        $validated = $request->validate([
-            'credit_id' => ['required','integer','exists:credits,id'],
-            'contact_id' => [
-                'required',
-                'integer',
-                Rule::exists('collection_contacts','id')
-                    ->where(fn($q) => $q->where('credit_id', $request->credit_id))
-            ],
-            'state' => ['required','string','max:50'],
-            'duration' => ['nullable','integer','min:0'],
-            'media_path' => ['nullable','string','max:255'],
-            'channel' => ['required','string','max:100'],
-        ]);
-        
-        $data_call=[
-            'state'=>$validated['state'],
-            'duration'=>$validated['duration'] ?? null,
-            'media_path'=>$validated['media_path'] ?? null,
-            'channel'=>$validated['channel'],
-            'created_by'=>Auth::id(),
-            'collection_contact_id'=>$validated['contact_id'],
-            'credit_id'=>$validated['credit_id']
-        ];
-
         try {
-            $create_call=CollectionCall::create($data_call);
-            return response()->json([
-                "state"=>1,
-                "data"=>$create_call,
-                "message"=>"Llamada guardada correctamente."
-            ],200);
+            $data_call = [
+                'state' => $request->validated()['state'],
+                'duration' => $request->validated()['duration'] ?? null,
+                'media_path' => $request->validated()['media_path'] ?? null,
+                'channel' => $request->validated()['channel'],
+                'created_by' => Auth::id(),
+                'collection_contact_id' => $request->validated()['contact_id'],
+                'credit_id' => $request->validated()['credit_id']
+            ];
+
+            $create_call = CollectionCall::create($data_call);
+            
+            return ResponseBase::success(
+                $create_call,
+                'Llamada guardada correctamente',
+                201
+            );
         } catch (\Throwable $th) {
+            Log::channel('calls')->error('Error creating call', [
+                'message' => $th->getMessage(),
+                'trace' => $th->getTraceAsString(),
+                'data' => $data_call ?? null
+            ]);
 
-            Log::channel('calls')->info($th->getMessage());
-            Log::channel('calls')->info(json_encode($data_call));
-
-            return response()->json([
-                "state"=>-1,
-                "data"=>$data_call,
-                "message"=>"Error al guardar la llamada."
-            ],200);
+            return ResponseBase::error(
+                'Error al guardar la llamada',
+                ['error' => $th->getMessage()],
+                500
+            );
         }
     }
 
-    public function store(Request $request)
+    /**
+     * Iniciar una llamada mediante Asterisk
+     */
+    public function dial(Request $request)
     {
-        $data_call=[
-            'state'=>$request->state,
-            'duration'=>$request->duration,
-            'media_path'=>$request->media_path,
-            'channel'=>$request->channel,
-            'created_by'=>Auth::user()->id,
-            'collection_contact_id'=>$request->contact_id,
-            'credit_id'=>$request->credit_id
-        ];
-
         try {
-            $create_call=CollectionCall::create($data_call);
-            return response()->json([
-                "state"=>1,
-                "data"=>$create_call,
-                "message"=>"Llamada guardada correctamente."
-            ],200);
-        } catch (\Throwable $th) {
+            $validated = $request->validate([
+                'channel' => ['required', 'string'],
+                'exten' => ['required', 'string'],
+                'context' => ['required', 'string'],
+                'priority' => ['required', 'integer'],
+                'timeout' => ['required', 'integer'],
+                'caller_id' => ['required', 'string'],
+                'application' => ['nullable', 'string'],
+                'data' => ['nullable', 'string'],
+                'variables' => ['nullable', 'array'],
+                'account' => ['nullable', 'string'],
+                'async' => ['nullable', 'boolean'],
+                'action_id' => ['nullable', 'string'],
+            ]);
 
-            Log::channel('calls')->info($th->getMessage());
-            Log::channel('calls')->info(json_encode($data_call));
+            $manager_asterisk = new AsteriskService(
+                "172.20.1.107",
+                "call_master",
+                "s3f1l_c@11"
+            );
 
-            return response()->json([
-                "state"=>-1,
-                "data"=>$data_call,
-                "message"=>"Error al guardar la llamada."
-            ],200);
+            $result = $manager_asterisk->originateCall(
+                $validated['channel'],
+                $validated['exten'],
+                $validated['context'],
+                $validated['priority'],
+                $validated['application'] ?? '',
+                $validated['data'] ?? '',
+                $validated['timeout'],
+                $validated['caller_id'],
+                $validated['variables'] ?? [],
+                $validated['account'] ?? '',
+                $validated['async'] ?? false,
+                $validated['action_id'] ?? ''
+            );
+
+            return ResponseBase::success(
+                $result,
+                'Llamada iniciada correctamente'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            Log::channel('calls')->error('Error dialing call', [
+                'message' => $e->getMessage()
+            ]);
+
+            return ResponseBase::error(
+                'Error al iniciar la llamada',
+                ['error' => $e->getMessage()],
+                500
+            );
         }
     }
 
-    public function dial(Request $request){
-        $manager_asterisk=new AsteriskService(
-            "172.20.1.107",
-            "call_master",
-            "s3f1l_c@11"
-        );
+    /**
+     * Colgar una llamada activa
+     */
+    public function hangup(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'channel' => ['required', 'string'],
+            ]);
 
-        $manager_asterisk->originateCall(
-            $request->channel,
-            $request->exten,
-            $request->context,
-            $request->priority,
-            ((request()->filled('application') ? $request->application : "")),
-            ((request()->filled('data') ? $request->data : "")),
-            $request->timeout,
-            $request->caller_id,
-            ((request()->filled('variables') ? ['FILENAME' => '0978950498_PRUEBA_AUDIO'] : "")),
-            ((request()->filled('account') ? $request->account : "")),
-            ((request()->filled('async') ? $request->async : "")),
-            ((request()->filled('action_id') ? $request->action_id : ""))
-        );
+            $manager_asterisk = new AsteriskService(
+                "172.20.1.107",
+                "call_master",
+                "s3f1l_c@11"
+            );
 
-        return response()->json($manager_asterisk,200);
-    }
+            $hangup = $manager_asterisk->hangup($validated['channel']);
+            
+            return ResponseBase::success(
+                $hangup,
+                'Llamada colgada correctamente'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            Log::channel('calls')->error('Error hanging up call', [
+                'message' => $e->getMessage()
+            ]);
 
-    public function hangup(Request $request){
-        $manager_asterisk=new AsteriskService(
-            "172.20.1.107",
-            "call_master",
-            "s3f1l_c@11"
-        );
-
-        $hangup=$manager_asterisk->hangup($request->channel);
-        return response()->json($hangup,200);
+            return ResponseBase::error(
+                'Error al colgar la llamada',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
     }
 }

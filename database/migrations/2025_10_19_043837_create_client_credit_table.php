@@ -12,9 +12,10 @@ class CreateClientCreditTable extends Migration
             $table->id();
             $table->foreignId('client_id')->constrained()->onDelete('cascade');
             $table->foreignId('credit_id')->constrained()->onDelete('cascade');
+            $table->string('type')->nullable();
             $table->timestamps();
 
-            $table->unique(['client_id', 'credit_id']); // Evita duplicados
+            $table->unique(['client_id', 'credit_id']);
         });
     }
     

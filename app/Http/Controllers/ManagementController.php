@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Campain;
-use App\Models\Client;
-use App\Models\Credit;
+use App\Http\Requests\StoreManagementRequest;
+use App\Http\Resources\ManagementResource;
+use App\Http\Responses\ResponseBase;
 use App\Models\Management;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class ManagementController extends Controller
 {
@@ -16,78 +15,54 @@ class ManagementController extends Controller
      */
     public function index()
     {
-        $managements = Management::paginate(request('per_page'));
-        return response()->json($managements,200);
+        $managements = Management::paginate(request('per_page', 15));
+        
+        return ResponseBase::success(
+            ManagementResource::collection($managements)->response()->getData(),
+            'Gestiones obtenidas correctamente'
+        );
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreManagementRequest $request)
     {
-        $validated = $request->validate([
-            'state' => ['required', 'string'],
-            'substate' => ['required', 'string'],
-            'observation' => ['nullable', 'string'],
-            'promise_date' => ['required', 'date'],
-            'promise_amount' => ['nullable', 'numeric'],
-            'created_by' => ['required', 'integer'],
-            'call_id' => ['nullable', 'integer'],
-            'call_collection' => ['nullable', 'string'],
-            'days_past_due' => ['required', 'integer'],
-            'paid_fees' => ['required', 'integer'],
-            'pending_fees' => ['required', 'integer'],
-            'managed_amount' => [
-                Rule::requiredIf(function () use ($request) {
-                    return in_array($request->state, ['CONTACTADO EFECTIVO', 'LOCALIZADO']);
-                }),
-                'nullable',
-                'numeric'
-            ],
-            'client_id' => ['required', 'integer'],
-            'credit_id' => ['required', 'integer'],
-            'campain_id' => ['required', 'integer'],
-        ]);
-
-        // Validar existencia de relaciones
-        $clientExists = Client::find($validated['client_id']);
-        $creditExists = Credit::find($validated['credit_id']);
-        $campainExists = Campain::find($validated['campain_id']);
-        
-        if (!$clientExists || !$creditExists || !$campainExists) {
-            return response()->json([
-                'message' => 'La gestión no se creó porque una de las relaciones no existe.',
-                'missing' => [
-                    'client' => !$clientExists,
-                    'credit' => !$creditExists,
-                    'campain' => !$campainExists,
-                ]
-            ], 200); // Estado 200 con advertencia
+        try {
+            $management = Management::create($request->validated());
+            
+            return ResponseBase::success(
+                new ManagementResource($management),
+                'Gestión creada correctamente',
+                201
+            );
+        } catch (\Exception $e) {
+            return ResponseBase::error(
+                'Error al crear la gestión',
+                ['error' => $e->getMessage()],
+                500
+            );
         }
-
-        $management = Management::create($validated);
-
-        return response()->json([
-            'message' => 'Gestión registrada exitosamente',
-            'data' => $management
-        ], 201);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Management $management)
     {
-         $management = Management::find($id);
+        $management->load(['client', 'credit', 'campain']);
+        
+        return ResponseBase::success(
+            new ManagementResource($management),
+            'Gestión obtenida correctamente'
+        );
+    }
 
-        if (!$management) {
-            return response()->json([
-                'message' => 'Gestión no encontrada'
-            ], 404);
-        }
-
-        return response()->json([
-            'data' => $management
-        ], 200);
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Management $management)
+    {
+        //
     }
 }

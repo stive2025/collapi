@@ -12,7 +12,6 @@ class Client extends Model
     protected $fillable = [
         'name',
         'ci',
-        'type',
         'gender',
         'civil_status',
         'economic_activity'
@@ -21,5 +20,15 @@ class Client extends Model
     public function credits()
     {
         return $this->belongsToMany(Credit::class, 'client_credit');
+    }
+
+    public function collectionContacts()
+    {
+        return $this->hasMany(CollectionContact::class);
+    }
+
+    public function collectionCredits()
+    {
+        return $this->hasManyThrough(CollectionCredit::class, Credit::class, 'id', 'credit_id', 'id', 'id');
     }
 }
