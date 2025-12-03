@@ -1,11 +1,9 @@
 <?php
-// filepath: c:\xampp\htdocs\collapi\app\Http\Requests\StoreCallRequest.php
 
 namespace App\Http\Requests;
 
 use App\Http\Responses\ResponseBase;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -20,6 +18,21 @@ class StoreCallRequest extends FormRequest
     }
 
     /**
+     * Prepare data for validation: set created_by from authenticated token.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->isMethod('post')) {
+            $user = $this->user();
+            if ($user) {
+                $this->merge([
+                    'created_by' => $user->id,
+                ]);
+            }
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
@@ -31,13 +44,12 @@ class StoreCallRequest extends FormRequest
             'contact_id' => [
                 'required',
                 'integer',
-                Rule::exists('collection_contacts', 'id')
-                    ->where(fn($q) => $q->where('credit_id', $this->input('credit_id')))
             ],
             'state' => ['required', 'string', 'max:50'],
             'duration' => ['nullable', 'integer', 'min:0'],
             'media_path' => ['nullable', 'string', 'max:255'],
             'channel' => ['required', 'string', 'max:100'],
+            'created_by' => ['required', 'integer', 'exists:users,id'],
         ];
     }
 
@@ -70,6 +82,8 @@ class StoreCallRequest extends FormRequest
             'media_path.max' => 'La ruta del archivo no puede exceder 255 caracteres.',
             'channel.required' => 'El canal es obligatorio.',
             'channel.max' => 'El canal no puede exceder 100 caracteres.',
+            'created_by.required' => 'El usuario creador no fue encontrado (token inválido).',
+            'created_by.exists' => 'El usuario creador especificado no existe.',
         ];
     }
 }

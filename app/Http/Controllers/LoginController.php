@@ -61,7 +61,21 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         try {
-            $request->user()->currentAccessToken()->delete();
+            $user = $request->user();
+
+            if (!$user) {
+                return ResponseBase::unauthorized('Usuario no autenticado');
+            }
+
+            $currentToken = $user->currentAccessToken();
+
+            
+
+            if (!$currentToken) {
+                return ResponseBase::unauthorized('Token no encontrado o ya revocado');
+            }
+
+            $currentToken->delete();
 
             return ResponseBase::success(
                 null,

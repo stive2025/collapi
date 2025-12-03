@@ -5,6 +5,7 @@ use App\Http\Controllers\CallController;
 use App\Http\Controllers\CampainController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CollectionPaymentController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ManagementController;
@@ -18,6 +19,7 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('users', UserController::class);
     Route::apiResource('credits', CreditController::class);
     Route::apiResource('clients', ClientController::class);
+    Route::apiResource('contacts', ContactController::class);
     Route::apiResource('managements', ManagementController::class);
     Route::apiResource('payments', CollectionPaymentController::class);
     Route::apiResource('businesses', BusinessController::class);
@@ -30,4 +32,5 @@ Route::middleware(['check.token'])->group(function () {
     
     Route::post('ImportCredits', [ImportController::class, 'importCredits']);
     Route::post('ImportClients', [ImportController::class, 'importClients']);
+    Route::post('logout', [LoginController::class, 'logout']);
 });
