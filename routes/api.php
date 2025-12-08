@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AgencieController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\CampainController;
@@ -23,7 +24,9 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('managements', ManagementController::class);
     Route::apiResource('payments', CollectionPaymentController::class);
     Route::apiResource('businesses', BusinessController::class);
+    Route::apiResource('agencies', AgencieController::class);
     Route::apiResource('campains', CampainController::class);
+    Route::patch('campains/transfer/{id}', [CampainController::class, 'transfer']);
 
     Route::post('calls/dial', [CallController::class, 'dial']);
     Route::post('calls/hangup', [CallController::class, 'hangup']);

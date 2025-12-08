@@ -1,4 +1,5 @@
 <?php
+// filepath: c:\xampp\htdocs\collapi\database\seeders\CreditSeeder.php
 
 namespace Database\Seeders;
 
@@ -21,20 +22,32 @@ class CreditSeeder extends Seeder
             ->create();
 
         $this->command->info('✓ 2000 créditos creados exitosamente.');
-        $this->command->info('✓ Iniciando asociación de créditos con clientes.');
-
-        $clients = Client::all();
-
-        if ($clients->isEmpty()) {
-            $this->command->warn('No hay clientes disponibles.');
-            return;
+        $this->command->info('✓ Creando pool inicial de clientes.');
+        
+        $poolSize = 1000;
+        $clients = collect();
+        
+        for ($i = 0; $i < $poolSize; $i++) {
+            $clients->push(Client::factory()->create());
         }
+
+        $this->command->info("✓ {$poolSize} clientes creados en el pool inicial.");
+        $this->command->info('✓ Iniciando asociación de créditos con clientes.');
 
         $credits = Credit::all();
         $relations = [];
+        $processedCount = 0;
+        $newClientsCreated = 0;
 
         foreach ($credits as $credit) {
-            $titular = $clients->random();
+            if (rand(1, 100) <= 70 && $clients->count() > 0) {
+                $titular = $clients->random();
+            } else {
+                $titular = Client::factory()->create();
+                $clients->push($titular);
+                $newClientsCreated++;
+            }
+            
             $relations[] = [
                 'client_id' => $titular->id,
                 'credit_id' => $credit->id,
@@ -44,11 +57,25 @@ class CreditSeeder extends Seeder
             ];
 
             if (rand(1, 100) <= 50) {
-                $availableClients = $clients->where('id', '!=', $titular->id);
                 $numGarantes = rand(1, 2);
-                $garantes = $availableClients->random(min($numGarantes, $availableClients->count()));
-
-                foreach ($garantes as $garante) {
+                
+                for ($i = 0; $i < $numGarantes; $i++) {
+                    if (rand(1, 100) <= 80 && $clients->count() > 1) {
+                        $availableClients = $clients->where('id', '!=', $titular->id);
+                        
+                        if ($availableClients->count() > 0) {
+                            $garante = $availableClients->random();
+                        } else {
+                            $garante = Client::factory()->create();
+                            $clients->push($garante);
+                            $newClientsCreated++;
+                        }
+                    } else {
+                        $garante = Client::factory()->create();
+                        $clients->push($garante);
+                        $newClientsCreated++;
+                    }
+                    
                     $relations[] = [
                         'client_id' => $garante->id,
                         'credit_id' => $credit->id,
@@ -61,14 +88,21 @@ class CreditSeeder extends Seeder
 
             if (count($relations) >= 500) {
                 DB::table('client_credit')->insert($relations);
+                $processedCount += count($relations);
+                $this->command->info("  ✓ Procesadas {$processedCount} relaciones | Pool de {$clients->count()} clientes...");
                 $relations = [];
             }
         }
 
         if (!empty($relations)) {
             DB::table('client_credit')->insert($relations);
+            $processedCount += count($relations);
         }
 
-        $this->command->info('✓ Créditos asociados exitosamente con clientes (TITULAR/GARANTE).');
+        $totalClients = $poolSize + $newClientsCreated;
+        $this->command->info("✓ Total de {$totalClients} clientes ({$poolSize} pool inicial + {$newClientsCreated} nuevos).");
+        $this->command->info("✓ Total de {$processedCount} relaciones (TITULAR/GARANTE) creadas.");
+        $this->command->info('✓ Los clientes pueden tener múltiples roles en diferentes créditos.');
+        $this->command->info('✓ Proceso completado exitosamente.');
     }
 }

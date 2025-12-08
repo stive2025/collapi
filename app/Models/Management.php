@@ -26,4 +26,9 @@ class Management extends Model
         'credit_id',
         'campain_id'
     ];
+
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
 }

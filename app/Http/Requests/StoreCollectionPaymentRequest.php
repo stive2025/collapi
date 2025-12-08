@@ -34,7 +34,8 @@ class StoreCollectionPaymentRequest extends FormRequest
         $financialInstitution = $this->input('financial_institution');
 
         return [
-            'payment_date' => ['required', 'date'],
+            'payment_date' => ['nullable', 'date'],
+            'payment_deposit_date' => ['nullable', 'date'],
             'payment_value' => ['required', 'numeric'],
             'payment_difference' => ['nullable', 'numeric'],
             'payment_type' => ['required', 'string', 'max:100'],
@@ -51,8 +52,8 @@ class StoreCollectionPaymentRequest extends FormRequest
                     return $query->where('financial_institution', $financialInstitution);
                 }),
             ],
-            'payment_status' => ['required', 'string', 'max:100'],
-            'payment_prints' => ['required', 'integer'],
+            'payment_status' => ['nullable', 'string', 'max:100'],
+            'payment_prints' => ['nullable', 'integer'],
 
             'fee' => ['nullable', 'numeric'],
             'capital' => ['required', 'numeric'],
@@ -90,12 +91,9 @@ class StoreCollectionPaymentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'payment_date.required' => 'La fecha de pago es obligatoria.',
             'payment_value.required' => 'El valor del pago es obligatorio.',
             'payment_type.required' => 'El tipo de pago es obligatorio.',
             'payment_method.required' => 'El método de pago es obligatorio.',
-            'payment_status.required' => 'El estado del pago es obligatorio.',
-            'payment_prints.required' => 'El número de impresiones es obligatorio.',
             'capital.required' => 'El capital es obligatorio.',
             'interest.required' => 'El interés es obligatorio.',
             'mora.required' => 'La mora es obligatoria.',
@@ -109,6 +107,7 @@ class StoreCollectionPaymentRequest extends FormRequest
             'created_by.required' => 'El usuario creador no fue encontrado (token inválido).',
             'created_by.exists' => 'El usuario creador especificado no existe.',
             'payment_reference.unique' => 'La referencia de pago ya existe para la institución financiera especificada.',
+            'payment_deposit_date.date' => 'La fecha de depósito de pago no es una fecha válida.',
         ];
     }
 }

@@ -15,7 +15,6 @@ class ImportController extends Controller
      */
     public function importCredits(Request $request)
     {
-        // Validación del archivo
         $validator = Validator::make($request->all(), [
             'file' => 'required|file|mimes:xlsx,xls,csv',
         ]);
@@ -26,7 +25,7 @@ class ImportController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
-
+        
         try {
             Excel::import(new CreditsImport, $request->file('file'));
 
@@ -64,7 +63,6 @@ class ImportController extends Controller
      */
     public function importClients(Request $request)
     {
-        // Validación del archivo
         $validator = Validator::make($request->all(), [
             'file' => 'required|file|mimes:xlsx,xls,csv',
         ]);

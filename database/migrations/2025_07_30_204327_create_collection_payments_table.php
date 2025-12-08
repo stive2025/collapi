@@ -17,14 +17,15 @@ return new class extends Migration
             $table->integer('created_by');
 
             $table->timestamp('payment_date');
+            $table->timestamp('payment_deposit_date')->nullable();
             $table->float('payment_value');
             $table->float('payment_difference')->nullable();
             $table->string('payment_type');
             $table->string('payment_method');
             $table->string('financial_institution')->nullable();
             $table->string('payment_reference')->nullable();
-            $table->string('payment_status');
-            $table->integer('payment_prints');
+            $table->string('payment_status')->nullable();
+            $table->integer('payment_prints')->nullable();
 
             $table->float('fee')->nullable();
             $table->float('capital');

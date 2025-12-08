@@ -133,7 +133,7 @@ return [
         ],
         'payments' => [
             'driver' => 'single',
-            'path' => storage_path('logs/credits.log'),
+            'path' => storage_path('logs/payments.log'),
             'level' => 'info'
         ],
         'managements' => [

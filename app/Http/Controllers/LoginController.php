@@ -23,11 +23,8 @@ class LoginController extends Controller
             if (!$user || !Hash::check($validated['password'], $user->password)) {
                 return ResponseBase::unauthorized('Credenciales incorrectas');
             }
-
-            // Revocar tokens anteriores ANTES de crear el nuevo
+            
             $user->tokens()->delete();
-
-            // Crear nuevo token DESPUÉS de eliminar los anteriores
             $token = $user->createToken('login', ['all']);
 
             return ResponseBase::success(

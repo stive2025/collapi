@@ -21,9 +21,7 @@ return new class extends Migration
             $table->integer('total_fees');
             $table->integer('paid_fees')->default(0);
             $table->decimal('fee_amount', 15, 2);
-            $table->date('start_date');
-            $table->date('end_date')->nullable();
-            $table->integer('pending_fees');
+            $table->jsonb('fee_detail');
             $table->string('created_by')->nullable();
             $table->string('updated_by')->nullable();
             $table->string('status')->default('active');

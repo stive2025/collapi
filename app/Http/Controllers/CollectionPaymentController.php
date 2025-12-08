@@ -23,9 +23,6 @@ class CollectionPaymentController extends Controller
         $this->sofiaService = $sofiaService;
     }
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         try {
@@ -77,12 +74,12 @@ class CollectionPaymentController extends Controller
         }
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(StoreCollectionPaymentRequest $request)
     {
+        Log::channel('payments')->info('Procesando y validando pago', ['payload' => $request->all()]);
         $data = $request->validated();
+        Log::channel('payments')->info('Datos validados para el pago', ['data' => $data]);
+
         DB::beginTransaction();
 
         try {
@@ -99,66 +96,153 @@ class CollectionPaymentController extends Controller
                 return ResponseBase::error('Crédito no encontrado', null, 404);
             }
 
-            if ((string)$credit->collection_state === 'CONVENIO DE PAGO') {
-                $paidCapital = isset($data['capital']) ? (float)$data['capital'] : 0.0;
-                $paidInterest = isset($data['interest']) ? (float)$data['interest'] : 0.0;
-                $paidMora = isset($data['mora']) ? (float)$data['mora'] : 0.0;
-                $paidOther = isset($data['other_values']) ? (float)$data['other_values'] : 0.0;
-                $paymentValue = isset($data['payment_value']) ? (float)$data['payment_value'] : 0.0;
-
-                $credit->capital = max(0, (float)$credit->capital - $paidCapital);
-                $credit->interest = max(0, (float)$credit->interest - $paidInterest);
-                $credit->mora = max(0, (float)$credit->mora - $paidMora);
-                $credit->other_values = max(0, (float)($credit->other_values ?? 0) - $paidOther);
-                $credit->total_amount = max(0, (float)$credit->total_amount - $paymentValue);
-
-                $prints = isset($data['payment_prints']) ? (int)$data['payment_prints'] : 1;
-                if (isset($credit->paid_fees)) {
-                    $credit->paid_fees = (int)$credit->paid_fees + $prints;
-                } else {
-                    $credit->paid_fees = $prints;
-                }
-                if (isset($credit->pending_fees)) {
-                    $credit->pending_fees = max(0, (int)$credit->pending_fees - $prints);
-                }
-
-                if (
-                    (float)$credit->capital <= 0.0 &&
-                    (float)$credit->interest <= 0.0 &&
-                    (float)$credit->mora <= 0.0 &&
-                    ($credit->pending_fees ?? 0) === 0
-                ) {
-                    $credit->collection_state = 'PAGADO';
-                }
-
-                $credit->save();
+            $validationResult = $this->validatePaymentRubros($credit, $data);
+            
+            if ($validationResult !== null) {
+                Log::channel('payments')->warning('Validación de rubros de pago fallida', ['validation_result' => $validationResult]);
+                DB::rollBack();
+                return ResponseBase::error(
+                    $validationResult['summary'],
+                    $validationResult['errors'],
+                    422
+                );
             }
 
-            if (!empty($data['payment_date'])) {
-                $data['payment_date'] = Carbon::parse($data['payment_date']);
+            $data['prev_dates'] = json_encode([
+                'capital' => $credit->capital,
+                'interest' => $credit->interest,
+                'mora' => $credit->mora,
+                'safe' => $credit->safe,
+                'collection_expenses' => $credit->collection_expenses,
+                'legal_expenses' => $credit->legal_expenses,
+                'management_collection_expenses' => $credit->management_collection_expenses,
+                'other_values' => $credit->other_values,
+                'total_amount' => $credit->total_amount
+            ]);
+
+            $credit->capital = max(0, $credit->capital - (isset($data['capital']) ? (float)$data['capital'] : 0.0));
+            $credit->interest = max(0, $credit->interest - (isset($data['interest']) ? (float)$data['interest'] : 0.0));
+            $credit->mora = max(0, $credit->mora - (isset($data['mora']) ? (float)$data['mora'] : 0.0));
+            $credit->safe = max(0, $credit->safe - (isset($data['safe']) ? (float)$data['safe'] : 0.0));
+            $credit->collection_expenses = max(0, $credit->collection_expenses - (isset($data['collection_expenses']) ? (float)$data['collection_expenses'] : 0.0));
+            $credit->legal_expenses = max(0, $credit->legal_expenses - (isset($data['legal_expenses']) ? (float)$data['legal_expenses'] : 0.0));
+            $credit->management_collection_expenses = max(0, $credit->management_collection_expenses - (isset($data['management_collection_expenses']) ? (float)$data['management_collection_expenses'] : 0.0));
+            $credit->other_values = max(0, $credit->other_values - (isset($data['other_values']) ? (float)$data['other_values'] : 0.0));
+            $credit->total_amount =
+                $credit->capital +
+                $credit->interest +
+                $credit->mora +
+                $credit->safe +
+                $credit->collection_expenses +
+                $credit->legal_expenses +
+                $credit->management_collection_expenses +
+                $credit->other_values;
+
+            if (isset($data['payment_type']) && (string)$data['payment_type'] === 'TOTAL') {
+                $credit->collection_state = 'CANCELADO';
+            }
+
+            $credit->save();
+
+            if ((string)$credit->collection_state === 'CONVENIO DE PAGO') {
+                $paymentValue = isset($data['payment_value']) ? (float)$data['payment_value'] : 0.0;
+                $this->updateAgreementFees($credit->id, $paymentValue);
+            }
+
+            if (!empty($data['payment_deposit_date'])) {
+                $data['payment_deposit_date'] = Carbon::parse($data['payment_deposit_date']);
+                $data['payment_date'] = date('Y-m-d H:i:s', time() - 18000);
             }
 
             $data['created_by'] = $user->id;
+
             $payment = CollectionPayment::create($data);
 
             DB::commit();
-            return ResponseBase::success($payment, 'Pago creado correctamente', 201);
+            Log::channel('payments')->info('Pago creado correctamente', ['payment' => $payment]);
 
+            return ResponseBase::success($payment, 'Pago creado correctamente', 201);
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Error creating collection payment (rollback)', [
+            Log::channel('payments')->error('Error al crear el pago', [
                 'message' => $e->getMessage(),
-                'payload' => $request->all()
+                'data' => $data
             ]);
 
             return ResponseBase::error('Error al crear el pago', ['error' => $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Display the specified resource.
-     */
+    private function updateAgreementFees(int $creditId, float $amountPaid): void
+    {
+        Log::channel('payments')->info('Actualizando cuotas del convenio', ['credit_id' => $creditId, 'amount_paid' => $amountPaid]);
+        $agreement = Agreement::where('credit_id', $creditId)
+            ->where('status', 'autorizado')
+            ->first();
+
+        if (!$agreement || empty($agreement->fee_detail)) {
+            return;
+        }
+
+        $feeDetail = json_decode($agreement->fee_detail, true);
+
+        if (!is_array($feeDetail)) {
+            return;
+        }
+
+        $remainingAmount = $amountPaid;
+        $totalPaidFees = 0;
+
+        foreach ($feeDetail as $index => &$fee) {
+            if ($index === 0 || (isset($fee['payment_status']) && $fee['payment_status'] === 'PAGADA')) {
+                continue;
+            }
+
+            if (!isset($fee['payment_status']) || $fee['payment_status'] !== 'PENDIENTE') {
+                continue;
+            }
+
+            if ($remainingAmount <= 0) {
+                break;
+            }
+
+            $feeAmount = (float)($fee['payment_amount'] ?? 0);
+            $currentPaid = (float)($fee['payment_value'] ?? 0);
+            $feeBalance = $feeAmount - $currentPaid;
+
+            if ($feeBalance <= 0) {
+                $fee['payment_status'] = 'PAGADA';
+                $totalPaidFees++;
+                continue;
+            }
+
+            if ($remainingAmount >= $feeBalance) {
+                $fee['payment_value'] = $feeAmount;
+                $fee['payment_status'] = 'PAGADA';
+                $fee['payment_date'] = now()->format('Y-m-d');
+                $remainingAmount -= $feeBalance;
+                $totalPaidFees++;
+            } else {
+                $fee['payment_value'] = $currentPaid + $remainingAmount;
+                $fee['payment_status'] = 'PENDIENTE';
+                $remainingAmount = 0;
+            }
+        }
+
+        unset($fee);
+
+        $agreement->fee_detail = json_encode($feeDetail);
+        $agreement->paid_fees = ($agreement->paid_fees ?? 0) + $totalPaidFees;
+        $agreement->pending_fees = max(0, ($agreement->total_fees ?? 0) - $agreement->paid_fees);
+        $agreement->save();
+        Log::channel('payments')->info('Cuotas del convenio actualizadas', [
+            'agreement_id' => $agreement->id,
+            'paid_fees' => $agreement->paid_fees,
+            'pending_fees' => $agreement->pending_fees
+        ]);
+    }
+
     public function show(CollectionPayment $payment)
     {
         try {
@@ -178,7 +262,7 @@ class CollectionPaymentController extends Controller
             if (!$creditId) {
                 return ResponseBase::validationError(['credito' => ['El id del crédito es obligatorio.']]);
             }
-            
+
             $invoice = Invoice::where('credito', $creditId)->where('status', 'pendiente')->first();
 
             if ($invoice === null) {
@@ -222,7 +306,6 @@ class CollectionPaymentController extends Controller
             ];
 
             $syntheticRequest = \Illuminate\Http\Request::create('/', 'POST', $syntheticPayload);
-
             $sofiaResult = $this->sofiaService->facturar($syntheticRequest, $paymentValue);
 
             Log::info('SofiaService.facturar result', ['result' => $sofiaResult]);
@@ -244,45 +327,6 @@ class CollectionPaymentController extends Controller
                     "financial_institution" => $financialInstitution
                 ]);
 
-                $cartera = $invoice->cartera;
-                $creditoRow = null;
-                if ($cartera) {
-                    $creditoRow = DB::table($cartera)->where('id', $invoice->credito)->first();
-                }
-
-                if ($creditoRow && (isset($creditoRow->collectionState) && $creditoRow->collectionState === "CONVENIO DE PAGO")) {
-                    $agreement = Agreement::where('credito', $creditoRow->id)
-                        ->where('cartera', $invoice->cartera)
-                        ->where('status', 'autorizado')
-                        ->first();
-
-                    if ($agreement) {
-                        $cuotas = json_decode($agreement->detail);
-                        $i = 0;
-                        $siguiente_cuota = 0;
-
-                        foreach ($cuotas as $cuota) {
-                            if (intval($cuota->cuota) === 1 && $i === 0) {
-                                $cuota->estado = "PAGADO";
-                                $i++;
-                            } elseif ($i === 1) {
-                                $siguiente_cuota = $cuota->valor;
-                                $i++;
-                            }
-                        }
-
-                        $update_convenio = $cuotas;
-
-                        Agreement::where('credito', $creditoRow->id)
-                            ->where('cartera', $invoice->cartera)
-                            ->where('status', 'autorizado')
-                            ->update([
-                                "detail" => json_encode($update_convenio),
-                                "valor_cuota" => $siguiente_cuota
-                            ]);
-                    }
-                }
-
                 return ResponseBase::success([
                     "fecha" => date('Y/m/d H:i:s', time() - 18000),
                     "clave_acceso" => $sofiaResult['response']->claveAcceso,
@@ -299,5 +343,59 @@ class CollectionPaymentController extends Controller
 
             return ResponseBase::error('Error al procesar la factura', ['error' => $e->getMessage()], 500);
         }
+    }
+
+    private function validatePaymentRubros(Credit $credit, array $data): ?array
+    {
+        $rubros = [
+            'capital' => 'Capital',
+            'interest' => 'Interés',
+            'mora' => 'Mora',
+            'safe' => 'Seguro',
+            'collection_expenses' => 'Gastos de cobranza',
+            'legal_expenses' => 'Gastos legales',
+            'management_collection_expenses' => 'Gastos de gestión de cobranza',
+            'other_values' => 'Otros valores'
+        ];
+
+        $errors = [];
+
+        foreach ($rubros as $field => $label) {
+            $paymentAmount = isset($data[$field]) ? (float)$data[$field] : 0.0;
+            
+            if ($paymentAmount > 0) {
+                $creditAmount = (float)($credit->$field ?? 0);
+                
+                if ($creditAmount <= 0) {
+                    $errors[] = [
+                        'field' => $field,
+                        'label' => $label,
+                        'payment_amount' => $paymentAmount,
+                        'credit_amount' => $creditAmount,
+                        'message' => "No se puede registrar un pago de {$paymentAmount} en {$label} porque el crédito tiene este rubro en cero."
+                    ];
+                }
+
+                if ($creditAmount > 0 && $paymentAmount > $creditAmount) {
+                    $errors[] = [
+                        'field' => $field,
+                        'label' => $label,
+                        'payment_amount' => $paymentAmount,
+                        'credit_amount' => $creditAmount,
+                        'message' => "El pago de {$paymentAmount} en {$label} excede el saldo disponible de {$creditAmount}."
+                    ];
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            return [
+                'valid' => false,
+                'errors' => $errors,
+                'summary' => 'Se están introduciendo valores en rubros que están en cero o exceden el saldo disponible.'
+            ];
+        }
+
+        return null;
     }
 }

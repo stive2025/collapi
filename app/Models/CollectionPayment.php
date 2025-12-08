@@ -14,6 +14,7 @@ class CollectionPayment extends Model
     protected $fillable = [
         'created_by',
         'payment_date',
+        'payment_deposit_date',
         'payment_value',
         'payment_difference',
         'payment_type',

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Credit;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -13,7 +14,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Usuario administrador
         User::create([
             'name'=>'Administrador',
             'username'=>'steven_cesen',
@@ -23,7 +23,6 @@ class DatabaseSeeder extends Seeder
             'role'=>'admin'
         ]);
 
-        // Usuario EN ESPERA
         User::create([
             'name'=>'EN ESPERA',
             'username'=>'en_espera',
@@ -35,6 +34,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             BusinessSeeder::class,
+            CreditSeeder::class
         ]);
     }
 }
