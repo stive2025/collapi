@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ContactRequest;
+use App\Http\Resources\CollectionContactResource;
 use App\Http\Responses\ResponseBase;
 use App\Models\CollectionContact;
 use Illuminate\Http\Request;
@@ -21,14 +22,22 @@ class ContactController extends Controller
                 $query->where('credit_id', $request->query('credit_id'));
             }
 
-            if ($request->filled('name')) {
-                $query->where('name', 'like', '%' . $request->query('name') . '%');
+            if ($request->filled('phone_number')) {
+                $query->where('phone_number', 'like', '%' . $request->query('phone_number') . '%');
+            }
+
+            if ($request->filled('phone_type')) {
+                $query->where('phone_type', $request->query('phone_type'));
+            }
+
+            if ($request->filled('phone_status')) {
+                $query->where('phone_status', $request->query('phone_status'));
             }
 
             $contacts = $query->paginate($perPage);
 
             return ResponseBase::success(
-                $contacts,
+                CollectionContactResource::collection($contacts)->response()->getData(),
                 'Contactos obtenidos correctamente'
             );
         } catch (\Exception $e) {
@@ -52,7 +61,7 @@ class ContactController extends Controller
             $contact = CollectionContact::create($data);
 
             return ResponseBase::success(
-                $contact,
+                new CollectionContactResource($contact),
                 'Contacto creado correctamente',
                 201
             );
@@ -70,13 +79,34 @@ class ContactController extends Controller
         }
     }
 
+    public function show(CollectionContact $contact)
+    {
+        try {
+            return ResponseBase::success(
+                new CollectionContactResource($contact),
+                'Contacto obtenido correctamente'
+            );
+        } catch (\Exception $e) {
+            Log::error('Error fetching contact', [
+                'message' => $e->getMessage(),
+                'contact_id' => $contact->id
+            ]);
+
+            return ResponseBase::error(
+                'Error al obtener el contacto',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
     public function update(ContactRequest $request, CollectionContact $contact)
     {
         try {
             $contact->update($request->validated());
 
             return ResponseBase::success(
-                $contact,
+                new CollectionContactResource($contact),
                 'Contacto actualizado correctamente'
             );
         } catch (\Exception $e) {
@@ -96,11 +126,24 @@ class ContactController extends Controller
 
     public function destroy(CollectionContact $contact)
     {
-        $contact->update(['phone_status' => 'INACTIVE']);
+        try {
+            $contact->update(['phone_status' => 'INACTIVE']);
 
-        return ResponseBase::success(
-            null,
-            'Contacto inactivado correctamente'
-        );
+            return ResponseBase::success(
+                new CollectionContactResource($contact),
+                'Contacto inactivado correctamente'
+            );
+        } catch (\Exception $e) {
+            Log::error('Error deactivating contact', [
+                'message' => $e->getMessage(),
+                'contact_id' => $contact->id
+            ]);
+
+            return ResponseBase::error(
+                'Error al inactivar el contacto',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
     }
 }

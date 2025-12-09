@@ -13,10 +13,17 @@ class CreditResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $firstDirection = $this->clients?->first()?->directions?->first();
+        
         return [
             'id' => $this->id,
             'sync_id' => $this->sync_id,
             'agency' => $this->agency,
+            'province' => $firstDirection?->province,
+            'canton' => $firstDirection?->canton,
+            'parish' => $firstDirection?->parish,
+            'neighborhood' => $firstDirection?->neighborhood,
+            'direction_type' => $firstDirection?->type,
             'collection_state' => $this->collection_state,
             'frequency' => $this->frequency,
             'payment_date' => $this->payment_date,
@@ -43,12 +50,25 @@ class CreditResource extends JsonResource
             'user_id' => $this->user_id,
             'business_id' => $this->business_id,
             'clients' => $this->whenLoaded('clients', function() {
-                return $this->clients->map(fn($client) => [
-                    'id' => $client->id,
-                    'name' => $client->name,
-                    'ci' => $client->ci,
-                    'type' => $client->pivot->type
-                ]);
+                return $this->clients->map(function($client) {
+                    return [
+                        'id' => $client->id,
+                        'name' => $client->name,
+                        'ci' => $client->ci,
+                        'type' => $client->pivot->type,
+                        'directions' => $client->directions?->map(fn($dir) => [
+                            'id' => $dir->id,
+                            'direction' => $dir->direction,
+                            'type' => $dir->type,
+                            'province' => $dir->province,
+                            'canton' => $dir->canton,
+                            'parish' => $dir->parish,
+                            'neighborhood' => $dir->neighborhood,
+                            'latitude' => $dir->latitude,
+                            'longitude' => $dir->longitude,
+                        ])
+                    ];
+                });
             }),
             'collection_managements' => $this->whenLoaded('collectionManagements'),
             'collection_calls' => $this->whenLoaded('collectionCalls'),

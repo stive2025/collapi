@@ -10,10 +10,19 @@ class CollectionDirection extends Model
     /** @use HasFactory<\Database\Factories\CollectionDirectionFactory> */
     use HasFactory;
     protected $fillable=[
-        'credit_id',
-        'direction_type',
-        'value',
-        'prelation_order',
-        'state'
+        'client_id',
+        'direction',
+        'type',
+        'province',
+        'canton',
+        'parish',
+        'neighborhood',
+        'latitude',
+        'longitude',
     ];
+    
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
 }

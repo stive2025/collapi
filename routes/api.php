@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\AgencieController;
+use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\CampainController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CollectionPaymentController;
+use App\Http\Controllers\CondonationController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CreditController;
 use App\Http\Controllers\LoginController;
@@ -25,15 +27,39 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('payments', CollectionPaymentController::class);
     Route::apiResource('businesses', BusinessController::class);
     Route::apiResource('agencies', AgencieController::class);
+    // --------------------------------------------------------------------------------------------------------------
     Route::apiResource('campains', CampainController::class);
+    // Transferencia de créditos
     Route::patch('campains/transfer/{id}', [CampainController::class, 'transfer']);
 
+    // --------------------------------------------------------------------------------------------------------------    
+    Route::apiResource('condonations', CondonationController::class);
+    // Revertir condonación
+    Route::post('condonations/revert/{id}', [CondonationController::class, 'revert']);
+    // Autorizar condonación
+    Route::post('condonations/authorize/{id}', [CondonationController::class, 'authorizeCondonation']);
+    
+    // -------------------------------------------------------------------------------------------------------------- 
+    Route::apiResource('agreements', AgreementController::class);
+    // Autorizar acuerdo
+    Route::post('agreements/authorize/{id}', [AgreementController::class, 'authorizeAgreement']);
+    // Revertir acuerdo
+    Route::post('agreements/revert/{id}', [AgreementController::class, 'revert']);
+    // --------------------------------------------------------------------------------------------------------------
+    
+    // Generar llamada ASTERISK
     Route::post('calls/dial', [CallController::class, 'dial']);
+    //  Colgar llamada ASTERISK
     Route::post('calls/hangup', [CallController::class, 'hangup']);
     Route::get('calls', [CallController::class, 'index']);
     Route::post('calls', [CallController::class, 'store']);
     
+    // --------------------------------------------------------------------------------------------------------------
+    //  Módulos para migraciones masivas
     Route::post('ImportCredits', [ImportController::class, 'importCredits']);
     Route::post('ImportClients', [ImportController::class, 'importClients']);
+
+    // --------------------------------------------------------------------------------------------------------------
+    // Desconectar usuario
     Route::post('logout', [LoginController::class, 'logout']);
 });

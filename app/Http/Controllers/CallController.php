@@ -2,28 +2,52 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Auth\AuthenticationException;
 use App\Http\Requests\StoreCallRequest;
 use App\Http\Responses\ResponseBase;
 use App\Models\CollectionCall;
-use App\Services\AsteriskService;
+use App\Models\CollectionContact;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class CallController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $calls = CollectionCall::paginate(request('per_page', 15));
-        
-        return ResponseBase::success(
-            $calls,
-            'Llamadas obtenidas correctamente'
-        );
+        try {
+            $perPage = (int) $request->query('per_page', 15);
+
+            $query = CollectionCall::query();
+
+            if ($request->filled('credit_id')) {
+                $query->where('credit_id', $request->query('credit_id'));
+            }
+
+            if ($request->filled('state')) {
+                $query->where('state', $request->query('state'));
+            }
+
+            if ($request->filled('channel')) {
+                $query->where('channel', $request->query('channel'));
+            }
+
+            if ($request->filled('created_by')) {
+                $query->where('created_by', $request->query('created_by'));
+            }
+
+            $calls = $query->with( 'credit')->paginate($perPage);
+
+            return ResponseBase::success($calls, 'Llamadas obtenidas correctamente');
+        } catch (\Exception $e) {
+            Log::error('Error fetching collection calls', [
+                'message' => $e->getMessage()
+            ]);
+
+            return ResponseBase::error('Error al obtener llamadas', ['error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -31,134 +55,82 @@ class CallController extends Controller
      */
     public function store(StoreCallRequest $request)
     {
+        DB::beginTransaction();
+        
         try {
-            $data_call = [
-                'state' => $request->validated()['state'],
-                'duration' => $request->validated()['duration'] ?? null,
-                'media_path' => $request->validated()['media_path'] ?? null,
-                'channel' => $request->validated()['channel'],
-                'created_by' => Auth::id(),
-                'collection_contact_id' => $request->validated()['contact_id'],
-                'credit_id' => $request->validated()['credit_id']
-            ];
+            $validated = $request->validated();
 
-            $create_call = CollectionCall::create($data_call);
+            // Asegurar que created_by esté presente
+            if (!isset($validated['created_by'])) {
+                $user = $request->user();
+                if (!$user) {
+                    DB::rollBack();
+                    return ResponseBase::unauthorized('Usuario no autenticado');
+                }
+                $validated['created_by'] = $user->id;
+            }
+
+            $contact = CollectionContact::find($validated['collection_contact_id']);
             
+            if (!$contact) {
+                DB::rollBack();
+                return ResponseBase::error('Contacto no encontrado', null, 404);
+            }
+
+            $call = CollectionCall::create($validated);
+            $this->updateContactCounters($contact, $validated['state']);
+
+            DB::commit();
+
             return ResponseBase::success(
-                $create_call,
-                'Llamada guardada correctamente',
+                $call->load('credit'),
+                'Llamada registrada correctamente',
                 201
             );
-        } catch (\Throwable $th) {
-            Log::channel('calls')->error('Error creating call', [
-                'message' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
-                'data' => $data_call ?? null
-            ]);
-
-            return ResponseBase::error(
-                'Error al guardar la llamada',
-                ['error' => $th->getMessage()],
-                500
-            );
-        }
-    }
-
-    /**
-     * Iniciar una llamada mediante Asterisk
-     */
-    public function dial(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'channel' => ['required', 'string'],
-                'exten' => ['required', 'string'],
-                'context' => ['required', 'string'],
-                'priority' => ['required', 'integer'],
-                'timeout' => ['required', 'integer'],
-                'caller_id' => ['required', 'string'],
-                'application' => ['nullable', 'string'],
-                'data' => ['nullable', 'string'],
-                'variables' => ['nullable', 'array'],
-                'account' => ['nullable', 'string'],
-                'async' => ['nullable', 'boolean'],
-                'action_id' => ['nullable', 'string'],
-            ]);
-
-            $manager_asterisk = new AsteriskService(
-                "172.20.1.107",
-                "call_master",
-                "s3f1l_c@11"
-            );
-
-            $result = $manager_asterisk->originateCall(
-                $validated['channel'],
-                $validated['exten'],
-                $validated['context'],
-                $validated['priority'],
-                $validated['application'] ?? '',
-                $validated['data'] ?? '',
-                $validated['timeout'],
-                $validated['caller_id'],
-                $validated['variables'] ?? [],
-                $validated['account'] ?? '',
-                $validated['async'] ?? false,
-                $validated['action_id'] ?? ''
-            );
-
-            return ResponseBase::success(
-                $result,
-                'Llamada iniciada correctamente'
-            );
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::channel('calls')->error('Error dialing call', [
-                'message' => $e->getMessage()
-            ]);
-
-            return ResponseBase::error(
-                'Error al iniciar la llamada',
-                ['error' => $e->getMessage()],
-                500
-            );
-        }
-    }
-
-    /**
-     * Colgar una llamada activa
-     */
-    public function hangup(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'channel' => ['required', 'string'],
-            ]);
-
-            $manager_asterisk = new AsteriskService(
-                "172.20.1.107",
-                "call_master",
-                "s3f1l_c@11"
-            );
-
-            $hangup = $manager_asterisk->hangup($validated['channel']);
+            DB::rollBack();
             
-            return ResponseBase::success(
-                $hangup,
-                'Llamada colgada correctamente'
-            );
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return ResponseBase::validationError($e->errors());
-        } catch (\Exception $e) {
-            Log::channel('calls')->error('Error hanging up call', [
-                'message' => $e->getMessage()
+            Log::error('Error creating collection call', [
+                'message' => $e->getMessage(),
+                'payload' => $request->all()
             ]);
 
             return ResponseBase::error(
-                'Error al colgar la llamada',
+                'Error al registrar la llamada',
                 ['error' => $e->getMessage()],
                 500
             );
+        }
+    }
+
+    /**
+     * Actualiza los contadores del contacto según el estado de la llamada
+     */
+    private function updateContactCounters(CollectionContact $contact, string $state): void
+    {
+        $effectiveStates = [
+            'CONTACTADO'
+        ];
+
+        $state = strtoupper($state);
+
+        if (in_array($state, $effectiveStates)) {
+            $contact->increment('calls_effective');
+        } else {
+            $contact->increment('calls_not_effective');
+        }
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(CollectionCall $collectionCall)
+    {
+        try {
+            $collectionCall->load('credit');
+            return ResponseBase::success($collectionCall, 'Llamada obtenida correctamente');
+        } catch (\Exception $e) {
+            return ResponseBase::error('Error al obtener la llamada', ['error' => $e->getMessage()], 500);
         }
     }
 }

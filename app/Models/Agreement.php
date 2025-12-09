@@ -9,7 +9,7 @@ class Agreement extends Model
 {
     /** @use HasFactory<\Database\Factories\AgreementFactory> */
     use HasFactory;
-
+    
     protected $fillable = [
         'credit_id',
         'total_amount',

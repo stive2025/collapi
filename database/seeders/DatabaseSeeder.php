@@ -34,7 +34,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             BusinessSeeder::class,
-            CreditSeeder::class
+            CreditSeeder::class,
+            CollectionDirectionSeeder::class,
         ]);
     }
 }

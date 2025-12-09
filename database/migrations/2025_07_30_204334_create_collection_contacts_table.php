@@ -18,12 +18,12 @@ return new class extends Migration
             $table->string('phone_type');
             $table->string('phone_status');
 
-            $table->string('calls_effective');
-            $table->string('calls_not_effective');
+            $table->string('calls_effective')->nullable();
+            $table->string('calls_not_effective')->nullable();
 
             $table->integer('created_by');
-            $table->integer('updated_by');
-            $table->integer('deleted_by');
+            $table->integer('updated_by')->nullable();
+            $table->integer('deleted_by')->nullable();
 
             $table->foreignId('client_id');
             $table->foreign('client_id')

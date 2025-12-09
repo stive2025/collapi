@@ -19,4 +19,10 @@ class CollectionCall extends Model
         'collection_contact_id',
         'credit_id'
     ];
+
+    public function credit()
+    {
+        return $this->belongsTo(Credit::class, 'credit_id');
+    }
+
 }

@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 
-class UtilsService
+class CatalogService
 {
     /**
      * Create a new class instance.
@@ -38,7 +38,7 @@ class UtilsService
             return 'CONVENIO DE PAGO';
         }
     }
-
+    
     public function rewriteValue(string $value){
         if($value>0){
             return bcdiv($value,'1',2);

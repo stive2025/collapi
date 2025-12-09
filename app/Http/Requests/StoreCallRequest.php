@@ -16,32 +16,12 @@ class StoreCallRequest extends FormRequest
     {
         return true;
     }
-
-    /**
-     * Prepare data for validation: set created_by from authenticated token.
-     */
-    protected function prepareForValidation(): void
-    {
-        if ($this->isMethod('post')) {
-            $user = $this->user();
-            if ($user) {
-                $this->merge([
-                    'created_by' => $user->id,
-                ]);
-            }
-        }
-    }
-
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
-     */
+    
     public function rules(): array
     {
         return [
             'credit_id' => ['required', 'integer', 'exists:credits,id'],
-            'contact_id' => [
+            'collection_contact_id' => [
                 'required',
                 'integer',
             ],
@@ -49,8 +29,29 @@ class StoreCallRequest extends FormRequest
             'duration' => ['nullable', 'integer', 'min:0'],
             'media_path' => ['nullable', 'string', 'max:255'],
             'channel' => ['required', 'string', 'max:100'],
-            'created_by' => ['required', 'integer', 'exists:users,id'],
+            'created_by' => ['sometimes', 'integer', 'exists:users,id'],
         ];
+    }
+
+    /**
+     * Get validated data with created_by from authenticated user
+     *
+     * @param  string|null  $key
+     * @param  mixed  $default
+     * @return mixed
+     */
+    public function validated($key = null, $default = null)
+    {
+        $validated = parent::validated($key, $default);
+
+        if (is_array($validated) && !isset($validated['created_by'])) {
+            $user = $this->user();
+            if ($user) {
+                $validated['created_by'] = $user->id;
+            }
+        }
+
+        return $validated;
     }
 
     /**
@@ -73,8 +74,8 @@ class StoreCallRequest extends FormRequest
         return [
             'credit_id.required' => 'El crédito es obligatorio.',
             'credit_id.exists' => 'El crédito especificado no existe.',
-            'contact_id.required' => 'El contacto es obligatorio.',
-            'contact_id.exists' => 'El contacto no existe o no pertenece al crédito especificado.',
+            'collection_contact_id.required' => 'El contacto es obligatorio.',
+            'collection_contact_id.exists' => 'El contacto no existe o no pertenece al crédito especificado.',
             'state.required' => 'El estado de la llamada es obligatorio.',
             'state.max' => 'El estado no puede exceder 50 caracteres.',
             'duration.integer' => 'La duración debe ser un número entero.',
@@ -82,7 +83,6 @@ class StoreCallRequest extends FormRequest
             'media_path.max' => 'La ruta del archivo no puede exceder 255 caracteres.',
             'channel.required' => 'El canal es obligatorio.',
             'channel.max' => 'El canal no puede exceder 100 caracteres.',
-            'created_by.required' => 'El usuario creador no fue encontrado (token inválido).',
             'created_by.exists' => 'El usuario creador especificado no existe.',
         ];
     }
