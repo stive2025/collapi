@@ -18,13 +18,13 @@ class CreditSeeder extends Seeder
         $this->command->info('Inicio proceso de creación de créditos.');
 
         Credit::factory()
-            ->count(2000)
+            ->count(100)
             ->create();
 
-        $this->command->info('✓ 2000 créditos creados exitosamente.');
+        $this->command->info('✓ 100 créditos creados exitosamente.');
         $this->command->info('✓ Creando pool inicial de clientes.');
         
-        $poolSize = 1000;
+        $poolSize = 10;
         $clients = collect();
         
         for ($i = 0; $i < $poolSize; $i++) {
@@ -40,7 +40,7 @@ class CreditSeeder extends Seeder
         $newClientsCreated = 0;
 
         foreach ($credits as $credit) {
-            if (rand(1, 100) <= 70 && $clients->count() > 0) {
+            if (rand(1, 10) <= 7 && $clients->count() > 0) {
                 $titular = $clients->random();
             } else {
                 $titular = Client::factory()->create();
@@ -56,11 +56,11 @@ class CreditSeeder extends Seeder
                 'updated_at' => now(),
             ];
 
-            if (rand(1, 100) <= 50) {
+            if (rand(1, 10) <= 5) {
                 $numGarantes = rand(1, 2);
                 
                 for ($i = 0; $i < $numGarantes; $i++) {
-                    if (rand(1, 100) <= 80 && $clients->count() > 1) {
+                    if (rand(1, 10) <= 8 && $clients->count() > 1) {
                         $availableClients = $clients->where('id', '!=', $titular->id);
                         
                         if ($availableClients->count() > 0) {
@@ -86,7 +86,7 @@ class CreditSeeder extends Seeder
                 }
             }
 
-            if (count($relations) >= 500) {
+            if (count($relations) >= 50) {
                 DB::table('client_credit')->insert($relations);
                 $processedCount += count($relations);
                 $this->command->info("  ✓ Procesadas {$processedCount} relaciones | Pool de {$clients->count()} clientes...");

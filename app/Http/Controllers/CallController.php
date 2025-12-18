@@ -6,6 +6,7 @@ use App\Http\Requests\StoreCallRequest;
 use App\Http\Responses\ResponseBase;
 use App\Models\CollectionCall;
 use App\Models\CollectionContact;
+use App\Services\AsteriskService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -132,5 +133,45 @@ class CallController extends Controller
         } catch (\Exception $e) {
             return ResponseBase::error('Error al obtener la llamada', ['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function dial(Request $request)
+    {
+        $asterisk_service = new AsteriskService(
+            env('ASTERISK_SERVER_IP'),
+            env('ASTERISK_USERNAME'),
+            env('ASTERISK_PASSWORD')
+        );
+
+        $originate_call = $asterisk_service->originateCall(
+            $request->input('channel'),
+            $request->input('exten'),
+            $request->input('context'),
+            $request->input('priority'),
+            $request->input('application'),
+            $request->input('data'),
+            $request->input('timeout'),
+            $request->input('caller_id'),
+            $request->input('variables', []),
+            $request->input('account'),
+            $request->input('async'),
+            $request->input('action_id')
+        );
+
+        return ResponseBase::success($originate_call, 'Llamada iniciada correctamente');
+    }
+
+    public function hangup(Request $request)
+    {
+        // Lógica para colgar una llamada ASTERISK
+        $asterisk_service = new AsteriskService(
+            env('ASTERISK_SERVER_IP'),
+            env('ASTERISK_USERNAME'),
+            env('ASTERISK_PASSWORD')
+        );
+        $hangup_call = $asterisk_service->hangup(
+            $request->input('channel')
+        );
+        return ResponseBase::success($hangup_call, 'Llamada colgada correctamente');
     }
 }
