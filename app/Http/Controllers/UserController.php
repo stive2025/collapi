@@ -44,7 +44,6 @@ class UserController extends Controller
             $validated = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
                 'username' => ['required', 'string', 'max:255', 'unique:users,username'],
-                'email' => ['nullable', 'email', 'unique:users,email'],
                 'extension' => ['nullable', 'string', 'max:50'],
                 'permission' => ['nullable', 'json'],
                 'phone' => ['nullable', 'string', 'max:20'],
@@ -54,7 +53,8 @@ class UserController extends Controller
             ]);
 
             $validated['password'] = Hash::make($validated['password']);
-            
+            $validated['is_active'] = true;
+
             $user = User::create($validated);
 
             // No retornar el password en la respuesta
