@@ -24,7 +24,7 @@ class CreditController extends Controller
                 $query->select(
                     'collection_directions.id',
                     'collection_directions.client_id',
-                    'collection_directions.direction',
+                    'collection_directions.address',
                     'collection_directions.type',
                     'collection_directions.province',
                     'collection_directions.canton',
