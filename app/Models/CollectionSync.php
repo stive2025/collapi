@@ -10,9 +10,11 @@ class CollectionSync extends Model
     /** @use HasFactory<\Database\Factories\CollectionSyncFactory> */
     use HasFactory;
     protected $fillable=[
-        'credit_id',
-        'sync_type',
-        'sync_date',
-        'state'
+        'new_credits', // Nro de créditos o pagos nuevos
+        'sync_type', // SYNC-CREDITS, SINC-PAYMENTS
+        'state_description', // Descripción del estado del sync
+        'code_syncs', // Códigos de créditos sincronizados
+        'nro_credits', // Nro de créditos o pagos sincronizados
+        'state' // Estado del sync
     ];
 }

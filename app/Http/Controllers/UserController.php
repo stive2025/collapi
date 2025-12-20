@@ -13,10 +13,22 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::paginate(request('per_page', 15));
-        
+        $perPage = (int) $request->query('per_page', 15);
+
+        $query = User::query();
+
+        if ($request->filled('agents')) {
+            $query->whereNotIn('role',['superadmin','admin','supervisor','query']);
+        }
+
+        if ($request->filled('is_active')) {
+            $query->where('is_active',$request->is_active);
+        }
+
+        $users = $query->paginate($perPage);
+
         return ResponseBase::success(
             $users,
             'Usuarios obtenidos correctamente'

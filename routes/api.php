@@ -14,6 +14,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\SyncController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [LoginController::class, 'login']);
@@ -27,6 +28,7 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('payments', CollectionPaymentController::class);
     Route::apiResource('businesses', BusinessController::class);
     Route::apiResource('agencies', AgencieController::class);
+    Route::apiResource('syncs', SyncController::class);
     // --------------------------------------------------------------------------------------------------------------
     Route::apiResource('campains', CampainController::class);
     // Transferencia de créditos
