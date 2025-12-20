@@ -35,6 +35,10 @@ class LoginController extends Controller
                         'username' => $user->username,
                         'name' => $user->name,
                         'email' => $user->email,
+                        'extension' => $user->extension,
+                        'role' => $user->role,
+                        'phone' => $user->phone,
+                        'permission' => json_decode($user->permission)
                     ]
                 ],
                 'Inicio de sesión exitoso'
