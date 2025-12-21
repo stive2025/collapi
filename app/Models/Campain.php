@@ -39,7 +39,7 @@ class Campain extends Model
                 }
 
                 return User::whereIn('id', $this->agents)
-                    ->select('id', 'username')
+                    ->select('id', 'name')
                     ->get()
                     ->toArray();
             }
