@@ -18,8 +18,8 @@ class ContactController extends Controller
 
             $query = CollectionContact::query();
 
-            if ($request->filled('credit_id')) {
-                $query->where('credit_id', $request->query('credit_id'));
+            if ($request->filled('client_id')) {
+                $query->where('client_id', $request->query('client_id'));
             }
 
             if ($request->filled('phone_number')) {
