@@ -147,6 +147,46 @@ class CreditController extends Controller
             'Créditos obtenidos correctamente'
         );
     }
+
+    /**
+     * Obtener el conteo de créditos agrupados por management_tray
+     */
+    public function indexNumberTrays(Request $request)
+    {
+        try {
+            $query = Credit::query();
+
+            $this->applyFilters($query);
+
+            $traysGrouped = (clone $query)
+                ->selectRaw('management_tray, COUNT(*) as count')
+                ->groupBy('management_tray')
+                ->get()
+                ->pluck('count', 'management_tray')
+                ->toArray();
+
+            $totalCredits = $query->count();
+
+            return ResponseBase::success(
+                [
+                    'total_credits' => $totalCredits,
+                    'trays' => (object) $traysGrouped
+                ],
+                'Conteo de bandejas obtenido correctamente'
+            );
+        } catch (\Exception $e) {
+            Log::error('Error counting trays in credits', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al obtener el conteo de bandejas',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
     
     /**
      * Display the specified resource.

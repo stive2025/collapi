@@ -67,4 +67,5 @@ Route::middleware(['check.token'])->group(function () {
     // --------------------------------------------------------------------------------------------------------------
     // Monitor de usuarios
     Route::get('monitor', [UserController::class, 'monitor']);
+    Route::get('number-trays', [CreditController::class, 'indexNumberTrays']);
 });
