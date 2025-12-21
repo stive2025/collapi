@@ -3,6 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Responses\ResponseBase;
+use App\Models\Campain;
+use App\Models\CollectionCall;
+use App\Models\Credit;
+use App\Models\Management;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -166,6 +170,143 @@ class UserController extends Controller
 
             return ResponseBase::error(
                 'Error al desactivar el usuario',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
+     * Monitor de agentes - devuelve estadísticas de usuarios activos en campañas
+     */
+    public function monitor(Request $request)
+    {
+        try {
+            $campainQuery = Campain::where('id', $request->campain_id);
+
+            if ($request->filled('business_id')) {
+                $campainQuery->where('business_id', $request->business_id);
+            }
+            
+            $activeCampain = $campainQuery->first();
+
+            if (!$activeCampain) {
+                return ResponseBase::success(
+                    [],
+                    'No hay campañas activas'
+                );
+            }
+
+            $agentIds = $activeCampain->agents ?? [];
+
+            if (empty($agentIds)) {
+                return ResponseBase::success(
+                    [],
+                    'No hay agentes asignados a la campaña activa'
+                );
+            }
+
+            $users = User::whereIn('id', $agentIds)
+                ->where('is_active', true)
+                ->get();
+
+            $today = now()->startOfDay();
+            $monitorData = [];
+
+            foreach ($users as $user) {
+                $nroCredits = Credit::where('user_id', $user->id)
+                    ->where('business_id', $activeCampain->business_id)
+                    ->count();
+
+                // Gestiones en la campaña
+                $nroGestions = Management::where('created_by', $user->id)
+                    ->where('campain_id', $activeCampain->id)
+                    ->count();
+
+                // Gestiones del día
+                $nroGestionsDia = Management::where('created_by', $user->id)
+                    ->where('campain_id', $activeCampain->id)
+                    ->whereDate('created_at', $today)
+                    ->count();
+
+                // Gestiones efectivas en la campaña (asumiendo que 'state' indica efectividad)
+                $nroGestionsEfec = Management::where('created_by', $user->id)
+                    ->where('campain_id', $activeCampain->id)
+                    ->whereIn('state', ['EFECTIVA', 'PROMESA_PAGO', 'COMPROMISO_PAGO'])
+                    ->count();
+
+                // Gestiones efectivas del día
+                $nroGestionsEfecDia = Management::where('created_by', $user->id)
+                    ->where('campain_id', $activeCampain->id)
+                    ->whereIn('state', ['EFECTIVA', 'PROMESA_PAGO', 'COMPROMISO_PAGO'])
+                    ->whereDate('created_at', $today)
+                    ->count();
+
+                // Créditos pendientes
+                $nroPendientes = Credit::where('user_id', $user->id)
+                    ->where('business_id', $activeCampain->business_id)
+                    ->where('management_tray', 'PENDIENTE')
+                    ->count();
+
+                // Créditos en proceso
+                $nroProceso = Credit::where('user_id', $user->id)
+                    ->where('business_id', $activeCampain->business_id)
+                    ->where('management_tray', 'EN PROCESO')
+                    ->count();
+
+                // Créditos en proceso del día
+                $nroProcesoDia = Credit::where('user_id', $user->id)
+                    ->where('business_id', $activeCampain->business_id)
+                    ->where('management_tray', 'EN PROCESO')
+                    ->whereDate('last_sync_date', $today)
+                    ->count();
+
+                // Llamadas del día
+                $nroCalls = CollectionCall::where('created_by', $user->id)
+                    ->whereDate('created_at', $today)
+                    ->count();
+
+                // Llamadas acumuladas en la campaña
+                $nroCallsAcum = CollectionCall::where('created_by', $user->id)
+                    ->whereHas('credit', function($q) use ($activeCampain) {
+                        $q->where('business_id', $activeCampain->business_id);
+                    })
+                    ->count();
+
+                $monitorData[] = [
+                    'name' => $user->name,
+                    'campain_id' => $activeCampain->id,
+                    'campain_name' => $activeCampain->name,
+                    'user_state' => 'Conectado',
+                    'time_state' => '00:00:00',
+                    'data' => [
+                        'nro_credits' => $nroCredits,
+                        'nro_gestions' => $nroGestions,
+                        'nro_gestions_dia' => $nroGestionsDia,
+                        'nro_gestions_efec' => $nroGestionsEfec,
+                        'nro_gestions_efec_dia' => $nroGestionsEfecDia,
+                        'nro_pendientes' => $nroPendientes,
+                        'nro_proceso' => $nroProceso,
+                        'nro_proceso_dia' => $nroProcesoDia,
+                        'nro_calls' => $nroCalls,
+                        'nro_calls_acum' => $nroCallsAcum,
+                    ]
+                ];
+            }
+
+            return ResponseBase::success(
+                $monitorData,
+                'Monitor de agentes obtenido correctamente'
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Error in monitor endpoint', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al obtener el monitor de agentes',
                 ['error' => $e->getMessage()],
                 500
             );

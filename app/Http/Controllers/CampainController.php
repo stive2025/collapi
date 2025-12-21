@@ -170,13 +170,18 @@ class CampainController extends Controller
             if (isset($validated['sync_status'])) {
                 $query->where('sync_status', $validated['sync_status']);
             }
-
+            
             $creditIds = $query->pluck('id')->toArray();
 
             if (empty($creditIds)) {
                 return ResponseBase::success([
                     'transferred' => 0,
-                    'message' => 'No se encontraron créditos que cumplan los filtros'
+                    'message' => 'No se encontraron créditos que cumplan los filtros',
+                    'debug' => [
+                        'campain_id' => $campain->id,
+                        'business_id' => $campain->business_id,
+                        'filters_applied' => $validated
+                    ]
                 ], 'Transferencia completada');
             }
 

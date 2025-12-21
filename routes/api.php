@@ -29,11 +29,11 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('businesses', BusinessController::class);
     Route::apiResource('agencies', AgencieController::class);
     Route::apiResource('syncs', SyncController::class);
+    
     // --------------------------------------------------------------------------------------------------------------
     Route::apiResource('campains', CampainController::class);
     // Transferencia de créditos
     Route::patch('campains/transfer/{id}', [CampainController::class, 'transfer']);
-
     // --------------------------------------------------------------------------------------------------------------    
     Route::apiResource('condonations', CondonationController::class);
     // Revertir condonación
@@ -64,4 +64,7 @@ Route::middleware(['check.token'])->group(function () {
     // --------------------------------------------------------------------------------------------------------------
     // Desconectar usuario
     Route::post('logout', [LoginController::class, 'logout']);
+    // --------------------------------------------------------------------------------------------------------------
+    // Monitor de usuarios
+    Route::get('monitor', [UserController::class, 'monitor']);
 });
