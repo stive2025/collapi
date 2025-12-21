@@ -21,11 +21,39 @@ class Campain extends Model
         'business_id'
     ];
 
-    protected $casts = [
-        'agents' => 'array',
-    ];
-
     protected $appends = ['agents_details'];
+
+    /**
+     * Get and set the agents attribute
+     */
+    protected function agents(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                $decoded = json_decode($value, true);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    $temp = json_decode($value, true);
+                    if (is_string($temp)) {
+                        $decoded = json_decode($temp, true);
+                    }
+                }
+
+                return $decoded;
+            },
+            set: function ($value) {
+                if (is_null($value)) {
+                    return null;
+                }
+
+                if (is_array($value)) {
+                    return json_encode($value);
+                }
+
+                return $value;
+            }
+        );
+    }
 
     /**
      * Get the agents details with username and id
@@ -34,11 +62,25 @@ class Campain extends Model
     {
         return Attribute::make(
             get: function () {
-                if (!$this->agents || !is_array($this->agents)) {
+                $rawValue = $this->attributes['agents'] ?? null;
+
+                if (is_null($rawValue) || $rawValue === '') {
                     return [];
                 }
+                
+                $agents = null;
 
-                return User::whereIn('id', $this->agents)
+                if (is_string($rawValue)) {
+                    $agents = json_decode($rawValue, true);
+
+                    if (is_string($agents)) {
+                        $agents = json_decode($agents, true);
+                    }
+                } else {
+                    $agents = $rawValue;
+                }
+
+                return User::whereIn('id', $agents)
                     ->select('id', 'name')
                     ->get()
                     ->toArray();
