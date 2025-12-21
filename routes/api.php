@@ -14,6 +14,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\StatisticController;
 use App\Http\Controllers\SyncController;
 use Illuminate\Support\Facades\Route;
 
@@ -68,4 +69,8 @@ Route::middleware(['check.token'])->group(function () {
     // Monitor de usuarios
     Route::get('monitor', [UserController::class, 'monitor']);
     Route::get('number-trays', [CreditController::class, 'indexNumberTrays']);
+
+    // Estadísticas
+    Route::get('statistics/payments-with-management', [StatisticController::class, 'getPaymentsWithManagement']);
+    Route::get('statistics/metrics', [StatisticController::class, 'getMetrics']);
 });
