@@ -14,9 +14,16 @@ class CampainController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $campains = Campain::paginate(request('per_page', 15));
+        $perPage = (int) $request->query('per_page', 15);
+        $query = Campain::query();
+
+        if ($request->filled('state')) {
+            $query->where('state', $request->query('state'));
+        }
+
+        $campains = $query->paginate($perPage);
         
         return ResponseBase::success(
             $campains,
@@ -170,7 +177,7 @@ class CampainController extends Controller
             if (isset($validated['sync_status'])) {
                 $query->where('sync_status', $validated['sync_status']);
             }
-            
+
             $creditIds = $query->pluck('id')->toArray();
 
             if (empty($creditIds)) {
