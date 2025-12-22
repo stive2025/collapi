@@ -144,18 +144,18 @@ class CallController extends Controller
         );
 
         $originate_call = $asterisk_service->originateCall(
-            $request->input('channel'),
-            $request->input('exten'),
-            $request->input('context'),
-            $request->input('priority'),
-            $request->input('application'),
-            $request->input('data'),
-            $request->input('timeout'),
-            $request->input('caller_id'),
+            $request->input('channel', ''),
+            $request->input('exten', ''),
+            $request->input('context', ''),
+            $request->input('priority', '1'),
+            $request->input('application') ?? '',
+            $request->input('data', ''),
+            $request->input('timeout', 30000),
+            $request->input('caller_id', ''),
             $request->input('variables', []),
-            $request->input('account'),
-            $request->input('async'),
-            $request->input('action_id')
+            $request->input('account', ''),
+            $request->input('async', 'true'),
+            $request->input('action_id', '')
         );
 
         return ResponseBase::success($originate_call, 'Llamada iniciada correctamente');
