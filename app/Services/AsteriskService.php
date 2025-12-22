@@ -74,9 +74,9 @@ class AsteriskService
                 $action_id
             );
 
+            $manager->disconnect();
+            
             return $originate;
-
-            // $manager->disconnect();
 
         }else{
             return false;
