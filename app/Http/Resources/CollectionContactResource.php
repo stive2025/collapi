@@ -21,6 +21,11 @@ class CollectionContactResource extends JsonResource
             'phone_status' => $this->phone_status,
             'calls_effective' => $this->calls_effective ?? 0,
             'calls_not_effective' => $this->calls_not_effective ?? 0,
+            'client_id' => $this->client_id ?? null,
+            'client_name' => $this->client?->name ?? null,
+            'client_ci' => $this->client?->ci ?? null,
+            'client_type' => $this->client?->credits?->first()?->pivot?->type ?? null,
+            'sync_id' => $this->client?->credits?->first()?->sync_id ?? null,
         ];
     }
 }

@@ -46,10 +46,16 @@ class ContactController extends Controller
                 $query->where('phone_status', $request->query('phone_status'));
             }
 
-            $contacts = $query->paginate($perPage);
+            $contacts = $query->with(['client.credits'])->paginate($perPage);
 
             return ResponseBase::success(
-                CollectionContactResource::collection($contacts)->response()->getData(),
+                [
+                    'data' => CollectionContactResource::collection($contacts),
+                    'current_page' => $contacts->currentPage(),
+                    'last_page' => $contacts->lastPage(),
+                    'per_page' => $contacts->perPage(),
+                    'total' => $contacts->total(),
+                ],
                 'Contactos obtenidos correctamente'
             );
         } catch (\Exception $e) {
@@ -94,6 +100,8 @@ class ContactController extends Controller
     public function show(CollectionContact $contact)
     {
         try {
+            $contact->load(['client.credits']);
+
             return ResponseBase::success(
                 new CollectionContactResource($contact),
                 'Contacto obtenido correctamente'
