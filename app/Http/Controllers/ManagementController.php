@@ -134,6 +134,15 @@ class ManagementController extends Controller
     {
         try {
             $management = Management::create($request->validated());
+
+            $credit = $management->credit;
+
+            if ($credit) {
+                $credit->management_status = $management->state;
+                $credit->management_tray = $management->substate;
+                $credit->management_promise = $management->promise_date;
+                $credit->save();
+            }
             
             return ResponseBase::success(
                 new ManagementResource($management),
