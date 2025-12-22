@@ -25,4 +25,13 @@ class CollectionCall extends Model
         return $this->belongsTo(Credit::class, 'credit_id');
     }
 
+    public function contact()
+    {
+        return $this->belongsTo(CollectionContact::class, 'collection_contact_id');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

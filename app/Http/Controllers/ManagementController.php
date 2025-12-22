@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreManagementRequest;
+use App\Http\Resources\CollectionCallResource;
 use App\Http\Resources\ManagementResource;
 use App\Http\Responses\ResponseBase;
+use App\Models\CollectionCall;
 use App\Models\Management;
 use Illuminate\Http\Request;
 
@@ -87,6 +89,41 @@ class ManagementController extends Controller
         return ResponseBase::success(
             ManagementResource::collection($managements)->response()->getData(),
             'Gestiones obtenidas correctamente'
+        );
+    }
+
+    public function indexCallsByManagementID(Request $request, int $management_id)
+    {
+        $management = Management::where('id', $management_id)->first();
+
+        if (!$management) {
+            return ResponseBase::error(
+                'Gestión no encontrada',
+                [],
+                404
+            );
+        }
+
+        $calls_collection = $management->call_collection;
+
+        // Decodificar el JSON de call_collection
+        $call_ids = json_decode($calls_collection, true);
+
+        if (empty($call_ids) || !is_array($call_ids)) {
+            return ResponseBase::success(
+                [],
+                'No hay llamadas asociadas a esta gestión'
+            );
+        }
+
+        // Buscar las llamadas por IDs con las relaciones necesarias
+        $calls = CollectionCall::whereIn('id', $call_ids)
+            ->with(['contact.client', 'creator'])
+            ->get();
+
+        return ResponseBase::success(
+            CollectionCallResource::collection($calls),
+            'Llamadas obtenidas correctamente'
         );
     }
 
