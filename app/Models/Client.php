@@ -19,7 +19,9 @@ class Client extends Model
 
     public function credits()
     {
-        return $this->belongsToMany(Credit::class, 'client_credit');
+        return $this->belongsToMany(Credit::class, 'client_credit')
+            ->withPivot('type')
+            ->withTimestamps();
     }
 
     public function collectionContacts()

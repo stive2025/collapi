@@ -33,15 +33,15 @@ class ManagementResource extends JsonResource
             'client_id' => $this->client_id,
             'client_name' => $this->client->name ?? null,
             'client_ci' => $this->client->ci ?? null,
-            'client_type' => $this->client->type ?? null,
+            'client_type' => $this->credit?->clients?->where('id', $this->client_id)->first()?->pivot?->type,
             'credit_id' => $this->credit_id,
             'campain_id' => $this->campain_id,
             'campain_name' => $this->campain->name ?? null,
             'client' => $this->whenLoaded('client'),
             'credit' => $this->whenLoaded('credit'),
             'campain' => $this->whenLoaded('campain'),
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'created_at' => $this->created_at?->format('Y/m/d H:i:s'),
+            'updated_at' => $this->updated_at?->format('Y/m/d H:i:s'),
         ];
     }
 }
