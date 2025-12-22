@@ -75,8 +75,8 @@ class ManagementController extends Controller
             $query->where('campain_id', $request->query('campain_id'));
         }
 
-        $managements = $query->paginate($perPage);
-        
+        $managements = $query->with(['client', 'credit', 'campain', 'creator'])->paginate($perPage);
+
         return ResponseBase::success(
             ManagementResource::collection($managements)->response()->getData(),
             'Gestiones obtenidas correctamente'
@@ -110,7 +110,7 @@ class ManagementController extends Controller
      */
     public function show(Management $management)
     {
-        $management->load(['client', 'credit', 'campain']);
+        $management->load(['client', 'credit', 'campain', 'creator']);
         
         return ResponseBase::success(
             new ManagementResource($management),

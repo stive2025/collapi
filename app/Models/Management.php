@@ -31,4 +31,19 @@ class Management extends Model
     {
         return $this->belongsTo(Client::class);
     }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function credit()
+    {
+        return $this->belongsTo(Credit::class);
+    }
+
+    public function campain()
+    {
+        return $this->belongsTo(Campain::class);
+    }
 }

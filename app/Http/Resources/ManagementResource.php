@@ -23,7 +23,7 @@ class ManagementResource extends JsonResource
             'promise_date' => $this->promise_date,
             'promise_amount' => $this->promise_amount,
             'created_by' => $this->created_by,
-            'ctreated_by_name' => $this->creator->name ?? null,
+            'created_by_name' => $this->creator->name ?? null,
             'call_id' => $this->call_id,
             'call_collection' => $this->call_collection,
             'days_past_due' => $this->days_past_due,
