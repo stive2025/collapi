@@ -48,7 +48,9 @@ class CreditResource extends JsonResource
             'management_status' => $this->management_status,
             'management_tray' => $this->management_tray,
             'user_id' => $this->user_id,
+            'agent_name' => $this->user?->name ?? null,
             'business_id' => $this->business_id,
+            'business_name' => $this->business?->name ?? null,
             'clients' => $this->whenLoaded('clients', function() {
                 return $this->clients->map(function($client) {
                     return [

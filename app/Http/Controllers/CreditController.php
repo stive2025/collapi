@@ -33,7 +33,9 @@ class CreditController extends Controller
                     'collection_directions.latitude',
                     'collection_directions.longitude'
                 );
-            }
+            },
+            'user',
+            'business'
         ]);
     }
 
@@ -192,15 +194,17 @@ class CreditController extends Controller
      * Display the specified resource.
      */
     public function show(Credit $credit)
-    {   
+    {
         $credit->load([
             'clients' => fn($query) => $query->withPivot('type'),
             'clients.directions',
             'collectionManagements',
             'collectionCalls',
-            'collectionPayments'
+            'collectionPayments',
+            'user',
+            'business'
         ]);
-        
+
         return ResponseBase::success(
             new CreditResource($credit),
             'Crédito obtenido correctamente'
