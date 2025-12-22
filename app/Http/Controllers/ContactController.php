@@ -22,6 +22,18 @@ class ContactController extends Controller
                 $query->where('client_id', $request->query('client_id'));
             }
 
+            if ($request->filled('client_name')) {
+                $query->whereHas('client', function ($q) use ($request) {
+                    $q->where('name', 'LIKE', '%' . $request->query('client_name') . '%');
+                });
+            }
+
+            if ($request->filled('client_ci')) {
+                $query->whereHas('client', function ($q) use ($request) {
+                    $q->where('ci', $request->query('client_ci'));
+                });
+            }
+
             if ($request->filled('phone_number')) {
                 $query->where('phone_number', 'like', '%' . $request->query('phone_number') . '%');
             }
