@@ -39,7 +39,7 @@ class CollectionCreditController extends Controller
             if ($request->filled('created_at_to')) {
                 $query->whereDate('created_at', '<=', $request->created_at_to);
             }
-            
+
             if ($request->filled('group')) {
                 $groupBy = $request->group;
 
@@ -53,6 +53,11 @@ class CollectionCreditController extends Controller
                         DB::raw('SUM(capital) as total_capital'),
                         DB::raw('SUM(interest) as total_interest'),
                         DB::raw('SUM(mora) as total_mora'),
+                        DB::raw('SUM(safe) as total_safe'),
+                        DB::raw('SUM(management_collection_expenses) as total_management_collection_expenses'),
+                        DB::raw('SUM(collection_expenses) as total_collection_expenses'),
+                        DB::raw('SUM(legal_expenses) as total_legal_expenses'),
+                        DB::raw('SUM(other_values) as total_other_values'),
                         DB::raw('AVG(days_past_due) as avg_days_past_due'),
                         DB::raw('MAX(created_at) as last_created_at'),
                         DB::raw('MIN(created_at) as first_created_at')
