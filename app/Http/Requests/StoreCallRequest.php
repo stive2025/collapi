@@ -21,10 +21,12 @@ class StoreCallRequest extends FormRequest
     {
         return [
             'credit_id' => ['required', 'integer', 'exists:credits,id'],
-            'collection_contact_id' => [
+            'client_id' => [
                 'required',
                 'integer',
+                'exists:clients,id',
             ],
+            'phone_number' => ['required', 'string', 'max:20'],
             'state' => ['required', 'string', 'max:50'],
             'duration' => ['nullable', 'integer', 'min:0'],
             'media_path' => ['nullable', 'string', 'max:255'],
@@ -74,8 +76,10 @@ class StoreCallRequest extends FormRequest
         return [
             'credit_id.required' => 'El crédito es obligatorio.',
             'credit_id.exists' => 'El crédito especificado no existe.',
-            'collection_contact_id.required' => 'El contacto es obligatorio.',
-            'collection_contact_id.exists' => 'El contacto no existe o no pertenece al crédito especificado.',
+            'client_id.required' => 'El cliente es obligatorio.',
+            'client_id.exists' => 'El cliente no existe o no pertenece al crédito especificado.',
+            'phone_number.required' => 'El número de teléfono es obligatorio.',
+            'phone_number.max' => 'El número de teléfono no puede exceder 20 caracteres.',
             'state.required' => 'El estado de la llamada es obligatorio.',
             'state.max' => 'El estado no puede exceder 50 caracteres.',
             'duration.integer' => 'La duración debe ser un número entero.',

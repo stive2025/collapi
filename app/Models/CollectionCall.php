@@ -15,8 +15,9 @@ class CollectionCall extends Model
         'duration',
         'media_path',
         'channel',
+        'phone_number',
         'created_by',
-        'collection_contact_id',
+        'client_id',
         'credit_id'
     ];
 

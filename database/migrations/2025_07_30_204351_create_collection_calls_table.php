@@ -18,13 +18,14 @@ return new class extends Migration
             $table->string('duration');
             $table->string('media_path');
             $table->string('channel');
+            $table->string('phone_number');
             
             $table->string('created_by');
-
-            $table->foreignId('collection_contact_id');
-            $table->foreign('collection_contact_id')
+            
+            $table->foreignId('client_id');
+            $table->foreign('client_id')
                 ->references('id')
-                ->on('collection_contacts');
+                ->on('clients');
             
             $table->foreignId('credit_id');
             $table->foreign('credit_id')
