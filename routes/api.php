@@ -6,6 +6,7 @@ use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\CampainController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\CollectionCreditController;
 use App\Http\Controllers\CollectionPaymentController;
 use App\Http\Controllers\CondonationController;
 use App\Http\Controllers\ContactController;
@@ -76,4 +77,8 @@ Route::middleware(['check.token'])->group(function () {
 
     // Obtener llamadas por gestión
     Route::get('managements/{management_id}/calls', [ManagementController::class, 'indexCallsByManagementID']);
+
+    // Rutas para collection credits
+    Route::get('collection-credits', [CollectionCreditController::class, 'index']);
+    Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
 });

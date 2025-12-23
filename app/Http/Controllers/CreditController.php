@@ -212,7 +212,7 @@ class CreditController extends Controller
             'Crédito obtenido correctamente'
         );
     }
-    
+
     /**
      * Update the specified resource in storage.
      */
