@@ -39,6 +39,41 @@ class CollectionCreditController extends Controller
             if ($request->filled('created_at_to')) {
                 $query->whereDate('created_at', '<=', $request->created_at_to);
             }
+            
+            if ($request->filled('group')) {
+                $groupBy = $request->group;
+
+                $allowedGroups = ['credit_id', 'campain_id', 'user_id'];
+
+                if (in_array($groupBy, $allowedGroups)) {
+                    $query->select(
+                        $groupBy,
+                        DB::raw('COUNT(*) as total_records'),
+                        DB::raw('SUM(total_amount) as total_amount_sum'),
+                        DB::raw('SUM(capital) as total_capital'),
+                        DB::raw('SUM(interest) as total_interest'),
+                        DB::raw('SUM(mora) as total_mora'),
+                        DB::raw('AVG(days_past_due) as avg_days_past_due'),
+                        DB::raw('MAX(created_at) as last_created_at'),
+                        DB::raw('MIN(created_at) as first_created_at')
+                    )
+                    ->groupBy($groupBy)
+                    ->orderBy('total_records', 'desc');
+
+                    $collectionCredits = $query->paginate($request->input('per_page', 15));
+
+                    return ResponseBase::success(
+                        $collectionCredits,
+                        'Collection credits agrupados correctamente'
+                    );
+                } else {
+                    return ResponseBase::error(
+                        'Parámetro group inválido',
+                        ['allowed_values' => $allowedGroups],
+                        400
+                    );
+                }
+            }
 
             $query->orderBy('created_at', 'desc');
 
