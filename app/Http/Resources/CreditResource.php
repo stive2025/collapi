@@ -68,6 +68,15 @@ class CreditResource extends JsonResource
                             'neighborhood' => $dir->neighborhood,
                             'latitude' => $dir->latitude,
                             'longitude' => $dir->longitude,
+                        ]),
+                        'collection_contacts' => $client->collectionContacts?->map(fn($contact) => [
+                            'id' => $contact->id,
+                            'client_name' => $contact->client_name,
+                            'client_type' => $contact->client_type,
+                            'client_ci' => $contact->client_ci,
+                            'phone' => $contact->phone,
+                            'email' => $contact->email,
+                            'type' => $contact->type,
                         ])
                     ];
                 });
