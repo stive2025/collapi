@@ -34,6 +34,7 @@ class CreditController extends Controller
                     'collection_directions.longitude'
                 );
             },
+            'clients.collection_contacts',
             'user',
             'business'
         ]);

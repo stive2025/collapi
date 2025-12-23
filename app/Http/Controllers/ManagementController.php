@@ -139,7 +139,7 @@ class ManagementController extends Controller
 
             if ($credit) {
                 $credit->management_status = $management->state;
-                $credit->management_tray = $management->substate;
+                $credit->management_tray = "GESTIONADO";
                 $credit->management_promise = $management->promise_date;
                 $credit->save();
             }
