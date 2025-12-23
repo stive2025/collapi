@@ -34,7 +34,7 @@ class CreditController extends Controller
                     'collection_directions.longitude'
                 );
             },
-            'clients.collection_contacts',
+            'clients.collectionContacts',
             'user',
             'business'
         ]);
@@ -199,7 +199,7 @@ class CreditController extends Controller
         $credit->load([
             'clients' => fn($query) => $query->withPivot('type'),
             'clients.directions',
-            'clients.collection_contacts',
+            'clients.collectionContacts',
             'collectionManagements',
             'collectionCalls',
             'collectionPayments',
