@@ -199,6 +199,7 @@ class CreditController extends Controller
         $credit->load([
             'clients' => fn($query) => $query->withPivot('type'),
             'clients.directions',
+            'clients.collection_contacts',
             'collectionManagements',
             'collectionCalls',
             'collectionPayments',
