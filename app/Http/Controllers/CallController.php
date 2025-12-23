@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreCallRequest;
 use App\Http\Responses\ResponseBase;
+use App\Models\Client;
 use App\Models\CollectionCall;
 use App\Models\CollectionContact;
 use App\Services\AsteriskService;
@@ -71,16 +72,16 @@ class CallController extends Controller
                 $validated['created_by'] = $user->id;
             }
 
-            $contact = CollectionContact::find($validated['collection_contact_id']);
+            $client = Client::find($validated['client_id']);
             
-            if (!$contact) {
+            if (!$client) {
                 DB::rollBack();
-                return ResponseBase::error('Contacto no encontrado', null, 404);
+                return ResponseBase::error('Cliente no encontrado', null, 404);
             }
 
             $call = CollectionCall::create($validated);
-            $this->updateContactCounters($contact, $validated['state']);
-
+            $this->updateContactCounters($validated['phone_number'], $validated['state']);
+            
             DB::commit();
 
             return ResponseBase::success(
@@ -107,8 +108,14 @@ class CallController extends Controller
     /**
      * Actualiza los contadores del contacto según el estado de la llamada
      */
-    private function updateContactCounters(CollectionContact $contact, string $state): void
+    private function updateContactCounters(string $phone_number, string $state): void
     {
+        $contact = CollectionContact::where('phone_number', $phone_number)->first();
+
+        if (!$contact) {
+            return;
+        }
+
         $effectiveStates = [
             'CONTACTADO'
         ];
