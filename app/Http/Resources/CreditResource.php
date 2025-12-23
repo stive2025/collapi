@@ -71,12 +71,10 @@ class CreditResource extends JsonResource
                         ]),
                         'collection_contacts' => $client->collectionContacts?->map(fn($contact) => [
                             'id' => $contact->id,
-                            'client_name' => $contact->client_name,
-                            'client_type' => $contact->client_type,
-                            'client_ci' => $contact->client_ci,
-                            'phone' => $contact->phone,
-                            'email' => $contact->email,
-                            'type' => $contact->type,
+                            'phone' => $contact->phone_number,
+                            'type' => $contact->phone_type,
+                            'calls_effective' => $contact->calls_effective,
+                            'calls_not_effective' => $contact->calls_not_effective,
                         ])
                     ];
                 });
