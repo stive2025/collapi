@@ -47,7 +47,7 @@ class TemplateController extends Controller
             }
 
             if ($request->filled('only_roots') && $request->only_roots === 'true') {
-                $query->whereDoesntHave('parents');
+                $query->whereHas('parents');
             }
 
             $templates = $query->orderBy('name')->paginate($request->input('per_page', 15));
@@ -246,7 +246,7 @@ class TemplateController extends Controller
             }
 
             $visited[] = $currentId;
-            
+
             $template = TemplateModel::find($currentId);
             if ($template) {
                 $parentIds = $template->parents()->pluck('template_models.id')->toArray();
