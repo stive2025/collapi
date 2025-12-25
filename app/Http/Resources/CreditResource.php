@@ -83,7 +83,9 @@ class CreditResource extends JsonResource
                 return ManagementResource::collection($this->collectionManagements);
             }),
             'collection_calls' => $this->whenLoaded('collectionCalls'),
-            'collection_payments' => $this->whenLoaded('collectionPayments'),
+            'collection_payments' => $this->whenLoaded('collectionPayments', function() {
+                return CollectionPaymentResource::collection($this->collectionPayments);
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

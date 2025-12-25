@@ -148,7 +148,7 @@ class CreditController extends Controller
         }
 
         if (request()->filled('with_payments') && request('with_payments') === 'true') {
-            $query->with('collectionPayments');
+            $query->with(['collectionPayments.campain']);
         }
 
         $credits = $query->paginate(request('per_page', 15));
