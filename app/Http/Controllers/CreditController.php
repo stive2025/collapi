@@ -144,7 +144,7 @@ class CreditController extends Controller
         $this->applyFilters($query);
 
         if (request()->filled('with_managements') && request('with_managements') === 'true') {
-            $query->with('collectionManagements');
+            $query->with(['collectionManagements.client', 'collectionManagements.creator', 'collectionManagements.campain']);
         }
 
         if (request()->filled('with_payments') && request('with_payments') === 'true') {
