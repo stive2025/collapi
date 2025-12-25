@@ -15,11 +15,6 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->boolean('is_active')->default(true);
-            $table->foreignId('parent_id')->nullable();
-            $table->foreign('parent_id')
-                ->references('id')
-                ->on('template_models')
-                ->onDelete('cascade');
             $table->timestamps();
         });
     }

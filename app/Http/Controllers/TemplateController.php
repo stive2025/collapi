@@ -16,9 +16,9 @@ class TemplateController extends Controller
     {
         try {
             $query = TemplateModel::where('is_active', true);
-            
+
             if ($request->filled('group') && $request->group === 'hierarchical') {
-                $templates = $query->whereNull('parent_id')
+                $templates = $query->whereDoesntHave('parents')
                     ->with(['children' => function($query) {
                         $query->where('is_active', true)
                             ->orderBy('name');
@@ -33,11 +33,21 @@ class TemplateController extends Controller
             }
 
             if ($request->filled('parent_id')) {
-                if ($request->parent_id === 'null') {
-                    $query->whereNull('parent_id');
-                } else {
-                    $query->where('parent_id', $request->parent_id);
-                }
+                $templates = TemplateModel::where('is_active', true)
+                    ->whereHas('parents', function($query) use ($request) {
+                        $query->where('template_models.id', $request->parent_id);
+                    })
+                    ->orderBy('name')
+                    ->paginate($request->input('per_page', 15));
+
+                return ResponseBase::success(
+                    $templates,
+                    'Templates obtenidos correctamente'
+                );
+            }
+
+            if ($request->filled('only_roots') && $request->only_roots === 'true') {
+                $query->whereDoesntHave('parents');
             }
 
             $templates = $query->orderBy('name')->paginate($request->input('per_page', 15));
@@ -69,12 +79,29 @@ class TemplateController extends Controller
         try {
             $validated = $request->validate([
                 'name' => ['required', 'string', 'max:255'],
-                'parent_id' => ['nullable', 'exists:template_models,id'],
+                'parent_ids' => ['nullable', 'array'],
+                'parent_ids.*' => ['exists:template_models,id'],
                 'is_active' => ['sometimes', 'boolean']
             ]);
 
-            $template = TemplateModel::create($validated);
-            $template->load('parent');
+            $template = TemplateModel::create([
+                'name' => $validated['name'],
+                'is_active' => $validated['is_active'] ?? true,
+            ]);
+
+            if (isset($validated['parent_ids']) && !empty($validated['parent_ids'])) {
+                if (in_array($template->id, $validated['parent_ids'])) {
+                    return ResponseBase::error(
+                        'Un template no puede ser su propio padre',
+                        [],
+                        400
+                    );
+                }
+
+                $template->parents()->attach($validated['parent_ids']);
+            }
+
+            $template->load('parents');
 
             return ResponseBase::success(
                 $template,
@@ -108,30 +135,42 @@ class TemplateController extends Controller
 
             $validated = $request->validate([
                 'name' => ['sometimes', 'string', 'max:255'],
-                'parent_id' => ['nullable', 'exists:template_models,id'],
+                'parent_ids' => ['nullable', 'array'],
+                'parent_ids.*' => ['exists:template_models,id'],
                 'is_active' => ['sometimes', 'boolean']
             ]);
 
-            if (isset($validated['parent_id']) && $validated['parent_id'] == $id) {
-                return ResponseBase::error(
-                    'Un template no puede ser su propio padre',
-                    [],
-                    400
-                );
+            if (isset($validated['name'])) {
+                $template->name = $validated['name'];
             }
+            if (isset($validated['is_active'])) {
+                $template->is_active = $validated['is_active'];
+            }
+            $template->save();
 
-            if (isset($validated['parent_id']) && $validated['parent_id'] !== null) {
-                if ($this->wouldCreateCircularReference($id, $validated['parent_id'])) {
+            if (isset($validated['parent_ids'])) {
+                if (in_array($id, $validated['parent_ids'])) {
                     return ResponseBase::error(
-                        'Esta operación crearía una referencia circular',
+                        'Un template no puede ser su propio padre',
                         [],
                         400
                     );
                 }
+
+                foreach ($validated['parent_ids'] as $parentId) {
+                    if ($this->wouldCreateCircularReference($id, $parentId)) {
+                        return ResponseBase::error(
+                            'Esta operación crearía una referencia circular',
+                            [],
+                            400
+                        );
+                    }
+                }
+
+                $template->parents()->sync($validated['parent_ids']);
             }
 
-            $template->update($validated);
-            $template->load('parent');
+            $template->load('parents');
 
             return ResponseBase::success(
                 $template,
@@ -192,21 +231,27 @@ class TemplateController extends Controller
      */
     private function wouldCreateCircularReference(string $templateId, string $newParentId): bool
     {
-        $currentId = $newParentId;
         $visited = [];
+        $toCheck = [$newParentId];
 
-        while ($currentId !== null) {
+        while (!empty($toCheck)) {
+            $currentId = array_shift($toCheck);
+
             if ($currentId == $templateId) {
                 return true;
-            }
+            }   
 
             if (in_array($currentId, $visited)) {
-                return false;
+                continue;
             }
 
             $visited[] = $currentId;
-            $parent = TemplateModel::find($currentId);
-            $currentId = $parent ? $parent->parent_id : null;
+            
+            $template = TemplateModel::find($currentId);
+            if ($template) {
+                $parentIds = $template->parents()->pluck('template_models.id')->toArray();
+                $toCheck = array_merge($toCheck, $parentIds);
+            }
         }
 
         return false;

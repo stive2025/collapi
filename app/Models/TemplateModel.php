@@ -9,16 +9,31 @@ class TemplateModel extends Model
     protected $fillable = [
         'name',
         'is_active',
-        'parent_id',
     ];
 
-    public function parent()
+    /**
+     * Los padres de este template (muchos-a-muchos)
+     */
+    public function parents()
     {
-        return $this->belongsTo(TemplateModel::class, 'parent_id');
+        return $this->belongsToMany(
+            TemplateModel::class,
+            'template_parent',
+            'template_id',
+            'parent_id'
+        )->withTimestamps();
     }
 
+    /**
+     * Los hijos de este template (muchos-a-muchos)
+     */
     public function children()
     {
-        return $this->hasMany(TemplateModel::class, 'parent_id');
+        return $this->belongsToMany(
+            TemplateModel::class,
+            'template_parent',
+            'parent_id',
+            'template_id'
+        )->withTimestamps();
     }
 }
