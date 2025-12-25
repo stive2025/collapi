@@ -273,12 +273,18 @@ class UserController extends Controller
                     })
                     ->count();
 
+                $timeElapsed = now()->diffInSeconds($user->updated_at);
+                $hours = floor($timeElapsed / 3600);
+                $minutes = floor(($timeElapsed % 3600) / 60);
+                $seconds = $timeElapsed % 60;
+                $timeState = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+
                 $monitorData[] = [
                     'name' => $user->name,
                     'campain_id' => $activeCampain->id,
                     'campain_name' => $activeCampain->name,
-                    'user_state' => 'Conectado',
-                    'time_state' => '00:00:00',
+                    'user_state' => $user->status,
+                    'time_state' => $timeState,
                     'data' => [
                         'nro_credits' => $nroCredits,
                         'nro_gestions' => $nroGestions,
