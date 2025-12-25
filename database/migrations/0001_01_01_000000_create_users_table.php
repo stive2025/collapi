@@ -24,6 +24,8 @@ return new class extends Migration
             $table->timestamp('updated_password')->nullable();
             $table->string('code')->nullable();
             $table->timestamp('email_verified_at')->nullable();
+            $table->string('status')->default('FUERA DE LÍNEA');
+            $table->boolean('is_active')->default(true);
             $table->rememberToken();
             $table->timestamps();
         });

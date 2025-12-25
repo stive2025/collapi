@@ -25,6 +25,7 @@ class LoginController extends Controller
             }
             
             $user->tokens()->delete();
+            $user->update(['status' => 'CONECTADO']);
             $token = $user->createToken('login', ['all']);
 
             return ResponseBase::success(
@@ -68,15 +69,12 @@ class LoginController extends Controller
                 return ResponseBase::unauthorized('Usuario no autenticado');
             }
 
+            $user->update(['status' => 'FUERA DE LÍNEA']);
+
             $currentToken = $user->currentAccessToken();
-
-            
-
-            if (!$currentToken) {
-                return ResponseBase::unauthorized('Token no encontrado o ya revocado');
+            if ($currentToken) {
+                $currentToken->delete();
             }
-
-            $currentToken->delete();
 
             return ResponseBase::success(
                 null,
