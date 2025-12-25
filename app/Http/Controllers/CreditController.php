@@ -139,10 +139,18 @@ class CreditController extends Controller
     public function index()
     {
         $query = Credit::query();
-        
+
         $this->withClientsAndDirections($query);
         $this->applyFilters($query);
-        
+
+        if (request()->filled('with_managements') && request('with_managements') === 'true') {
+            $query->with('collectionManagements');
+        }
+
+        if (request()->filled('with_payments') && request('with_payments') === 'true') {
+            $query->with('collectionPayments');
+        }
+
         $credits = $query->paginate(request('per_page', 15));
 
         return ResponseBase::success(
