@@ -17,6 +17,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\StatisticController;
 use App\Http\Controllers\SyncController;
+use App\Http\Controllers\TemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [LoginController::class, 'login']);
@@ -31,6 +32,7 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('businesses', BusinessController::class);
     Route::apiResource('agencies', AgencieController::class);
     Route::apiResource('syncs', SyncController::class);
+    Route::apiResource('templates', TemplateController::class);
     
     // --------------------------------------------------------------------------------------------------------------
     Route::apiResource('campains', CampainController::class);
