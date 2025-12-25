@@ -197,7 +197,7 @@ class UserController extends Controller
                 );
             }
 
-            $agentIds = $activeCampain->agents ?? [];
+            $agentIds = json_decode($activeCampain->agents) ?? [];
 
             if (empty($agentIds)) {
                 return ResponseBase::success(
