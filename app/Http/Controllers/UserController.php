@@ -273,7 +273,7 @@ class UserController extends Controller
                     })
                     ->count();
 
-                $timeElapsed = now()->diffInSeconds($user->updated_at);
+                $timeElapsed = abs(now()->diffInSeconds($user->updated_at));
                 $hours = floor($timeElapsed / 3600);
                 $minutes = floor(($timeElapsed % 3600) / 60);
                 $seconds = $timeElapsed % 60;
