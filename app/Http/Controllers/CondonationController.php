@@ -112,7 +112,7 @@ class CondonationController extends Controller
                 'credit_id' => $validated['credit_id'],
                 'prev_dates' => json_encode($prevDates),
                 'post_dates' => json_encode($postDates),
-                'condoned_amount' => json_encode($condonedAmount),
+                'amount' => json_encode($condonedAmount),
                 'status' => 'APLICADA',
                 'created_by' => $user->id,
             ]);
