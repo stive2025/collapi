@@ -17,11 +17,17 @@ return new class extends Migration
             $table->string('sync_type');
             $table->string('state');
             $table->string('state_description');
-            $table->integer('new_credits');
-            $table->integer('nro_syncs');
-            $table->string('code_sync');
-            $table->string('nro_credits');
-
+            $table->integer('new_credits')->nullable();
+            $table->integer('nro_syncs')->nullable();
+            $table->string('nro_credits')->nullable();
+            $table->foreignId('business_id');
+            $table->foreign('business_id')
+                ->references('id')
+                ->on('businesses');
+            $table->foreignId('campain_id');
+            $table->foreign('campain_id')
+                ->references('id')
+                ->on('campains');
             $table->timestamps();
         });
     }

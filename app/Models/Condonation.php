@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Condonation extends Model
 {
@@ -11,8 +12,26 @@ class Condonation extends Model
         'amount',
         'prev_dates',
         'post_dates',
+        'condoned_amount',
         'created_by',
         'updated_by',
+        'reverted_by',
+        'reverted_at',
         'status',
     ];
+
+    public function credit(): BelongsTo
+    {
+        return $this->belongsTo(Credit::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function reverter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reverted_by');
+    }
 }

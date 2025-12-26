@@ -13,8 +13,10 @@ class CollectionSync extends Model
         'new_credits', // Nro de créditos o pagos nuevos
         'sync_type', // SYNC-CREDITS, SINC-PAYMENTS
         'state_description', // Descripción del estado del sync
-        'code_syncs', // Códigos de créditos sincronizados
+        'nro_syncs', // Nro de syncs realizados
         'nro_credits', // Nro de créditos o pagos sincronizados
-        'state' // Estado del sync
+        'state', // Estado del sync
+        'business_id',
+        'campain_id'
     ];
 }
