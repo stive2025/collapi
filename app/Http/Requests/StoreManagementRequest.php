@@ -86,6 +86,24 @@ class StoreManagementRequest extends FormRequest
                     );
                 }
             }
+            
+            $lastManagement = \App\Models\Management::where('credit_id', $this->credit_id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($lastManagement && $lastManagement->substate === 'VISITA CAMPO') {
+                $allowedSubstates = ['NOTIFICADO', 'ENTREGADO AVISO DE COBRANZA', 'NO NOTIFICADO'];
+
+                if (!in_array($this->substate, $allowedSubstates)) {
+                    throw new HttpResponseException(
+                        ResponseBase::error(
+                            'Cuando la última gestión fue VISITA CAMPO, el subestado solo puede ser: NOTIFICADO, ENTREGADO AVISO DE COBRANZA o NO NOTIFICADO',
+                            [],
+                            400
+                        )
+                    );
+                }
+            }
         });
     }
 
