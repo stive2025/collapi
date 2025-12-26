@@ -26,6 +26,7 @@ return new class extends Migration
             $table->integer('paid_fees');
             $table->integer('pending_fees');
             $table->float('managed_amount');
+            $table->string('nro_notification')->nullable();
 
             $table->foreignId('client_id');
             $table->foreign('client_id')

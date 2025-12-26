@@ -35,6 +35,7 @@ class StoreManagementRequest extends FormRequest
             'paid_fees' => ['required', 'integer', 'min:0'],
             'pending_fees' => ['required', 'integer', 'min:0'],
             'managed_amount' => ['nullable', 'numeric', 'min:0'],
+            'nro_notification' => ['nullable', 'string', 'max:255'],
             'client_id' => ['required', 'integer', 'exists:clients,id'],
             'credit_id' => ['required', 'integer', 'exists:credits,id'],
             'campain_id' => ['required', 'integer', 'exists:campains,id']
@@ -51,6 +52,37 @@ class StoreManagementRequest extends FormRequest
         );
     }
     
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            if ($this->substate === 'OFERTA DE PAGO') {
+                $existingOffer = \App\Models\Management::where('substate', 'OFERTA DE PAGO')
+                    ->where('campain_id', $this->campain_id)
+                    ->where('credit_id', $this->credit_id)
+                    ->exists();
+
+                if ($existingOffer) {
+                    $validator->errors()->add(
+                        'substate',
+                        'Ya existe una oferta de pago registrada para este crédito en esta campaña'
+                    );
+                }
+            }
+
+            if ($this->substate === 'NOTIFICADO') {
+                if (empty($this->nro_notification)) {
+                    $validator->errors()->add(
+                        'nro_notification',
+                        'Debe ingresar un Nro. de notificación para este subestado de gestión.'
+                    );
+                }
+            }
+        });
+    }
+
     /**
      * Get custom messages for validator errors.
      *

@@ -105,8 +105,6 @@ class ManagementController extends Controller
         }
 
         $calls_collection = $management->call_collection;
-
-        // Decodificar el JSON de call_collection
         $call_ids = json_decode($calls_collection, true);
 
         if (empty($call_ids) || !is_array($call_ids)) {
@@ -116,7 +114,6 @@ class ManagementController extends Controller
             );
         }
 
-        // Buscar las llamadas por IDs con las relaciones necesarias
         $calls = CollectionCall::whereIn('id', $call_ids)
             ->with(['contact.client', 'creator'])
             ->get();
@@ -138,12 +135,12 @@ class ManagementController extends Controller
             $credit = $management->credit;
 
             if ($credit) {
-                $credit->management_status = $management->state;
+                $credit->management_status = $management->substate;
                 $credit->management_tray = "GESTIONADO";
                 $credit->management_promise = $management->promise_date;
                 $credit->save();
             }
-            
+
             return ResponseBase::success(
                 new ManagementResource($management),
                 'Gestión creada correctamente',

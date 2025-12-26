@@ -22,6 +22,7 @@ class Management extends Model
         'paid_fees',
         'pending_fees',
         'managed_amount',
+        'nro_notification',
         'client_id',
         'credit_id',
         'campain_id'
