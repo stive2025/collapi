@@ -65,18 +65,24 @@ class StoreManagementRequest extends FormRequest
                     ->exists();
 
                 if ($existingOffer) {
-                    $validator->errors()->add(
-                        'substate',
-                        'Ya existe una oferta de pago registrada para este crédito en esta campaña'
+                    throw new HttpResponseException(
+                        ResponseBase::error(
+                            'Ya existe una oferta de pago registrada para este crédito en esta campaña',
+                            [],
+                            400
+                        )
                     );
                 }
             }
 
             if ($this->substate === 'NOTIFICADO') {
                 if (empty($this->nro_notification)) {
-                    $validator->errors()->add(
-                        'nro_notification',
-                        'Debe ingresar un Nro. de notificación para este subestado de gestión.'
+                    throw new HttpResponseException(
+                        ResponseBase::error(
+                            'Debe ingresar un Nro. de notificación para este subestado de gestión.',
+                            [],
+                            400
+                        )
                     );
                 }
             }
