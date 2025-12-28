@@ -155,7 +155,7 @@ class CampainController extends Controller
                 'user_origin.*' => ['integer', 'exists:users,id'],
                 'user_dstn' => ['required', 'array', 'min:1'],
                 'user_dstn.*' => ['integer', 'exists:users,id'],
-                'agencies' => ['nullable'],
+                'agency' => ['nullable'],
                 'status_management' => ['nullable', 'array'],
                 'status_management.*' => ['string'],
                 'collection_state' => ['nullable', 'array'],
@@ -173,12 +173,12 @@ class CampainController extends Controller
                 }
             }
 
-            if (isset($validated['agencies'])) {
-                if (is_string($validated['agencies'])) {
-                    $decoded = json_decode($validated['agencies'], true);
-                    $validated['agencies'] = is_array($decoded) ? $decoded : [$validated['agencies']];
-                } elseif (!is_array($validated['agencies'])) {
-                    $validated['agencies'] = [$validated['agencies']];
+            if (isset($validated['agency'])) {
+                if (is_string($validated['agency'])) {
+                    $decoded = json_decode($validated['agency'], true);
+                    $validated['agency'] = is_array($decoded) ? $decoded : [$validated['agency']];
+                } elseif (!is_array($validated['agency'])) {
+                    $validated['agency'] = [$validated['agency']];
                 }
             }
 
@@ -197,7 +197,7 @@ class CampainController extends Controller
             $this->applyRangeFilter($query, 'total_amount', $validated);
 
             $this->applyInFilter($query, 'user_id', $validated, 'user_origin');
-            $this->applyInFilter($query, 'agency', $validated, 'agencies');
+            $this->applyInFilter($query, 'agency', $validated, 'agency');
             $this->applyInFilter($query, 'management_status', $validated, 'status_management');
             $this->applyInFilter($query, 'collection_state', $validated, 'collection_state');
             $this->applyInFilter($query, 'sync_id', $validated, 'sync_ids');
