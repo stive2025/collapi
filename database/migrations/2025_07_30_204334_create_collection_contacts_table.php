@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('calls_effective')->nullable();
             $table->string('calls_not_effective')->nullable();
 
-            $table->integer('created_by');
+            $table->integer('created_by')->nullable();
             $table->integer('updated_by')->nullable();
             $table->integer('deleted_by')->nullable();
 

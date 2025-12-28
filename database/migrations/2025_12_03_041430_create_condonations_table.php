@@ -18,8 +18,10 @@ return new class extends Migration
             $table->decimal('amount', 15, 2);
             $table->jsonb('prev_dates')->nullable();
             $table->jsonb('post_dates')->nullable();
-            $table->string('created_by')->nullable();
-            $table->string('updated_by')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+            $table->unsignedBigInteger('reverted_by')->nullable();
+            $table->timestamp('reverted_at')->nullable();
             $table->string('status')->default('active');
             $table->timestamps();
         });

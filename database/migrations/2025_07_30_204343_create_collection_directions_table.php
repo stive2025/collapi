@@ -14,13 +14,13 @@ return new class extends Migration
         Schema::create('collection_directions', function (Blueprint $table) {
             $table->id();
             $table->string('type');
-            $table->string('direction');
-            $table->string('province');
-            $table->string('canton');
-            $table->string('parish');
-            $table->string('neighborhood');
-            $table->string('latitude');
-            $table->string('longitude');
+            $table->string('address')->nullable();
+            $table->string('province')->nullable();
+            $table->string('canton')->nullable();
+            $table->string('parish')->nullable();
+            $table->string('neighborhood')->nullable();
+            $table->string('latitude')->nullable();
+            $table->string('longitude')->nullable();
             $table->foreignId('client_id');
             $table->foreign('client_id')
                 ->references('id')
