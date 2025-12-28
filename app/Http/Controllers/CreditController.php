@@ -46,14 +46,20 @@ class CreditController extends Controller
     private function applyFilters($query)
     {
         return $query
-            ->when(request()->filled('user_id'), fn($q) => 
+            ->when(request()->filled('user_id'), fn($q) =>
                 $q->where('user_id', request('user_id'))
             )
-            ->when(request()->filled('agency'), fn($q) => 
+            ->when(request()->filled('user_ids'), fn($q) =>
+                $q->whereIn('user_id', request('user_ids'))
+            )
+            ->when(request()->filled('agency'), fn($q) =>
                 $q->where('agency', 'REGEXP', request('agency'))
             )
-            ->when(request()->filled('sync_id'), fn($q) => 
+            ->when(request()->filled('sync_id'), fn($q) =>
                 $q->where('sync_id', request('sync_id'))
+            )
+            ->when(request()->filled('sync_ids'), fn($q) =>
+                $q->whereIn('sync_id', request('sync_ids'))
             )
             ->when(request()->filled('client_name'), fn($q) => 
                 $q->whereHas('clients', fn($subQ) => 
