@@ -149,12 +149,16 @@ class CreditController extends Controller
             ->when(request()->filled('business_id'), fn($q) => 
                 $q->where('business_id', request('business_id'))
             )
-            ->when(request()->filled('sync_status'), fn($q) => 
+            ->when(request()->filled('sync_status'), fn($q) =>
                 $q->where('sync_status', request('sync_status'))
             )
-            ->when(request()->filled('collection_state'), fn($q) => 
-                $q->where('collection_state', request('collection_state'))
-            )
+            ->when(request()->filled('collection_state'), function($q) {
+                $value = request('collection_state');
+                if (is_array($value) || (is_string($value) && (str_starts_with(trim($value), '[') || str_contains($value, ',')))) {
+                    return $q->whereIn('collection_state', $this->toArray($value));
+                }
+                return $q->where('collection_state', $value);
+            })
             ->when(request()->filled('management_promise'), fn($q) => 
                 $q->where('management_promise', request('management_promise'))
             );
