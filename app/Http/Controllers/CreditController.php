@@ -41,6 +41,27 @@ class CreditController extends Controller
     }
 
     /**
+     * Convertir un valor a array si es necesario
+     */
+    private function toArray($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            if (str_starts_with($trimmed, '[') && str_ends_with($trimmed, ']')) {
+                $decoded = json_decode($trimmed, true);
+                return is_array($decoded) ? $decoded : [$value];
+            }
+            return explode(',', $value);
+        }
+
+        return [$value];
+    }
+
+    /**
      * Aplicar filtros comunes a la consulta de créditos
      */
     private function applyFilters($query)
@@ -50,7 +71,7 @@ class CreditController extends Controller
                 $q->where('user_id', request('user_id'))
             )
             ->when(request()->filled('user_ids'), fn($q) =>
-                $q->whereIn('user_id', request('user_ids'))
+                $q->whereIn('user_id', $this->toArray(request('user_ids')))
             )
             ->when(request()->filled('agency'), fn($q) =>
                 $q->where('agency', 'REGEXP', request('agency'))
@@ -59,7 +80,7 @@ class CreditController extends Controller
                 $q->where('sync_id', request('sync_id'))
             )
             ->when(request()->filled('sync_ids'), fn($q) =>
-                $q->whereIn('sync_id', request('sync_ids'))
+                $q->whereIn('sync_id', $this->toArray(request('sync_ids')))
             )
             ->when(request()->filled('client_name'), fn($q) => 
                 $q->whereHas('clients', fn($subQ) => 
