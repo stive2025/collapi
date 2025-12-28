@@ -80,11 +80,20 @@ class CampainController extends Controller
      */
     public function show(string $id)
     {
-        $campain = Campain::find($id);
+        $campain = Campain::select('campains.*', 'businesses.name as business_name')
+            ->leftJoin('businesses', 'campains.business_id', '=', 'businesses.id')
+            ->where('campains.id', $id)
+            ->first();
 
         if (!$campain) {
             return ResponseBase::notFound('Campaña no encontrada');
         }
+
+        $totalCredits = Credit::where('business_id', $campain->business_id)
+            ->where('sync_status', 'ACTIVE')
+            ->count();
+
+        $campain->total_credits = $totalCredits;
 
         return ResponseBase::success($campain, 'Campaña obtenida correctamente');
     }
