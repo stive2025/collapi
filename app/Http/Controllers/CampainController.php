@@ -147,25 +147,43 @@ class CampainController extends Controller
                 'days_past_due_max' => ['nullable', 'integer'],
                 'total_fees_min' => ['nullable', 'integer'],
                 'total_fees_max' => ['nullable', 'integer'],
+                'pending_fees_min' => ['nullable', 'integer'],
+                'pending_fees_max' => ['nullable', 'integer'],
                 'total_amount_min' => ['nullable', 'numeric'],
                 'total_amount_max' => ['nullable', 'numeric'],
                 'user_origin' => ['nullable', 'array'],
                 'user_origin.*' => ['integer', 'exists:users,id'],
                 'user_dstn' => ['required', 'array', 'min:1'],
                 'user_dstn.*' => ['integer', 'exists:users,id'],
-                'agencies' => ['nullable', 'array'],
-                'agencies.*' => ['string'],
+                'agencies' => ['nullable'],
                 'status_management' => ['nullable', 'array'],
                 'status_management.*' => ['string'],
                 'collection_state' => ['nullable', 'array'],
                 'collection_state.*' => ['string'],
-                'sync_id' => ['nullable', 'array'],
-                'sync_id.*' => ['string'],
+                'sync_ids' => ['nullable'],
                 'sync_status' => ['nullable', 'string'],
             ]);
 
+            if (isset($validated['sync_ids'])) {
+                if (is_string($validated['sync_ids'])) {
+                    $decoded = json_decode($validated['sync_ids'], true);
+                    $validated['sync_ids'] = is_array($decoded) ? $decoded : [$validated['sync_ids']];
+                } elseif (!is_array($validated['sync_ids'])) {
+                    $validated['sync_ids'] = [$validated['sync_ids']];
+                }
+            }
+
+            if (isset($validated['agencies'])) {
+                if (is_string($validated['agencies'])) {
+                    $decoded = json_decode($validated['agencies'], true);
+                    $validated['agencies'] = is_array($decoded) ? $decoded : [$validated['agencies']];
+                } elseif (!is_array($validated['agencies'])) {
+                    $validated['agencies'] = [$validated['agencies']];
+                }
+            }
+
             $campain = Campain::select('id', 'name', 'business_id')->find($id);
-            
+
             if (!$campain) {
                 return ResponseBase::notFound('Campaña no encontrada');
             }
@@ -175,13 +193,14 @@ class CampainController extends Controller
 
             $this->applyRangeFilter($query, 'days_past_due', $validated);
             $this->applyRangeFilter($query, 'total_fees', $validated);
+            $this->applyRangeFilter($query, 'pending_fees', $validated);
             $this->applyRangeFilter($query, 'total_amount', $validated);
 
             $this->applyInFilter($query, 'user_id', $validated, 'user_origin');
             $this->applyInFilter($query, 'agency', $validated, 'agencies');
             $this->applyInFilter($query, 'management_status', $validated, 'status_management');
             $this->applyInFilter($query, 'collection_state', $validated, 'collection_state');
-            $this->applyInFilter($query, 'sync_id', $validated, 'sync_id');
+            $this->applyInFilter($query, 'sync_id', $validated, 'sync_ids');
 
             if (isset($validated['sync_status'])) {
                 $query->where('sync_status', $validated['sync_status']);

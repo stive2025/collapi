@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::create('collection_payments', function (Blueprint $table) {
             $table->id();
 
-            $table->integer('created_by');
+            $table->integer('created_by')->nullable();
 
             $table->timestamp('payment_date');
             $table->timestamp('payment_deposit_date')->nullable();
             $table->float('payment_value');
             $table->float('payment_difference')->nullable();
             $table->string('payment_type');
-            $table->string('payment_method');
+            $table->string('payment_method')->nullable();
             $table->string('financial_institution')->nullable();
             $table->string('payment_reference')->nullable();
             $table->string('payment_status')->nullable();
@@ -37,7 +37,7 @@ return new class extends Migration
             $table->float('legal_expenses')->nullable();
             $table->float('other_values');
 
-            $table->text('prev_dates');
+            $table->text('prev_dates')->nullable();
 
             $table->string('with_management')->nullable();
             $table->integer('management_auto')->nullable();
