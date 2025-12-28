@@ -73,9 +73,13 @@ class CreditController extends Controller
             ->when(request()->filled('user_ids'), fn($q) =>
                 $q->whereIn('user_id', $this->toArray(request('user_ids')))
             )
-            ->when(request()->filled('agency'), fn($q) =>
-                $q->where('agency', 'REGEXP', request('agency'))
-            )
+            ->when(request()->filled('agency'), function($q) {
+                $value = request('agency');
+                if (is_array($value) || (is_string($value) && (str_starts_with(trim($value), '[') || str_contains($value, ',')))) {
+                    return $q->whereIn('agency', $this->toArray($value));
+                }
+                return $q->where('agency', 'REGEXP', $value);
+            })
             ->when(request()->filled('sync_id'), fn($q) =>
                 $q->where('sync_id', request('sync_id'))
             )
