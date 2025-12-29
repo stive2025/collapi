@@ -62,7 +62,7 @@ class CollectionPaymentController extends Controller
                 $query->where('payment_status', $request->query('payment_status'));
             }
 
-            $orderBy = $request->query('order_by', 'created_at');
+            $orderBy = $request->query('order_by', 'payment_date');
             $orderDir = $request->query('order_dir', 'desc');
             $query->orderBy($orderBy, $orderDir);
             $payments = $query->paginate($perPage);
