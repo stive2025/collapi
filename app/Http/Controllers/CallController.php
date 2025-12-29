@@ -85,14 +85,16 @@ class CallController extends Controller
 
             DB::commit();
 
-            // Enviar notificación WebSocket
+            // Cargar la relación credit después del commit
+            $call->load('credit');
+
+            // Enviar notificación WebSocket después de confirmar la transacción
             try {
-                $credit = $call->credit;
-                if ($credit && isset($credit->campain_id)) {
+                if ($call->credit && $call->credit->campain_id) {
                     $ws = new WebSocketService();
                     $ws->sendCallUpdate(
                         $validated['created_by'],
-                        $credit->campain_id
+                        $call->credit->campain_id
                     );
                 }
             } catch (\Exception $wsError) {
@@ -103,7 +105,7 @@ class CallController extends Controller
             }
 
             return ResponseBase::success(
-                $call->load('credit'),
+                $call,
                 'Llamada registrada correctamente',
                 201
             );
@@ -183,8 +185,7 @@ class CallController extends Controller
                 $request->input('async', 'true'),
                 $request->input('action_id', '')
             );
-
-            // Enviar notificación WebSocket - Usuario EN LLAMADA
+            
             try {
                 $user = $request->user();
                 $campainId = $request->input('campain_id');
