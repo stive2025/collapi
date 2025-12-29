@@ -46,6 +46,9 @@ class ContactController extends Controller
                 $query->where('phone_status', $request->query('phone_status'));
             }
 
+            $orderBy = $request->query('order_by', 'created_at');
+            $orderDir = $request->query('order_dir', 'desc');
+            $query->orderBy($orderBy, $orderDir);
             $contacts = $query->with(['client.credits'])->paginate($perPage);
 
             return ResponseBase::success(

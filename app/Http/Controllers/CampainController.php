@@ -22,8 +22,10 @@ class CampainController extends Controller
         if ($request->filled('state')) {
             $query->where('state', $request->query('state'));
         }
-
-        $campains = $query->paginate($perPage);
+        
+        $orderBy = $request->query('order_by', 'created_at');
+        $orderDir = $request->query('order_dir', 'desc');
+        $campains = $query->orderBy($orderBy, $orderDir)->paginate($perPage);
         
         return ResponseBase::success(
             $campains,

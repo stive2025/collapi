@@ -77,6 +77,10 @@ class ManagementController extends Controller
             $query->where('campain_id', $request->query('campain_id'));
         }
 
+        $orderBy = $request->query('order_by', 'created_at');
+        $orderDir = $request->query('order_dir', 'desc');
+        $query->orderBy($orderBy, $orderDir);
+        
         $managements = $query->with([
             'client',
             'credit.clients' => function ($query) {
