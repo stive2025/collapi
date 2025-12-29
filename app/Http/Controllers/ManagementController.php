@@ -8,7 +8,9 @@ use App\Http\Resources\ManagementResource;
 use App\Http\Responses\ResponseBase;
 use App\Models\CollectionCall;
 use App\Models\Management;
+use App\Services\WebSocketService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ManagementController extends Controller
 {
@@ -143,6 +145,20 @@ class ManagementController extends Controller
                 $credit->management_tray = "GESTIONADO";
                 $credit->management_promise = $management->promise_date;
                 $credit->save();
+            }
+
+            // Enviar notificación WebSocket
+            try {
+                $ws = new WebSocketService();
+                $ws->sendManagementUpdate(
+                    $management->created_by,
+                    $management->campain_id
+                );
+            } catch (\Exception $wsError) {
+                Log::error('WebSocket notification failed after management creation', [
+                    'error' => $wsError->getMessage(),
+                    'management_id' => $management->id
+                ]);
             }
 
             return ResponseBase::success(

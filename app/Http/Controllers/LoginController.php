@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Responses\ResponseBase;
 use App\Models\User;
+use App\Services\WebSocketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -27,6 +28,17 @@ class LoginController extends Controller
             $user->tokens()->delete();
             $user->update(['status' => 'CONECTADO']);
             $token = $user->createToken('login', ['all']);
+
+            // Enviar notificación WebSocket - Login
+            try {
+                $ws = new WebSocketService();
+                $ws->sendLoginUpdate($user->id);
+            } catch (\Exception $wsError) {
+                Log::error('WebSocket notification failed on login', [
+                    'error' => $wsError->getMessage(),
+                    'user_id' => $user->id
+                ]);
+            }
 
             return ResponseBase::success(
                 [
@@ -70,6 +82,17 @@ class LoginController extends Controller
             }
 
             $user->update(['status' => 'FUERA DE LÍNEA']);
+
+            // Enviar notificación WebSocket - Logout
+            try {
+                $ws = new WebSocketService();
+                $ws->sendLogoutUpdate($user->id);
+            } catch (\Exception $wsError) {
+                Log::error('WebSocket notification failed on logout', [
+                    'error' => $wsError->getMessage(),
+                    'user_id' => $user->id
+                ]);
+            }
 
             $currentToken = $user->currentAccessToken();
             if ($currentToken) {

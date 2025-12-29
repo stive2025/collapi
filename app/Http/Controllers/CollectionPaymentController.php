@@ -401,4 +401,43 @@ class CollectionPaymentController extends Controller
 
         return null;
     }
+
+    public function getPaymentsResume(){
+        try {
+            $startOfMonth = Carbon::now()->startOfMonth();
+            $endOfMonth = Carbon::now()->endOfMonth();
+            $startOfDay = Carbon::now()->startOfDay();
+            $endOfDay = Carbon::now()->endOfDay();
+
+            $monthBindings = [$startOfMonth, $endOfMonth];
+            $dayBindings = [$startOfDay, $endOfDay];
+
+            $paymentResume = CollectionPayment::select(
+                    'collection_payments.business_id',
+                    'businesses.name as business_name',
+                    DB::raw('COUNT(DISTINCT collection_payments.credit_id) as nro_credits_with_payment'),
+                    DB::raw('COALESCE(SUM(CASE WHEN collection_payments.payment_date BETWEEN ? AND ? THEN collection_payments.payment_value ELSE 0 END), 0) as total_amount_by_month'),
+                    DB::raw('COALESCE(SUM(CASE WHEN collection_payments.payment_date BETWEEN ? AND ? THEN collection_payments.payment_value ELSE 0 END), 0) as total_amount_by_day')
+                )
+                ->join('businesses', 'collection_payments.business_id', '=', 'businesses.id')
+                ->whereBetween('collection_payments.payment_date', [$startOfMonth, $endOfMonth])
+                ->groupBy('collection_payments.business_id', 'businesses.name')
+                ->orderBy('businesses.name')
+                ->addBinding(array_merge($monthBindings, $dayBindings), 'select')
+                ->get();
+
+            return ResponseBase::success($paymentResume, 'Resumen de pagos obtenido correctamente');
+        } catch (\Exception $e) {
+            Log::error('Error al obtener resumen de pagos', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al obtener el resumen de pagos',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
 }

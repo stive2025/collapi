@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\CollectionCall;
 use App\Models\CollectionContact;
 use App\Services\AsteriskService;
+use App\Services\WebSocketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -81,8 +82,25 @@ class CallController extends Controller
 
             $call = CollectionCall::create($validated);
             $this->updateContactCounters($validated['phone_number'], $validated['state']);
-            
+
             DB::commit();
+
+            // Enviar notificación WebSocket
+            try {
+                $credit = $call->credit;
+                if ($credit && isset($credit->campain_id)) {
+                    $ws = new WebSocketService();
+                    $ws->sendCallUpdate(
+                        $validated['created_by'],
+                        $credit->campain_id
+                    );
+                }
+            } catch (\Exception $wsError) {
+                Log::error('WebSocket notification failed after call creation', [
+                    'error' => $wsError->getMessage(),
+                    'call_id' => $call->id
+                ]);
+            }
 
             return ResponseBase::success(
                 $call->load('credit'),
@@ -144,28 +162,57 @@ class CallController extends Controller
 
     public function dial(Request $request)
     {
-        $asterisk_service = new AsteriskService(
-            env('ASTERISK_SERVER_IP'),
-            env('ASTERISK_USERNAME'),
-            env('ASTERISK_PASSWORD')
-        );
+        try {
+            $asterisk_service = new AsteriskService(
+                env('ASTERISK_SERVER_IP'),
+                env('ASTERISK_USERNAME'),
+                env('ASTERISK_PASSWORD')
+            );
 
-        $originate_call = $asterisk_service->originateCall(
-            $request->input('channel', ''),
-            $request->input('exten', ''),
-            $request->input('context', ''),
-            $request->input('priority', '1'),
-            $request->input('application') ?? '',
-            $request->input('data', ''),
-            $request->input('timeout', 30000),
-            $request->input('caller_id', ''),
-            $request->input('variables', []),
-            $request->input('account', ''),
-            $request->input('async', 'true'),
-            $request->input('action_id', '')
-        );
+            $originate_call = $asterisk_service->originateCall(
+                $request->input('channel', ''),
+                $request->input('exten', ''),
+                $request->input('context', ''),
+                $request->input('priority', '1'),
+                $request->input('application') ?? '',
+                $request->input('data', ''),
+                $request->input('timeout', 30000),
+                $request->input('caller_id', ''),
+                $request->input('variables', []),
+                $request->input('account', ''),
+                $request->input('async', 'true'),
+                $request->input('action_id', '')
+            );
 
-        return ResponseBase::success($originate_call, 'Llamada iniciada correctamente');
+            // Enviar notificación WebSocket - Usuario EN LLAMADA
+            try {
+                $user = $request->user();
+                $campainId = $request->input('campain_id');
+
+                if ($user && $campainId) {
+                    $ws = new WebSocketService();
+                    $ws->sendDialUpdate($user->id, $campainId);
+                }
+            } catch (\Exception $wsError) {
+                Log::error('WebSocket notification failed on dial', [
+                    'error' => $wsError->getMessage(),
+                    'user_id' => $user->id ?? null
+                ]);
+            }
+
+            return ResponseBase::success($originate_call, 'Llamada iniciada correctamente');
+        } catch (\Exception $e) {
+            Log::error('Error dialing call', [
+                'error' => $e->getMessage(),
+                'request' => $request->all()
+            ]);
+
+            return ResponseBase::error(
+                'Error al iniciar la llamada',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
     }
 
     public function hangup(Request $request)
