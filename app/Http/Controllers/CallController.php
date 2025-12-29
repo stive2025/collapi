@@ -11,7 +11,6 @@ use App\Services\AsteriskService;
 use App\Services\WebSocketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 
 class CallController extends Controller
 {
@@ -58,45 +57,33 @@ class CallController extends Controller
      */
     public function store(StoreCallRequest $request)
     {
-        DB::beginTransaction();
-        
         try {
             $validated = $request->validated();
 
-            // Asegurar que created_by esté presente
             if (!isset($validated['created_by'])) {
                 $user = $request->user();
                 if (!$user) {
-                    DB::rollBack();
                     return ResponseBase::unauthorized('Usuario no autenticado');
                 }
                 $validated['created_by'] = $user->id;
             }
 
             $client = Client::find($validated['client_id']);
-            
+
             if (!$client) {
-                DB::rollBack();
                 return ResponseBase::error('Cliente no encontrado', null, 404);
             }
 
             $call = CollectionCall::create($validated);
             $this->updateContactCounters($validated['phone_number'], $validated['state']);
-
-            DB::commit();
-
-            // Cargar la relación credit después del commit
             $call->load('credit');
 
-            // Enviar notificación WebSocket después de confirmar la transacción
             try {
-                if ($call->credit && $call->credit->campain_id) {
-                    $ws = new WebSocketService();
-                    $ws->sendCallUpdate(
-                        $validated['created_by'],
-                        $call->credit->campain_id
-                    );
-                }
+                $ws = new WebSocketService();
+                $ws->sendCallUpdate(
+                    $validated['created_by'],
+                    $request->campain_id
+                );
             } catch (\Exception $wsError) {
                 Log::error('WebSocket notification failed after call creation', [
                     'error' => $wsError->getMessage(),
@@ -110,8 +97,6 @@ class CallController extends Controller
                 201
             );
         } catch (\Exception $e) {
-            DB::rollBack();
-            
             Log::error('Error creating collection call', [
                 'message' => $e->getMessage(),
                 'payload' => $request->all()
@@ -185,7 +170,7 @@ class CallController extends Controller
                 $request->input('async', 'true'),
                 $request->input('action_id', '')
             );
-            
+
             try {
                 $user = $request->user();
                 $campainId = $request->input('campain_id');
