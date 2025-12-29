@@ -114,6 +114,8 @@ class UserController extends Controller
                 'phone' => ['nullable', 'string', 'max:20'],
                 'password' => ['sometimes', 'string', 'min:6'],
                 'role' => ['sometimes', 'string', 'max:50'],
+                'status' => ['sometimes', 'string', 'max:50'],
+                'is_active' => ['sometimes', 'boolean']
             ]);
 
             // Si se envía password, hashearlo
