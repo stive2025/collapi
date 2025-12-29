@@ -80,11 +80,13 @@ class CreditResource extends JsonResource
                 });
             }),
             'collection_managements' => $this->whenLoaded('collectionManagements', function() {
-                return ManagementResource::collection($this->collectionManagements);
+                return ManagementResource::collection($this->collectionManagements->sortByDesc('created_at')->values());
             }),
-            'collection_calls' => $this->whenLoaded('collectionCalls'),
+            'collection_calls' => $this->whenLoaded('collectionCalls', function() {
+                return $this->collectionCalls->sortByDesc('created_at')->values();
+            }),
             'collection_payments' => $this->whenLoaded('collectionPayments', function() {
-                return CollectionPaymentResource::collection($this->collectionPayments);
+                return CollectionPaymentResource::collection($this->collectionPayments->sortByDesc('payment_date')->values());
             }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
