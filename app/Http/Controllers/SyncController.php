@@ -13,7 +13,7 @@ class SyncController extends Controller
      */
     public function index()
     {
-        $syncs = CollectionSync::orderBy('created_at', 'desc')->get();
+        $syncs = CollectionSync::orderBy('updated_at', 'desc')->get();
 
         return ResponseBase::success($syncs, 'Lista de sincronizaciones obtenida');
     }
