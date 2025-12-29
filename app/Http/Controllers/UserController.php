@@ -8,6 +8,7 @@ use App\Models\CollectionCall;
 use App\Models\Credit;
 use App\Models\Management;
 use App\Models\User;
+use App\Services\WebSocketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -118,12 +119,39 @@ class UserController extends Controller
                 'is_active' => ['sometimes', 'boolean']
             ]);
 
-            // Si se envía password, hashearlo
             if (isset($validated['password'])) {
                 $validated['password'] = Hash::make($validated['password']);
             }
 
             $user->update($validated);
+
+            if (isset($validated['status'])) {
+                try {
+                    $ws = new WebSocketService();
+                    $status = $validated['status'];
+
+                    if ($status === 'CONECTADO') {
+                        $ws->sendLoginUpdate($user->id);
+                    } elseif ($status === 'FUERA DE LÍNEA') {
+                        $ws->sendLogoutUpdate($user->id);
+                    } elseif ($status === 'EN LLAMADA') {
+                        $campainId = $request->input('campain_id');
+                        if ($campainId) {
+                            $ws->sendDialUpdate($user->id, $campainId);
+                        }
+                    } else {
+                        $campainId = $request->input('campain_id', 'ALL');
+                        $ws->sendUserUpdate($user->id, $status, $campainId);
+                    }
+                } catch (\Exception $wsError) {
+                    Log::error('WebSocket notification failed on user update', [
+                        'error' => $wsError->getMessage(),
+                        'user_id' => $user->id,
+                        'status' => $validated['status'] ?? null
+                    ]);
+                }
+            }
+
             $user->makeHidden(['password']);
 
             return ResponseBase::success(
@@ -152,7 +180,6 @@ class UserController extends Controller
     public function destroy(User $user)
     {
         try {
-            // Desactivar usuario en lugar de eliminarlo
             $user->update([
                 'permission' => '[]',
                 'extension' => ''
@@ -220,55 +247,46 @@ class UserController extends Controller
                     ->where('business_id', $activeCampain->business_id)
                     ->count();
 
-                // Gestiones en la campaña
                 $nroGestions = Management::where('created_by', $user->id)
                     ->where('campain_id', $activeCampain->id)
                     ->count();
 
-                // Gestiones del día
                 $nroGestionsDia = Management::where('created_by', $user->id)
                     ->where('campain_id', $activeCampain->id)
                     ->whereDate('created_at', $today)
                     ->count();
 
-                // Gestiones efectivas en la campaña (asumiendo que 'state' indica efectividad)
                 $nroGestionsEfec = Management::where('created_by', $user->id)
                     ->where('campain_id', $activeCampain->id)
                     ->whereIn('state', ['EFECTIVA', 'PROMESA_PAGO', 'COMPROMISO_PAGO'])
                     ->count();
 
-                // Gestiones efectivas del día
                 $nroGestionsEfecDia = Management::where('created_by', $user->id)
                     ->where('campain_id', $activeCampain->id)
                     ->whereIn('state', ['EFECTIVA', 'PROMESA_PAGO', 'COMPROMISO_PAGO'])
                     ->whereDate('created_at', $today)
                     ->count();
 
-                // Créditos pendientes
                 $nroPendientes = Credit::where('user_id', $user->id)
                     ->where('business_id', $activeCampain->business_id)
                     ->where('management_tray', 'PENDIENTE')
                     ->count();
 
-                // Créditos en proceso
                 $nroProceso = Credit::where('user_id', $user->id)
                     ->where('business_id', $activeCampain->business_id)
                     ->where('management_tray', 'EN PROCESO')
                     ->count();
 
-                // Créditos en proceso del día
                 $nroProcesoDia = Credit::where('user_id', $user->id)
                     ->where('business_id', $activeCampain->business_id)
                     ->where('management_tray', 'EN PROCESO')
                     ->whereDate('last_sync_date', $today)
                     ->count();
 
-                // Llamadas del día
                 $nroCalls = CollectionCall::where('created_by', $user->id)
                     ->whereDate('created_at', $today)
                     ->count();
 
-                // Llamadas acumuladas en la campaña
                 $nroCallsAcum = CollectionCall::where('created_by', $user->id)
                     ->whereHas('credit', function($q) use ($activeCampain) {
                         $q->where('business_id', $activeCampain->business_id);
