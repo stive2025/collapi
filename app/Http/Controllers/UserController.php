@@ -285,6 +285,7 @@ class UserController extends Controller
                     'campain_name' => $activeCampain->name,
                     'user_state' => $user->status,
                     'time_state' => $timeState,
+                    'user_id' => $user->id,
                     'data' => [
                         'nro_credits' => $nroCredits,
                         'nro_gestions' => $nroGestions,

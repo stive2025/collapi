@@ -16,7 +16,7 @@ return new class extends Migration
 
             $table->string('state');
             $table->string('duration');
-            $table->string('media_path');
+            $table->string('media_path')->nullable();
             $table->string('channel');
             $table->string('phone_number');
             
