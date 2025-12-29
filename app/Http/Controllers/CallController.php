@@ -77,13 +77,20 @@ class CallController extends Controller
             $call = CollectionCall::create($validated);
             $this->updateContactCounters($validated['phone_number'], $validated['state']);
             $call->load('credit');
-
+            
             try {
-                $ws = new WebSocketService();
-                $ws->sendCallUpdate(
-                    $validated['created_by'],
-                    $request->campain_id
-                );
+                $user = $request->user();
+                $campainId = $request->input('campain_id');
+
+                if ($user && $campainId) {
+                    $user->update([
+                        'status' => 'CONECTADO',
+                        'updated_at' => now()
+                    ]);
+
+                    $ws = new WebSocketService();
+                    $ws->sendCallUpdate($user->id, $campainId);
+                }
             } catch (\Exception $wsError) {
                 Log::error('WebSocket notification failed after call creation', [
                     'error' => $wsError->getMessage(),
@@ -176,6 +183,10 @@ class CallController extends Controller
                 $campainId = $request->input('campain_id');
 
                 if ($user && $campainId) {
+                    $user->update([
+                        'status' => 'EN LLAMADA',
+                        'updated_at' => now()
+                    ]);
                     $ws = new WebSocketService();
                     $ws->sendDialUpdate($user->id, $campainId);
                 }
