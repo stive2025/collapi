@@ -110,7 +110,7 @@ class BusinessController extends Controller
         try {
             $validated = $request->validate([
                 'prelation_order' => ['required', 'array'],
-                'prelation_order.*' => ['string', 'in:capital,interest'],
+                'prelation_order.*' => ['string', 'in:capital,interest,mora,safe,legal_expenses,other_values,collection_expenses'],
             ]);
 
             // Convertir el array a JSON para guardar en la base de datos
