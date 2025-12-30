@@ -103,6 +103,42 @@ class BusinessController extends Controller
     }
 
     /**
+     * Update the prelation order of a business.
+     */
+    public function updatePrelation(Request $request, Business $business)
+    {
+        try {
+            $validated = $request->validate([
+                'prelation_order' => ['required', 'array'],
+                'prelation_order.*' => ['string', 'in:capital,interest'],
+            ]);
+
+            // Convertir el array a JSON para guardar en la base de datos
+            $business->update([
+                'prelation_order' => json_encode($validated['prelation_order'])
+            ]);
+
+            return ResponseBase::success(
+                $business,
+                'Orden de prelación actualizado exitosamente'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Error updating business prelation order', [
+                'message' => $e->getMessage(),
+                'business_id' => $business->id
+            ]);
+
+            return ResponseBase::error(
+                'Error al actualizar el orden de prelación',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Business $business)

@@ -30,6 +30,8 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('managements', ManagementController::class);
     Route::apiResource('payments', CollectionPaymentController::class);
     Route::apiResource('businesses', BusinessController::class);
+    // Actualizar orden de prelación
+    Route::patch('businesses/{business}/prelation', [BusinessController::class, 'updatePrelation']);
     Route::apiResource('agencies', AgencieController::class);
     Route::apiResource('syncs', SyncController::class);
     Route::apiResource('templates', TemplateController::class);

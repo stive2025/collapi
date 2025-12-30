@@ -26,9 +26,9 @@ class LoginController extends Controller
             }
             
             $user->tokens()->delete();
-            $user->update(['status' => 'CONECTADO']);
+            $user->update(['status' => 'CONECTADO','updated_at' => now()]);
             $token = $user->createToken('login', ['all']);
-
+            
             // Enviar notificación WebSocket - Login
             try {
                 $ws = new WebSocketService();
