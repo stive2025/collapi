@@ -46,6 +46,7 @@ class CreditResource extends JsonResource
             'sync_status' => $this->sync_status,
             'last_sync_date' => $this->last_sync_date,
             'management_status' => $this->management_status,
+            'management_promise' => $this->management_promise,
             'management_tray' => $this->management_tray,
             'user_id' => $this->user_id,
             'agent_name' => $this->user?->name ?? null,
