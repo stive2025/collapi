@@ -78,7 +78,7 @@ class TemplateController extends Controller
     {
         try {
             $validated = $request->validate([
-                'name' => ['required', 'string', 'max:255'],
+                'name' => ['required', 'string', 'max:255', 'unique:template_models,name'],
                 'parent_ids' => ['nullable', 'array'],
                 'parent_ids.*' => ['exists:template_models,id'],
                 'is_active' => ['sometimes', 'boolean']
