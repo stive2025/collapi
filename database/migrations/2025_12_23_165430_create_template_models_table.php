@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->boolean('is_active')->default(true);
+            $table->json('roles')->nullable();
+            $table->integer('days_past_due_min')->nullable();
             $table->timestamps();
         });
     }

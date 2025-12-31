@@ -81,11 +81,16 @@ class TemplateController extends Controller
                 'name' => ['required', 'string', 'max:255', 'unique:template_models,name'],
                 'parent_ids' => ['nullable', 'array'],
                 'parent_ids.*' => ['exists:template_models,id'],
+                'roles' => ['nullable', 'array'],
+                'roles.*' => ['string', 'in:all,campo,call,supervisor,admin'],
+                'days_past_due_min' => ['nullable', 'integer', 'min:0'],
                 'is_active' => ['sometimes', 'boolean']
             ]);
 
             $template = TemplateModel::create([
                 'name' => $validated['name'],
+                'roles' => isset($validated['roles']) ? json_encode($validated['roles']) : null,
+                'days_past_due_min' => $validated['days_past_due_min'] ?? null,
                 'is_active' => $validated['is_active'] ?? true,
             ]);
 
@@ -137,11 +142,20 @@ class TemplateController extends Controller
                 'name' => ['sometimes', 'string', 'max:255'],
                 'parent_ids' => ['nullable', 'array'],
                 'parent_ids.*' => ['exists:template_models,id'],
+                'roles' => ['nullable', 'array'],
+                'roles.*' => ['string', 'in:all,campo,call,supervisor,admin'],
+                'days_past_due_min' => ['nullable', 'integer', 'min:0'],
                 'is_active' => ['sometimes', 'boolean']
             ]);
 
             if (isset($validated['name'])) {
                 $template->name = $validated['name'];
+            }
+            if (isset($validated['roles'])) {
+                $template->roles = json_encode($validated['roles']);
+            }
+            if (isset($validated['days_past_due_min'])) {
+                $template->days_past_due_min = $validated['days_past_due_min'];
             }
             if (isset($validated['is_active'])) {
                 $template->is_active = $validated['is_active'];

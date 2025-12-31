@@ -9,6 +9,8 @@ class TemplateModel extends Model
     protected $fillable = [
         'name',
         'is_active',
+        'roles',
+        'days_past_due_min'
     ];
 
     /**
