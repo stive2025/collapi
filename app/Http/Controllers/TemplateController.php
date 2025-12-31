@@ -157,7 +157,14 @@ class TemplateController extends Controller
                     );
                 }
 
-                foreach ($validated['parent_ids'] as $parentId) {
+                // Obtener los parent_ids actuales
+                $currentParentIds = $template->parents()->pluck('template_models.id')->toArray();
+
+                // Filtrar solo los nuevos parent_ids que no existen
+                $newParentIds = array_diff($validated['parent_ids'], $currentParentIds);
+
+                // Verificar referencias circulares solo para los nuevos
+                foreach ($newParentIds as $parentId) {
                     if ($this->wouldCreateCircularReference($id, $parentId)) {
                         return ResponseBase::error(
                             'Esta operación crearía una referencia circular',
@@ -167,7 +174,10 @@ class TemplateController extends Controller
                     }
                 }
 
-                $template->parents()->sync($validated['parent_ids']);
+                // Agregar solo las nuevas relaciones sin eliminar las existentes
+                if (!empty($newParentIds)) {
+                    $template->parents()->attach($newParentIds);
+                }
             }
 
             $template->load('parents');
