@@ -11,6 +11,7 @@ use App\Http\Controllers\CollectionPaymentController;
 use App\Http\Controllers\CondonationController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CreditController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\UserController;
@@ -86,3 +87,9 @@ Route::middleware(['check.token'])->group(function () {
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);
     Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
 });
+
+// --------------------------------------------------------------------------------------------------------------
+// Exportaciones
+Route::get('exports/campain', [ExportController::class, 'exportCampain']);
+Route::get('exports/accounting', [ExportController::class, 'exportAccounting']);
+Route::get('exports/campain-assignments', [ExportController::class, 'exportCampainAssign']);

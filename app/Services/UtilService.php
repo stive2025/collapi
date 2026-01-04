@@ -12,32 +12,21 @@ class UtilService
         //
     }
 
-    public function setState(string $value){
-        if(
-            $value=='PREJUDICIAL' | 
-            $value=='EN TRAMITE JUDICIAL' | 
-            $value=='VENCIDO TOTAL' | 
-            $value=='Cartera Vendida' | 
-            $value=='Vencido'
-        ){
+    public function setState($value)
+    {
+        $value = strtoupper($value);
+        if (in_array($value, ['PREJUDICIAL', 'EN TRAMITE JUDICIAL', 'VENCIDO TOTAL', 'CARTERA VENDIDA', 'VENCIDO'])) {
             return 'Vencido';
-        }else if(
-            $value=='CANCELADO' | 
-            $value=='Cancelado'
-        ){
+        } elseif (in_array($value, ['CANCELADO', 'CANCELADO'])) {
             return 'Cancelado';
-        }else if($value=='JUDICIAL'){
+        } elseif ($value == 'JUDICIAL') {
             return 'Judicial';
-        }else if(
-            $value=='VIGENTE' | 
-            $value=="Vigente"
-        ){
+        } elseif ($value == 'VIGENTE') {
             return 'Vigente';
-        }else if($value=="Castigado"){
-            return 'Castigado';
-        }else if($value=='CONVENIO DE PAGO'){
+        } elseif ($value == 'CONVENIO DE PAGO') {
             return 'CONVENIO DE PAGO';
         }
+        return $value;
     }
     
     public function setRange(int $days_past_due){
@@ -293,5 +282,95 @@ class UtilService
                 'post_management' => $post_management
             ]);
         }
+    }
+
+    public function getMonthNumber($monthName)
+    {
+        $months = [
+            'enero' => 1, 'febrero' => 2, 'marzo' => 3, 'abril' => 4,
+            'mayo' => 5, 'junio' => 6, 'julio' => 7, 'agosto' => 8,
+            'septiembre' => 9, 'octubre' => 10, 'noviembre' => 11, 'diciembre' => 12
+        ];
+
+        return $months[strtolower($monthName)] ?? 1;
+    }
+
+    public function getLastThreeMonthsCampaigns($businessId)
+    {
+        $currentMonth = (int) date('m');
+        $currentYear = (int) date('Y');
+
+        $months = [];
+        for ($i = 3; $i >= 1; $i--) {
+            $month = $currentMonth - $i;
+            $year = $currentYear;
+
+            if ($month <= 0) {
+                $month += 12;
+                $year--;
+            }
+
+            $months[] = [
+                'month' => $month,
+                'year' => $year,
+                'name' => $this->getMonthName($month)
+            ];
+        }
+
+        $campaigns = [];
+        foreach ($months as $monthData) {
+            $startDate = "{$monthData['year']}-{$monthData['month']}-01 00:00:00";
+            $endDate = date('Y-m-t 23:59:59', strtotime($startDate));
+
+            $campaign = \App\Models\Campain::where('business_id', $businessId)
+                ->where(function($query) use ($startDate, $endDate) {
+                    $query->whereBetween('begin_time', [$startDate, $endDate])
+                          ->orWhereBetween('end_time', [$startDate, $endDate])
+                          ->orWhere(function($q) use ($startDate, $endDate) {
+                              $q->where('begin_time', '<=', $startDate)
+                                ->where('end_time', '>=', $endDate);
+                          });
+                })
+                ->first();
+
+            $campaigns[] = [
+                'month' => $monthData['month'],
+                'year' => $monthData['year'],
+                'name' => $monthData['name'],
+                'campaign_id' => $campaign ? $campaign->id : null
+            ];
+        }
+
+        return $campaigns;
+    }
+
+    public function getMonthName($monthNumber)
+    {
+        $months = [
+            1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO', 4 => 'ABRIL',
+            5 => 'MAYO', 6 => 'JUNIO', 7 => 'JULIO', 8 => 'AGOSTO',
+            9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE'
+        ];
+
+        return $months[$monthNumber] ?? 'ENERO';
+    }
+
+    public function getAgentNameForCreditInMonth($creditId, $campaignId)
+    {
+        if (!$campaignId) {
+            return '';
+        }
+
+        $collectionCredit = \App\Models\CollectionCredit::where('credit_id', $creditId)
+            ->where('campain_id', $campaignId)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        if ($collectionCredit && $collectionCredit->user_id) {
+            $user = \App\Models\User::find($collectionCredit->user_id);
+            return $user ? $user->name : '';
+        }
+
+        return '';
     }
 }
