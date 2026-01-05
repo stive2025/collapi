@@ -109,11 +109,16 @@ class CollectionCreditController extends Controller
     public function saveCurrentlyCampain(Request $request)
     {
         try {
-            $activeCampains = Campain::where('state', 'ACTIVE')->get();
+            $now = now();
+
+            $activeCampains = Campain::where('state', 'ACTIVE')
+                ->where('begin_time', '<=', $now)
+                ->where('end_time', '>=', $now)
+                ->get();
 
             if ($activeCampains->isEmpty()) {
                 return ResponseBase::error(
-                    'No hay campañas activas',
+                    'No hay campañas activas en el rango de fechas actual',
                     [],
                     404
                 );

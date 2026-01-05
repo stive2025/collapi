@@ -40,7 +40,7 @@ return new class extends Migration
                 ->references('id')
                 ->on('campains');
 
-            $table->foreignId('user_id');
+            $table->foreignId('user_id')->nullable();
             $table->foreign('user_id')
                 ->references('id')
                 ->on('users');
