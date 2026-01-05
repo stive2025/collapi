@@ -4,6 +4,7 @@ namespace App\Imports;
 
 use App\Models\Client;
 use App\Models\Credit;
+use App\Models\CollectionDirection;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -14,7 +15,6 @@ class ClientsImport implements ToCollection, WithHeadingRow, WithValidation
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
-            // Buscar o crear cliente por CI
             $client = Client::firstOrCreate(
                 ['ci' => $row['ci']],
                 [
@@ -26,12 +26,59 @@ class ClientsImport implements ToCollection, WithHeadingRow, WithValidation
                 ]
             );
 
-            // Verificar si el crédito existe
-            $credit = Credit::where('sync_id',$row['credit_id'])->first();
+            $credit = Credit::where('sync_id', $row['sync_id'])->first();
 
             if ($credit) {
-                // Asociar el crédito al cliente sin duplicar
-                $client->credits()->syncWithoutDetaching([$credit->id]);
+                $client->credits()->syncWithoutDetaching([
+                    $credit->id => ['type' => 'TITULAR']
+                ]);
+            }
+
+            if (isset($row['contactos']) && !empty($row['contactos'])) {
+                $contactos = json_decode($row['contactos'], true);
+
+                if (is_array($contactos)) {
+                    foreach ($contactos as $contacto) {
+                        if (empty($contacto) || !isset($contacto['ci']) || empty($contacto['ci'])) {
+                            continue;
+                        }
+
+                        $garante = Client::firstOrCreate(
+                            ['ci' => $contacto['ci']],
+                            [
+                                'name' => $contacto['name'] ?? '',
+                                'type' => $contacto['tipo'] ?? '',
+                                'gender' => $contacto['genero'] ?? '',
+                                'civil_status' => $contacto['estado_civil'] ?? '',
+                                'economic_activity' => $contacto['actividad_economica'] ?? '',
+                            ]
+                        );
+
+                        if ($credit) {
+                            $garante->credits()->syncWithoutDetaching([
+                                $credit->id => ['type' => 'GARANTE']
+                            ]);
+                        }
+
+                        if (isset($contacto['direccion']) && !empty($contacto['direccion'])) {
+                            CollectionDirection::updateOrCreate(
+                                [
+                                    'client_id' => $garante->id,
+                                    'type' => 'DOMICILIO'
+                                ],
+                                [
+                                    'direction' => $contacto['direccion'] ?? '',
+                                    'province' => $contacto['provincia'] ?? '',
+                                    'canton' => $contacto['canton'] ?? '',
+                                    'parish' => $contacto['parroquia'] ?? '',
+                                    'neighborhood' => $contacto['barrio'] ?? '',
+                                    'latitude' => $contacto['latitud'] ?? null,
+                                    'longitude' => $contacto['longitud'] ?? null,
+                                ]
+                            );
+                        }
+                    }
+                }
             }
         }
     }
@@ -44,8 +91,8 @@ class ClientsImport implements ToCollection, WithHeadingRow, WithValidation
             '*.type' => ['required', 'string'],
             '*.gender' => ['required', 'string'],
             '*.civil_status' => ['required', 'string'],
-            // '*.economic_activity' => ['required', 'string'],
-            // '*.credito_id' => ['required', 'exists:credits,id'],
+            '*.sync_id' => ['required', 'string'],
+            '*.contactos' => ['nullable', 'json'],
         ];
     }
 

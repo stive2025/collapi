@@ -154,10 +154,10 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
                 $join->on('mg.credit_id', '=', 'c.id');
             })
             // Join con collection_credits para filtrar por campaña
-            ->join('collection_credits as colc', function($join) use ($campainId) {
-                $join->on('colc.credit_id', '=', 'c.id')
-                    ->where('colc.campain_id', '=', $campainId);
-            })
+            // ->join('collection_credits as colc', function($join) use ($campainId) {
+            //     $join->on('colc.credit_id', '=', 'c.id')
+            //         ->where('colc.campain_id', '=', $campainId);
+            // })
             ->get();
 
         return collect($collectionCampain);
