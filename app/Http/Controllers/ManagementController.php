@@ -219,8 +219,9 @@ class ManagementController extends Controller
 
             $totalManagements = count($managementsData['data']);
             $syncedCount = 0;
+            $parseCampainId = $request->parse_campain_id;
 
-            DB::transaction(function () use ($managementsData, $campainId, &$syncedCount) {
+            DB::transaction(function () use ($managementsData, $campainId, $parseCampainId, &$syncedCount) {
                 foreach ($managementsData['data'] as $index => $managementData) {
                     $user = \App\Models\User::where('name', $managementData['byUser'])->first();
                     if (!$user) {
@@ -257,7 +258,7 @@ class ManagementController extends Controller
                                     'phone' => $call['phone'] ?? '',
                                     'channel' => $call['channel'] ?? null,
                                     'credit_id' => $credit->id,
-                                    'campain_id' => $managementData['parse_campain_id'],
+                                    'campain_id' => $parseCampainId,
                                     'created_by' => $callUser ? $callUser->id : $user->id,
                                     'created_at' => $call['fecha'] ?? now(),
                                     'updated_at' => $call['updated_at'] ?? now(),
@@ -284,7 +285,7 @@ class ManagementController extends Controller
                         'nro_notification' => $managementData['nro_notification'] ?? null,
                         'client_id' => $client->id,
                         'credit_id' => $credit->id,
-                        'campain_id' => $managementData['parse_campain_id'],
+                        'campain_id' => $parseCampainId,
                         'created_at' => $managementData['fecha'] ?? now(),
                         'updated_at' => $managementData['updated_at'] ?? now(),
                     ]);
