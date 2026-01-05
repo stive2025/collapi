@@ -16,7 +16,7 @@ class ClientsImport implements ToCollection, WithHeadingRow, WithValidation
     {
         foreach ($rows as $row) {
             $client = Client::firstOrCreate(
-                ['ci' => $row['ci']],
+                ['ci' => strval($row['ci'])],
                 [
                     'name' => $row['name'],
                     'type' => $row['type'],
@@ -44,7 +44,7 @@ class ClientsImport implements ToCollection, WithHeadingRow, WithValidation
                         }
 
                         $garante = Client::firstOrCreate(
-                            ['ci' => $contacto['ci']],
+                            ['ci' => strval($contacto['ci'])],
                             [
                                 'name' => $contacto['name'] ?? '',
                                 'type' => $contacto['tipo'] ?? '',
