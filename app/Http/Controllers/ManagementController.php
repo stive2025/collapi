@@ -199,11 +199,11 @@ class ManagementController extends Controller
     public function syncManagements(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'campain_id' => 'required|integer|exists:campains,id'
-            ]);
+            // $validated = $request->validate([
+            //     'campain_id' => 'required|integer|exists:campains,id'
+            // ]);
 
-            $campainId = $validated['campain_id'];
+            $campainId = $request->campain_id;
             $apiUrl = "https://core.sefil.com.ec/api/public/api/managments?campain_id={$campainId}";
 
             $response = file_get_contents($apiUrl);
