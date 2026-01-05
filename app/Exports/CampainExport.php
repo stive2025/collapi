@@ -82,9 +82,20 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
     {
         $campainId = $this->campainId;
 
+        $campain = DB::table('campains')->where('id', $campainId)->first();
+
+        if (!$campain) {
+            return collect([]);
+        }
+
+        $businessId = $campain->business_id;
+
+        $business = DB::table('businesses')->where('id', $businessId)->first();
+        $businessName = $business ? $business->name : '';
+
         $collectionCampain = DB::table('credits as c')
             ->select(
-                DB::raw('CONCAT("credits-", c.sync_id) as sync_id'),
+                DB::raw('CONCAT("' . $businessName . '-", c.sync_id) as sync_id'),
                 'u.name as Agente',
                 'c.collection_state',
                 DB::raw("
@@ -129,15 +140,14 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
                 DB::raw("DATE_FORMAT(c.updated_at, '%d/%m/%Y %H:%i:%s') as updated_at"),
                 'c.id as id'
             )
-            // Join con clients a través de la tabla pivote client_credit
+            ->where('c.business_id', $businessId)
+            ->where('c.sync_status', 'ACTIVE')
             ->join('client_credit as cc', 'cc.credit_id', '=', 'c.id')
             ->join('clients as cl', function($join) {
                 $join->on('cl.id', '=', 'cc.client_id')
                     ->where('cc.type', '=', 'TITULAR');
             })
-            // Join con users
             ->leftJoin('users as u', 'u.id', '=', 'c.user_id')
-            // Subquery para obtener estadísticas de gestiones
             ->leftJoin(DB::raw("(
                 SELECT
                     credit_id,
@@ -153,11 +163,6 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
             ) as mg"), function($join) {
                 $join->on('mg.credit_id', '=', 'c.id');
             })
-            // Join con collection_credits para filtrar por campaña
-            // ->join('collection_credits as colc', function($join) use ($campainId) {
-            //     $join->on('colc.credit_id', '=', 'c.id')
-            //         ->where('colc.campain_id', '=', $campainId);
-            // })
             ->get();
 
         return collect($collectionCampain);

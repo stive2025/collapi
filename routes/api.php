@@ -82,6 +82,8 @@ Route::middleware(['check.token'])->group(function () {
 
     // Obtener llamadas por gestión
     Route::get('managements/{management_id}/calls', [ManagementController::class, 'indexCallsByManagementID']);
+    // Sincronización masiva de gestiones
+    Route::post('managements/sync', [ManagementController::class, 'syncManagements']);
 
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);

@@ -10,6 +10,7 @@ use App\Models\CollectionCall;
 use App\Models\Management;
 use App\Services\WebSocketService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ManagementController extends Controller
@@ -188,10 +189,129 @@ class ManagementController extends Controller
             'campain',
             'creator'
         ]);
-        
+
         return ResponseBase::success(
             new ManagementResource($management),
             'Gestión obtenida correctamente'
         );
+    }
+
+    public function syncManagements(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'campain_id' => 'required|integer|exists:campains,id'
+            ]);
+
+            $campainId = $validated['campain_id'];
+            $apiUrl = "https://core.sefil.com.ec/api/public/api/managments?campain_id={$campainId}";
+
+            $response = file_get_contents($apiUrl);
+            $managementsData = json_decode($response, true);
+
+            if (!isset($managementsData['data']) || !is_array($managementsData['data'])) {
+                return ResponseBase::error(
+                    'No se obtuvieron gestiones de la API',
+                    [],
+                    400
+                );
+            }
+
+            $totalManagements = count($managementsData['data']);
+            $syncedCount = 0;
+
+            DB::transaction(function () use ($managementsData, $campainId, &$syncedCount) {
+                foreach ($managementsData['data'] as $index => $managementData) {
+                    $user = \App\Models\User::where('name', $managementData['byUser'])->first();
+                    if (!$user) {
+                        throw new \Exception("Usuario '{$managementData['byUser']}' no encontrado en índice {$index}");
+                    }
+
+                    $client = \App\Models\Client::where('ci', $managementData['client_ci'])->first();
+                    if (!$client) {
+                        throw new \Exception("Cliente con CI '{$managementData['client_ci']}' no encontrado en índice {$index}");
+                    }
+
+                    $credit = \App\Models\Credit::find($managementData['id_credit']);
+                    if (!$credit) {
+                        throw new \Exception("Crédito con ID '{$managementData['id_credit']}' no encontrado en índice {$index}");
+                    }
+
+                    $newCallIds = [];
+                    $callIdsExtras = json_decode($managementData['id_calls_extras'], true);
+
+                    if (is_array($callIdsExtras) && !empty($callIdsExtras)) {
+                        foreach ($callIdsExtras as $oldCallId) {
+                            $callApiUrl = "https://core.sefil.com.ec/api/public/api/calls/{$oldCallId}";
+                            $callResponse = file_get_contents($callApiUrl);
+                            $callData = json_decode($callResponse, true);
+
+                            if (isset($callData['call'])) {
+                                $call = $callData['call'];
+
+                                $callUser = \App\Models\User::where('name', $call['byUser'])->first();
+
+                                $newCall = CollectionCall::create([
+                                    'state_call' => $call['state_call'] ?? '',
+                                    'duration_call' => $call['duration_call'] ?? 0,
+                                    'phone' => $call['phone'] ?? '',
+                                    'channel' => $call['channel'] ?? null,
+                                    'credit_id' => $credit->id,
+                                    'campain_id' => $managementData['parse_campain_id'],
+                                    'created_by' => $callUser ? $callUser->id : $user->id,
+                                    'created_at' => $call['fecha'] ?? now(),
+                                    'updated_at' => $call['updated_at'] ?? now(),
+                                ]);
+
+                                $newCallIds[] = $newCall->id;
+                            }
+                        }
+                    }
+
+                    Management::create([
+                        'state' => $managementData['state_gestion'],
+                        'substate' => $managementData['substate_gestion'],
+                        'observation' => $managementData['observation'] ?? null,
+                        'promise_date' => $managementData['date_promise'] ?? now(),
+                        'promise_amount' => $managementData['monto_a_pagar'] ?? null,
+                        'created_by' => $user->id,
+                        'call_id' => null,
+                        'call_collection' => json_encode($newCallIds),
+                        'days_past_due' => $managementData['dias_vencidos'] ?? 0,
+                        'paid_fees' => $managementData['cuotas_pagadas'] ?? 0,
+                        'pending_fees' => $managementData['cuotas_pendientes'] ?? 0,
+                        'managed_amount' => $managementData['monto'] ?? 0,
+                        'nro_notification' => $managementData['nro_notification'] ?? null,
+                        'client_id' => $client->id,
+                        'credit_id' => $credit->id,
+                        'campain_id' => $managementData['parse_campain_id'],
+                        'created_at' => $managementData['fecha'] ?? now(),
+                        'updated_at' => $managementData['updated_at'] ?? now(),
+                    ]);
+
+                    $syncedCount++;
+                }
+            });
+
+            return ResponseBase::success(
+                [
+                    'total_managements' => $totalManagements,
+                    'synced' => $syncedCount
+                ],
+                "Sincronización completada exitosamente: {$syncedCount} gestiones sincronizadas"
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Error en sincronización masiva de gestiones', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al sincronizar gestiones',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
     }
 }
