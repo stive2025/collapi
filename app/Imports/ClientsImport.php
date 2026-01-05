@@ -67,7 +67,7 @@ class ClientsImport implements ToCollection, WithHeadingRow, WithValidation
                                     'type' => 'DOMICILIO'
                                 ],
                                 [
-                                    'direction' => $contacto['direccion'] ?? '',
+                                    'address' => $contacto['direccion'] ?? '',
                                     'province' => $contacto['provincia'] ?? '',
                                     'canton' => $contacto['canton'] ?? '',
                                     'parish' => $contacto['parroquia'] ?? '',
