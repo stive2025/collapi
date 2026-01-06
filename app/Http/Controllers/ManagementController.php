@@ -196,46 +196,138 @@ class ManagementController extends Controller
         );
     }
 
+    /**
+     * Sincronización masiva de gestiones desde la API externa
+     */
     public function syncManagements(Request $request)
     {
         try {
-            // $validated = $request->validate([
-            //     'campain_id' => 'required|integer|exists:campains,id'
-            // ]);
-
             $campainId = $request->campain_id;
-            $apiUrl = "https://core.sefil.com.ec/api/public/api/managments?campain_id={$campainId}";
-
-            $response = file_get_contents($apiUrl);
-            $managementsData = json_decode($response, true);
-
-            if (!isset($managementsData['data']) || !is_array($managementsData['data'])) {
-                return ResponseBase::error(
-                    'No se obtuvieron gestiones de la API',
-                    [],
-                    400
-                );
-            }
-
-            $totalManagements = count($managementsData['data']);
-            $syncedCount = 0;
             $parseCampainId = $request->parse_campain_id;
 
-            DB::transaction(function () use ($managementsData, $campainId, $parseCampainId, &$syncedCount) {
-                foreach ($managementsData['data'] as $index => $managementData) {
+            $parseDateAndAdd5Hours = function($dateString) use (&$debugCounter) {
+                static $callCount = 0;
+                $callCount++;
+
+                if (empty($dateString)) {
+                    if ($callCount <= 2) {
+                        Log::warning("parseDateAndAdd5Hours recibió fecha vacía, retornando now()");
+                    }
+                    return now();
+                }
+
+                try {
+                    $date = \Carbon\Carbon::parse($dateString);
+                    $dateWithOffset = $date->addHours(5);
+
+                    if ($callCount <= 2) {
+                        Log::info("parseDateAndAdd5Hours - Input: '{$dateString}', Output: '{$dateWithOffset->toDateTimeString()}'");
+                    }
+
+                    return $dateWithOffset;
+                } catch (\Exception $e) {
+                    Log::error("Error parseando fecha '{$dateString}': {$e->getMessage()}");
+                    return now();
+                }
+            };
+
+            $parsePromiseDate = function($dateString) use ($parseDateAndAdd5Hours) {
+                if (empty($dateString) || $dateString === 'N/D' || $dateString === 'n/d') {
+                    return null;
+                }
+
+                try {
+                    return $parseDateAndAdd5Hours($dateString);
+                } catch (\Exception $e) {
+                    return null;
+                }
+            };
+
+            $allManagements = [];
+            $currentPage = 1;
+            $lastPage = 1;
+
+            do {
+                $apiUrl = "https://core.sefil.com.ec/api/public/api/managments?campain_id={$campainId}&page={$currentPage}&per_page=100";
+                $response = file_get_contents($apiUrl);
+                $managementsData = json_decode($response, true);
+
+                if (!isset($managementsData['data']['data']) || !is_array($managementsData['data']['data'])) {
+                    if ($currentPage === 1) {
+                        return ResponseBase::error(
+                            'No se obtuvieron gestiones de la API',
+                            [],
+                            400
+                        );
+                    }
+                    break;
+                }
+
+                $allManagements = array_merge($allManagements, $managementsData['data']['data']);
+
+                $lastPage = $managementsData['data']['last_page'] ?? 1;
+                $currentPage++;
+
+            } while ($currentPage <= $lastPage);
+
+            $managements = $allManagements;
+            $totalManagements = count($managements);
+            $syncedCount = 0;
+            $callsCache = [];
+            $currentCallPage = 1;
+            $lastCallPage = 1;
+
+            do {
+                try {
+                    $callsApiUrl = "https://core.sefil.com.ec/api/public/api/calls?page={$currentCallPage}&per_page=100000";
+                    $callsResponse = file_get_contents($callsApiUrl);
+                    $callsData = json_decode($callsResponse, true);
+
+                    if (isset($callsData['data']) && is_array($callsData['data'])) {
+                        $pageCallsCount = count($callsData['data']);
+
+                        foreach ($callsData['data'] as $call) {
+                            if (isset($call['id_call'])) {
+                                $callsCache[$call['id_call']] = $call;
+                            }
+                            if (isset($call['id'])) {
+                                $callsCache[$call['id']] = $call;
+                            }
+                        }
+
+                        $lastCallPage = $callsData['last_page'] ?? 1;
+                        $currentCallPage++;
+                    } else {
+                        Log::warning("No se encontraron datos en página {$currentCallPage}");
+                        break;
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Error al obtener página {$currentCallPage} de llamadas: {$e->getMessage()}");
+                    break;
+                }
+            } while ($currentCallPage <= $lastCallPage);
+
+            Log::info("Llamadas cargadas en cache: " . count($callsCache));
+
+            DB::transaction(function () use ($managements, $campainId, $parseCampainId, $parseDateAndAdd5Hours, $parsePromiseDate, $callsCache, &$syncedCount) {
+                foreach ($managements as $index => $managementData) {
                     $user = \App\Models\User::where('name', $managementData['byUser'])->first();
                     if (!$user) {
-                        throw new \Exception("Usuario '{$managementData['byUser']}' no encontrado en índice {$index}");
+                        Log::warning("Usuario '{$managementData['byUser']}' no encontrado en índice {$index}, se omite");
+                        continue;
                     }
 
                     $client = \App\Models\Client::where('ci', $managementData['client_ci'])->first();
                     if (!$client) {
-                        throw new \Exception("Cliente con CI '{$managementData['client_ci']}' no encontrado en índice {$index}");
+                        Log::warning("Cliente con CI '{$managementData['client_ci']}' no encontrado en índice {$index}, se omite");
+                        continue;
                     }
+                    
+                    $credit = \App\Models\Credit::where('sync_id', $managementData['sync_id'])->first();
 
-                    $credit = \App\Models\Credit::find($managementData['id_credit']);
                     if (!$credit) {
-                        throw new \Exception("Crédito con ID '{$managementData['id_credit']}' no encontrado en índice {$index}");
+                        Log::warning("Crédito con sync_id '{$managementData['sync_id']}' no encontrado en índice {$index}, se omite");
+                        continue;
                     }
 
                     $newCallIds = [];
@@ -243,52 +335,61 @@ class ManagementController extends Controller
 
                     if (is_array($callIdsExtras) && !empty($callIdsExtras)) {
                         foreach ($callIdsExtras as $oldCallId) {
-                            $callApiUrl = "https://core.sefil.com.ec/api/public/api/calls/{$oldCallId}";
-                            $callResponse = file_get_contents($callApiUrl);
-                            $callData = json_decode($callResponse, true);
-
-                            if (isset($callData['call'])) {
-                                $call = $callData['call'];
-
-                                $callUser = \App\Models\User::where('name', $call['byUser'])->first();
-
-                                $newCall = CollectionCall::create([
-                                    'state_call' => $call['state_call'] ?? '',
-                                    'duration_call' => $call['duration_call'] ?? 0,
-                                    'phone' => $call['phone'] ?? '',
-                                    'channel' => $call['channel'] ?? null,
-                                    'credit_id' => $credit->id,
-                                    'campain_id' => $parseCampainId,
-                                    'created_by' => $callUser ? $callUser->id : $user->id,
-                                    'created_at' => $call['fecha'] ?? now(),
-                                    'updated_at' => $call['updated_at'] ?? now(),
-                                ]);
-
-                                $newCallIds[] = $newCall->id;
+                            if (!isset($callsCache[$oldCallId])) {
+                                Log::warning("Llamada {$oldCallId} no encontrada en cache, se omite");
+                                continue;
                             }
+
+                            $call = $callsCache[$oldCallId];
+                            $callUser = \App\Models\User::where('name', $call['byUser'])->first();
+
+                            $contact = null;
+                            if (!empty($call['phone_number'])) {
+                                $contact = \App\Models\CollectionContact::where('phone', $call['phone_number'])->first();
+                            }
+
+                            $newCall = new CollectionCall([
+                                'state' => $call['state_call'] ?? 'NO CONTACTADO',
+                                'duration' => $call['duration_call'] ?? 0,
+                                'media_path' => $call['id_record'] ?? null,
+                                'phone_number' => $call['phone'] ?? '',
+                                'channel' => $call['channel'] ?? null,
+                                'client_id' => $contact ? $contact->client_id : null,
+                                'credit_id' => $credit->id,
+                                'campain_id' => $parseCampainId,
+                                'created_by' => $callUser ? $callUser->id : $user->id,
+                            ]);
+
+                            $newCall->created_at = $parseDateAndAdd5Hours($call['fecha'] ?? null);
+                            $newCall->updated_at = $parseDateAndAdd5Hours($call['updated_at'] ?? null);
+                            $newCall->save();
+
+                            $newCallIds[] = $newCall->id;
                         }
                     }
 
-                    Management::create([
+                    $newManagement = new Management([
                         'state' => $managementData['state_gestion'],
                         'substate' => $managementData['substate_gestion'],
                         'observation' => $managementData['observation'] ?? null,
-                        'promise_date' => $managementData['date_promise'] ?? now(),
-                        'promise_amount' => $managementData['monto_a_pagar'] ?? null,
+                        'promise_date' => $parsePromiseDate($managementData['date_promise'] ?? null),
+                        'promise_amount' => floatval($managementData['monto_a_pagar']) ?? null,
                         'created_by' => $user->id,
                         'call_id' => null,
                         'call_collection' => json_encode($newCallIds),
-                        'days_past_due' => $managementData['dias_vencidos'] ?? 0,
-                        'paid_fees' => $managementData['cuotas_pagadas'] ?? 0,
-                        'pending_fees' => $managementData['cuotas_pendientes'] ?? 0,
-                        'managed_amount' => $managementData['monto'] ?? 0,
-                        'nro_notification' => $managementData['nro_notification'] ?? null,
+                        'days_past_due' => intval($managementData['dias_vencidos']) ?? 0,
+                        'paid_fees' => intval($managementData['cuotas_pagadas']) ?? 0,
+                        'pending_fees' => intval($managementData['cuotas_pendientes']) ?? 0,
+                        'managed_amount' => floatval($managementData['monto']) ?? 0,
+                        'nro_notification' => intval($managementData['nro_notification']) ?? null,
                         'client_id' => $client->id,
                         'credit_id' => $credit->id,
                         'campain_id' => $parseCampainId,
-                        'created_at' => $managementData['fecha'] ?? now(),
-                        'updated_at' => $managementData['updated_at'] ?? now(),
                     ]);
+
+                    $newManagement->created_at = $parseDateAndAdd5Hours($managementData['fecha'] ?? null);
+                    $newManagement->updated_at = $parseDateAndAdd5Hours($managementData['updated_at'] ?? null);
+                    $newManagement->save();
 
                     $syncedCount++;
                 }
