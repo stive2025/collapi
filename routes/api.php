@@ -19,6 +19,7 @@ use App\Http\Controllers\ImportController;
 use App\Http\Controllers\StatisticController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TemplateController;
+use App\Http\Controllers\SmsController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [LoginController::class, 'login']);
@@ -92,6 +93,10 @@ Route::middleware(['check.token'])->group(function () {
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);
     Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
+
+    // Envío de SMS
+    Route::post('sms/send', [SmsController::class, 'sendSms']);
+    Route::get('sms/check', [SmsController::class, 'checkSms']);
 });
 
 // --------------------------------------------------------------------------------------------------------------
