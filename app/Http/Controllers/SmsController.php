@@ -27,7 +27,7 @@ class SmsController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'client_ci' => 'required|string',
+                'client_id' => 'required|integer',
                 'credit_id' => 'required|integer',
                 'campain_id' => 'required|integer',
             ]);
@@ -36,15 +36,15 @@ class SmsController extends Controller
                 return ResponseBase::validationError($validator->errors()->toArray());
             }
 
-            $clientCi = $request->input('client_ci');
+            $clientId = $request->input('client_id');
             $creditId = $request->input('credit_id');
             $campainId = $request->input('campain_id');
 
-            $messageExists = DB::table('managements')
-                ->where('client_ci', $clientCi)
+            $messageExists = DB::table('management')
+                ->where('client_id', $clientId)
                 ->where('credit_id', $creditId)
                 ->where('campain_id', $campainId)
-                ->where('substate_management', 'MENSAJE DE TEXTO')
+                ->where('substate', 'MENSAJE DE TEXTO')
                 ->exists();
 
             if ($messageExists) {
@@ -87,7 +87,7 @@ class SmsController extends Controller
             $validator = Validator::make($request->all(), [
                 'phone' => 'required|string',
                 'cod_sms' => 'required|integer|in:43334,43335,48392',
-                'client_ci' => 'required|string',
+                'client_id' => 'required|integer',
                 'credit_id' => 'required|integer',
                 'campain_id' => 'required|integer',
             ]);
@@ -96,16 +96,16 @@ class SmsController extends Controller
                 return ResponseBase::validationError($validator->errors()->toArray());
             }
 
-            $clientCi = $request->input('client_ci');
+            $clientId = $request->input('client_id');
             $creditId = $request->input('credit_id');
             $campainId = $request->input('campain_id');
 
             // Verificar si ya se envió un SMS a este cliente en esta campaña
-            $messageExists = DB::table('managements')
-                ->where('client_ci', $clientCi)
+            $messageExists = DB::table('management')
+                ->where('client_id', $clientId)
                 ->where('credit_id', $creditId)
                 ->where('campain_id', $campainId)
-                ->where('substate_management', 'MENSAJE DE TEXTO')
+                ->where('substate', 'MENSAJE DE TEXTO')
                 ->exists();
 
             if ($messageExists) {
