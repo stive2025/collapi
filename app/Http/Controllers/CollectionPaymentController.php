@@ -275,7 +275,13 @@ class CollectionPaymentController extends Controller
     public function show(CollectionPayment $payment)
     {
         try {
-            return ResponseBase::success($payment, 'Pago obtenido correctamente');
+            // Cargar relación con crédito y sus clientes
+            $payment->load(['credit.clients', 'campain']);
+
+            return ResponseBase::success(
+                new \App\Http\Resources\CollectionPaymentResource($payment),
+                'Pago obtenido correctamente'
+            );
         } catch (\Exception $e) {
             return ResponseBase::error('Error al obtener el pago', ['error' => $e->getMessage()], 500);
         }
@@ -693,8 +699,7 @@ class CollectionPaymentController extends Controller
             );
         }
     }
-
-
+    
     public function syncPayments(Request $request){
         try {
             $businessName = $request->input('business_name');

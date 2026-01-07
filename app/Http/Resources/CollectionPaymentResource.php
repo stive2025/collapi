@@ -47,8 +47,60 @@ class CollectionPaymentResource extends JsonResource
             'business_id' => $this->business_id,
             'campain_id' => $this->campain_id,
             'campain_name' => $this->campain?->name,
+
+            // Información del crédito
+            'sync_id' => $this->credit?->sync_id,
+
+            // Información del cliente (TITULAR o primer cliente)
+            'client_name' => $this->getClientName(),
+            'client_ci' => $this->getClientCi(),
+
             'created_at' => $this->created_at?->format('Y/m/d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y/m/d H:i:s'),
         ];
+    }
+
+    /**
+     * Obtiene el nombre del cliente titular o el primer cliente disponible
+     */
+    private function getClientName(): ?string
+    {
+        if (!$this->credit) {
+            return null;
+        }
+
+        // Buscar cliente titular
+        $mainClient = $this->credit->clients()->wherePivot('type', 'TITULAR')->first();
+
+        if ($mainClient) {
+            return $mainClient->name;
+        }
+
+        // Si no hay titular, obtener el primer cliente
+        $firstClient = $this->credit->clients()->first();
+
+        return $firstClient?->name;
+    }
+
+    /**
+     * Obtiene la cédula del cliente titular o el primer cliente disponible
+     */
+    private function getClientCi(): ?string
+    {
+        if (!$this->credit) {
+            return null;
+        }
+
+        // Buscar cliente titular
+        $mainClient = $this->credit->clients()->wherePivot('type', 'TITULAR')->first();
+
+        if ($mainClient) {
+            return $mainClient->ci;
+        }
+
+        // Si no hay titular, obtener el primer cliente
+        $firstClient = $this->credit->clients()->first();
+
+        return $firstClient?->ci;
     }
 }
