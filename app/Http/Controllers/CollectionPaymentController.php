@@ -132,7 +132,8 @@ class CollectionPaymentController extends Controller
                 'legal_expenses' => $credit->legal_expenses,
                 'management_collection_expenses' => $credit->management_collection_expenses,
                 'other_values' => $credit->other_values,
-                'total_amount' => $credit->total_amount
+                'total_amount' => $credit->total_amount,
+                'collection_state' => $credit->collection_state
             ]);
 
             $credit->capital = max(0, $credit->capital - (isset($data['capital']) ? (float)$data['capital'] : 0.0));
@@ -278,6 +279,223 @@ class CollectionPaymentController extends Controller
         } catch (\Exception $e) {
             return ResponseBase::error('Error al obtener el pago', ['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Summary of revertPayment
+     * @description Revierte un pago y restaura los valores originales del crédito desde prev_dates
+     * @param int $paymentId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function revertPayment(int $paymentId)
+    {
+        DB::beginTransaction();
+
+        try {
+            $payment = CollectionPayment::find($paymentId);
+
+            if (!$payment) {
+                DB::rollBack();
+                return ResponseBase::error('Pago no encontrado', null, 404);
+            }
+
+            if (empty($payment->prev_dates)) {
+                DB::rollBack();
+                return ResponseBase::error('El pago no tiene información de valores previos (prev_dates) para revertir', null, 422);
+            }
+
+            // Validar que no hayan pasado más de 24 horas desde la creación del pago
+            $paymentCreatedAt = Carbon::parse($payment->created_at);
+            $now = Carbon::now();
+            $hoursSinceCreation = $paymentCreatedAt->diffInHours($now);
+
+            if ($hoursSinceCreation > 24) {
+                DB::rollBack();
+                return ResponseBase::error(
+                    'No se puede revertir el pago. Han pasado más de 24 horas desde su creación',
+                    [
+                        'payment_created_at' => $paymentCreatedAt->format('Y-m-d H:i:s'),
+                        'hours_since_creation' => $hoursSinceCreation,
+                        'max_hours_allowed' => 24
+                    ],
+                    422
+                );
+            }
+
+            // Validar que el pago no haya sido revertido previamente
+            if ($payment->payment_status === 'revertido') {
+                DB::rollBack();
+                return ResponseBase::error('El pago ya fue revertido previamente', null, 422);
+            }
+
+            $credit = Credit::lockForUpdate()->find($payment->credit_id);
+
+            if (!$credit) {
+                DB::rollBack();
+                return ResponseBase::error('Crédito asociado al pago no encontrado', null, 404);
+            }
+
+            $prevDates = json_decode($payment->prev_dates, true);
+
+            if (!is_array($prevDates)) {
+                DB::rollBack();
+                return ResponseBase::error('Los datos de prev_dates no son válidos', null, 422);
+            }
+
+            $oldCreditValues = [
+                'capital' => $credit->capital,
+                'interest' => $credit->interest,
+                'mora' => $credit->mora,
+                'safe' => $credit->safe,
+                'collection_expenses' => $credit->collection_expenses,
+                'legal_expenses' => $credit->legal_expenses,
+                'management_collection_expenses' => $credit->management_collection_expenses,
+                'other_values' => $credit->other_values,
+                'total_amount' => $credit->total_amount,
+                'collection_state' => $credit->collection_state
+            ];
+
+            $credit->capital = floatval($prevDates['capital'] ?? 0);
+            $credit->interest = floatval($prevDates['interest'] ?? 0);
+            $credit->mora = floatval($prevDates['mora'] ?? 0);
+            $credit->safe = floatval($prevDates['safe'] ?? 0);
+            $credit->collection_expenses = floatval($prevDates['collection_expenses'] ?? 0);
+            $credit->legal_expenses = floatval($prevDates['legal_expenses'] ?? 0);
+            $credit->management_collection_expenses = floatval($prevDates['management_collection_expenses'] ?? 0);
+            $credit->other_values = floatval($prevDates['other_values'] ?? 0);
+            $credit->total_amount = floatval($prevDates['total_amount'] ?? 0);
+
+            // Restaurar el collection_state desde prev_dates
+            if (isset($prevDates['collection_state'])) {
+                $credit->collection_state = $prevDates['collection_state'];
+            } elseif ($credit->collection_state === 'CANCELADO') {
+                // Fallback para pagos antiguos sin collection_state en prev_dates
+                $credit->collection_state = 'Vencido';
+            }
+
+            $credit->save();
+
+            // Revertir cuotas de convenio si el estado restaurado es CONVENIO DE PAGO
+            if ((string)$credit->collection_state === 'CONVENIO DE PAGO') {
+                $this->revertAgreementFees($credit->id, floatval($payment->payment_value));
+            }
+
+            $payment->payment_status = 'revertido';
+            $payment->save();
+
+            DB::commit();
+
+            Log::channel('payments')->info('Pago revertido correctamente', [
+                'payment_id' => $paymentId,
+                'credit_id' => $credit->id,
+                'old_values' => $oldCreditValues,
+                'restored_values' => $prevDates
+            ]);
+
+            return ResponseBase::success([
+                'payment' => $payment,
+                'credit' => $credit,
+                'previous_credit_values' => $oldCreditValues,
+                'restored_credit_values' => $prevDates
+            ], 'Pago revertido correctamente y crédito restaurado', 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::channel('payments')->error('Error al revertir el pago', [
+                'payment_id' => $paymentId,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error('Error al revertir el pago', ['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Summary of revertAgreementFees
+     * @description Revierte las cuotas pagadas de un convenio de pago asociado a un crédito
+     * @param int $creditId
+     * @param float $amountToRevert
+     * @return void
+     */
+    private function revertAgreementFees(int $creditId, float $amountToRevert): void
+    {
+        Log::channel('payments')->info('Revirtiendo cuotas del convenio', ['credit_id' => $creditId, 'amount_to_revert' => $amountToRevert]);
+
+        $agreement = Agreement::where('credit_id', $creditId)
+            ->where('status', 'autorizado')
+            ->first();
+
+        if (!$agreement || empty($agreement->fee_detail)) {
+            return;
+        }
+
+        $feeDetail = json_decode($agreement->fee_detail, true);
+
+        if (!is_array($feeDetail)) {
+            return;
+        }
+
+        $remainingAmount = $amountToRevert;
+        $totalRevertedFees = 0;
+
+        for ($index = count($feeDetail) - 1; $index > 0; $index--) {
+            $fee = &$feeDetail[$index];
+
+            if (!isset($fee['payment_status'])) {
+                continue;
+            }
+
+            if ($remainingAmount <= 0) {
+                break;
+            }
+
+            $currentPaid = floatval($fee['payment_value'] ?? 0);
+
+            if ($currentPaid <= 0) {
+                continue;
+            }
+
+            if ($fee['payment_status'] === 'PAGADA') {
+                $feeAmount = floatval($fee['payment_amount'] ?? 0);
+
+                if ($remainingAmount >= $feeAmount) {
+                    $fee['payment_value'] = 0;
+                    $fee['payment_status'] = 'PENDIENTE';
+                    unset($fee['payment_date']);
+                    $remainingAmount -= $feeAmount;
+                    $totalRevertedFees++;
+                } else {
+                    $fee['payment_value'] = $feeAmount - $remainingAmount;
+                    $fee['payment_status'] = 'PENDIENTE';
+                    unset($fee['payment_date']);
+                    $remainingAmount = 0;
+                }
+            } elseif ($fee['payment_status'] === 'PENDIENTE' && $currentPaid > 0) {
+                if ($remainingAmount >= $currentPaid) {
+                    $fee['payment_value'] = 0;
+                    $remainingAmount -= $currentPaid;
+                } else {
+                    $fee['payment_value'] = $currentPaid - $remainingAmount;
+                    $remainingAmount = 0;
+                }
+            }
+        }
+
+        unset($fee);
+
+        $agreement->fee_detail = json_encode($feeDetail);
+        $agreement->paid_fees = max(0, ($agreement->paid_fees ?? 0) - $totalRevertedFees);
+        $agreement->pending_fees = min(($agreement->total_fees ?? 0), ($agreement->pending_fees ?? 0) + $totalRevertedFees);
+        $agreement->save();
+
+        Log::channel('payments')->info('Cuotas del convenio revertidas', [
+            'agreement_id' => $agreement->id,
+            'paid_fees' => $agreement->paid_fees,
+            'pending_fees' => $agreement->pending_fees,
+            'reverted_fees' => $totalRevertedFees
+        ]);
     }
 
     /**
