@@ -47,7 +47,6 @@ class StoreCollectionPaymentRequest extends FormRequest
             'payment_value' => ['required', 'numeric'],
             'payment_difference' => ['nullable', 'numeric'],
             'payment_type' => ['required', 'string', 'max:100'],
-            'payment_method' => ['required', 'string', 'max:100'],
             'financial_institution' => ['nullable', 'string', 'max:255'],
             'payment_reference' => [
                 'nullable',
