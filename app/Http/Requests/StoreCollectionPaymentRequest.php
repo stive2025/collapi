@@ -23,9 +23,17 @@ class StoreCollectionPaymentRequest extends FormRequest
                 throw new HttpResponseException(ResponseBase::unauthorized('Token inválido o expirado'));
             }
 
-            $this->merge([
-                'created_by' => $user->id,
-            ]);
+            $mergeData = ['created_by' => $user->id];
+
+            // Si no se envió campain_id pero sí business_id, obtenerlo automáticamente
+            if (!$this->has('campain_id') && $this->has('business_id')) {
+                $campain = \App\Models\Campain::where('business_id', $this->input('business_id'))->first();
+                if ($campain) {
+                    $mergeData['campain_id'] = $campain->id;
+                }
+            }
+
+            $this->merge($mergeData);
         }
     }
 
@@ -102,7 +110,7 @@ class StoreCollectionPaymentRequest extends FormRequest
             'credit_id.exists' => 'El crédito especificado no existe.',
             'business_id.required' => 'La empresa es obligatoria.',
             'business_id.exists' => 'La empresa especificada no existe.',
-            'campain_id.required' => 'La campaña es obligatoria.',
+            'campain_id.required' => 'No se encontró una campaña para el negocio especificado.',
             'campain_id.exists' => 'La campaña especificada no existe.',
             'created_by.required' => 'El usuario creador no fue encontrado (token inválido).',
             'created_by.exists' => 'El usuario creador especificado no existe.',
