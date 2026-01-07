@@ -89,9 +89,11 @@ Route::middleware(['check.token'])->group(function () {
 
     // Sincronización masiva de pagos
     Route::post('payments/sync', [CollectionPaymentController::class, 'syncPayments']);
+    // Obtener resumen de pagos
+    Route::get('payments/summary', [CollectionPaymentController::class, 'getPaymentsResume']);
     // Revertir pago
     Route::post('payments/revert/{id}', [CollectionPaymentController::class, 'revertPayment']);
-
+    
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);
     Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);

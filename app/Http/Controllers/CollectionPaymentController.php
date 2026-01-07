@@ -71,9 +71,16 @@ class CollectionPaymentController extends Controller
             $orderBy = $request->query('order_by', 'payment_date');
             $orderDir = $request->query('order_dir', 'desc');
             $query->orderBy($orderBy, $orderDir);
+
+            // Cargar relaciones necesarias para el Resource
+            $query->with(['credit.clients', 'campain']);
+
             $payments = $query->paginate($perPage);
 
-            return ResponseBase::success($payments, 'Pagos obtenidos correctamente');
+            return ResponseBase::success(
+                \App\Http\Resources\CollectionPaymentResource::collection($payments),
+                'Pagos obtenidos correctamente'
+            );
         } catch (\Exception $e) {
             Log::error('Error fetching collection payments', [
                 'message' => $e->getMessage()
@@ -174,10 +181,17 @@ class CollectionPaymentController extends Controller
 
             $payment = CollectionPayment::create($data);
 
+            // Cargar relaciones para el Resource
+            $payment->load(['credit.clients', 'campain']);
+
             DB::commit();
             Log::channel('payments')->info('Pago creado correctamente', ['payment' => $payment]);
 
-            return ResponseBase::success($payment, 'Pago creado correctamente', 201);
+            return ResponseBase::success(
+                new \App\Http\Resources\CollectionPaymentResource($payment),
+                'Pago creado correctamente',
+                201
+            );
         } catch (\Exception $e) {
             DB::rollBack();
 
