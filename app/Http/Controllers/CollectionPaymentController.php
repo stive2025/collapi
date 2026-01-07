@@ -23,6 +23,12 @@ class CollectionPaymentController extends Controller
         $this->sofiaService = $sofiaService;
     }
 
+    /**
+     * Summary of index
+     * @description Lista y filtra los pagos de cobranza
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index(Request $request)
     {
         try {
@@ -77,6 +83,12 @@ class CollectionPaymentController extends Controller
         }
     }
 
+    /**
+     * Summary of store
+     * @description Crea un nuevo pago de crédito y actualiza el estado del crédito asociado
+     * @param StoreCollectionPaymentRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function store(StoreCollectionPaymentRequest $request)
     {
         Log::channel('payments')->info('Procesando y validando pago', ['payload' => $request->all()]);
@@ -177,6 +189,13 @@ class CollectionPaymentController extends Controller
         }
     }
 
+    /**
+     * Summary of updateAgreementFees
+     * @description Actualiza las cuotas pagadas y pendientes de un convenio de pago asociado a un crédito
+     * @param int $creditId
+     * @param float $amountPaid
+     * @return void
+     */
     private function updateAgreementFees(int $creditId, float $amountPaid): void
     {
         Log::channel('payments')->info('Actualizando cuotas del convenio', ['credit_id' => $creditId, 'amount_paid' => $amountPaid]);
@@ -246,6 +265,12 @@ class CollectionPaymentController extends Controller
         ]);
     }
 
+    /**
+     * Summary of show
+     * @description Obtiene los detalles de un pago de cobranza específico
+     * @param CollectionPayment $payment
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function show(CollectionPayment $payment)
     {
         try {
@@ -255,6 +280,12 @@ class CollectionPaymentController extends Controller
         }
     }
 
+    /**
+     * Summary of processInvoice
+     * @description Procesa la factura asociada a un gasto de cobranza
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function processInvoice(Request $request)
     {
         $payload = $request->all();
@@ -347,7 +378,6 @@ class CollectionPaymentController extends Controller
             return ResponseBase::error('Error al procesar la factura', ['error' => $e->getMessage()], 500);
         }
     }
-
     private function validatePaymentRubros(Credit $credit, array $data): ?array
     {
         $rubros = [
@@ -402,6 +432,11 @@ class CollectionPaymentController extends Controller
         return null;
     }
 
+    /**
+     * Summary of getPaymentsResume
+     * @description Obtiene un resumen de pagos por negocio para el mes y día actual
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getPaymentsResume(){
         try {
             $startOfMonth = Carbon::now()->startOfMonth();
@@ -440,4 +475,224 @@ class CollectionPaymentController extends Controller
             );
         }
     }
+
+
+    public function syncPayments(Request $request){
+        try {
+            $businessName = $request->input('business_name');
+
+            if (!$businessName) {
+                return ResponseBase::error(
+                    'El parámetro business_name es requerido',
+                    ['business_name' => 'Este campo es obligatorio'],
+                    422
+                );
+            }
+
+            if (!in_array($businessName, ['SEFIL_1', 'SEFIL_2'])) {
+                return ResponseBase::error(
+                    'El business_name debe ser SEFIL_1 o SEFIL_2',
+                    ['business_name' => 'Valor inválido'],
+                    422
+                );
+            }
+
+            $parseDateAndAdd5Hours = function($dateString) {
+                static $callCount = 0;
+                $callCount++;
+
+                if (empty($dateString)) {
+                    if ($callCount <= 2) {
+                        Log::warning("parseDateAndAdd5Hours recibió fecha vacía, retornando now()");
+                    }
+                    return now();
+                }
+
+                try {
+                    $date = \Carbon\Carbon::parse($dateString);
+                    $dateWithOffset = $date->addHours(5);
+
+                    if ($callCount <= 2) {
+                        Log::info("parseDateAndAdd5Hours - Input: '{$dateString}', Output: '{$dateWithOffset->toDateTimeString()}'");
+                    }
+
+                    return $dateWithOffset;
+                } catch (\Exception $e) {
+                    Log::error("Error parseando fecha '{$dateString}': {$e->getMessage()}");
+                    return now();
+                }
+            };
+
+            $apiUrl = "https://core.sefil.com.ec/api/public/api/vouchers";
+            $response = file_get_contents($apiUrl);
+            $payments = json_decode($response, true);
+
+            if (!is_array($payments)) {
+                return ResponseBase::error(
+                    'No se obtuvieron pagos de la API',
+                    [],
+                    400
+                );
+            }
+
+            $totalPayments = count($payments);
+            $syncedCount = 0;
+
+            DB::transaction(function () use ($payments, $parseDateAndAdd5Hours, $businessName, &$syncedCount) {
+                foreach ($payments as $index => $paymentData) {
+                    // Buscar crédito por sync_id
+                    $credit = \App\Models\Credit::where('sync_id', $paymentData['sync_id'])->first();
+                    if (!$credit) {
+                        Log::warning("Crédito con sync_id '{$paymentData['sync_id']}' no encontrado en índice {$index}, se omite");
+                        continue;
+                    }
+
+                    // Buscar campaña por business_id
+                    $campain = \App\Models\Campain::where('business_id', $credit->business_id)->first();
+                    if (!$campain) {
+                        Log::warning("Campaña para business_id '{$credit->business_id}' no encontrada en índice {$index}, se omite");
+                        continue;
+                    }
+
+                    // Procesar según el business_name
+                    if ($businessName === 'SEFIL_1') {
+                        // Lógica original de SEFIL_1
+                        $user = \App\Models\User::where('name', $paymentData['byUser'])->first();
+                        if (!$user) {
+                            Log::warning("Usuario '{$paymentData['byUser']}' no encontrado en índice {$index}, se omite");
+                            continue;
+                        }
+
+                        // Parsear detalle
+                        $detalle = json_decode($paymentData['detalle'], true);
+                        $prevDates = json_decode($paymentData['prevDates'], true);
+
+                        // Determinar valores según tipo de transacción
+                        $isTotalPayment = strtolower($paymentData['tipo_transaccion'] ?? '') === 'total';
+
+                        $paymentValues = [];
+                        if ($isTotalPayment && is_array($prevDates)) {
+                            // Para pago total, usar prev_dates
+                            $paymentValues = [
+                                'capital' => floatval($prevDates['saldo_capital'] ?? 0),
+                                'interest' => floatval($prevDates['interes'] ?? 0),
+                                'mora' => floatval($prevDates['mora'] ?? 0),
+                                'safe' => floatval($prevDates['seguro_desgravamen'] ?? 0),
+                                'collection_expenses' => floatval($prevDates['gastos_cobranza'] ?? 0),
+                                'legal_expenses' => floatval($prevDates['gastos_judiciales'] ?? 0),
+                                'management_collection_expenses' => 0,
+                                'other_values' => floatval($prevDates['otros_valores'] ?? 0),
+                            ];
+                        } elseif (is_array($detalle)) {
+                            // Para pago parcial, usar detalle
+                            $paymentValues = [
+                                'capital' => floatval($detalle['saldo_capital'] ?? 0),
+                                'interest' => floatval($detalle['interes'] ?? 0),
+                                'mora' => floatval($detalle['mora'] ?? 0),
+                                'safe' => floatval($detalle['seguro_desgravamen'] ?? 0),
+                                'collection_expenses' => floatval($detalle['gastos_cobranza'] ?? 0),
+                                'legal_expenses' => floatval($detalle['gastos_judiciales'] ?? 0),
+                                'management_collection_expenses' => 0,
+                                'other_values' => floatval($detalle['otros_valores'] ?? 0),
+                            ];
+                        }
+
+                        // Crear el pago para SEFIL_1
+                        $newPayment = new CollectionPayment([
+                            'payment_date' => $parseDateAndAdd5Hours($paymentData['fecha'] ?? null),
+                            'payment_deposit_date' => !empty($paymentData['fecha_deposito'])
+                                ? Carbon::parse($paymentData['fecha_deposito'])
+                                : null,
+                            'payment_type' => $paymentData['forma_pago'] ?? null,
+                            'payment_value' => floatval($paymentData['valor_recibido'] ?? 0),
+                            'payment_difference' => floatval($paymentData['valor_devuelto'] ?? 0),
+                            'financial_institution' => $paymentData['institucion_financiera'] ?? null,
+                            'payment_reference' => $paymentData['codigo_deposito'] ?? null,
+                            'payment_status' => $paymentData['status'] ?? null,
+                            'payment_prints' => intval($paymentData['status_print'] ?? 0),
+                            'prev_dates' => $paymentData['prevDates'] ?? null,
+                            'capital' => $paymentValues['capital'] ?? 0,
+                            'interest' => $paymentValues['interest'] ?? 0,
+                            'mora' => $paymentValues['mora'] ?? 0,
+                            'safe' => $paymentValues['safe'] ?? 0,
+                            'collection_expenses' => $paymentValues['collection_expenses'] ?? 0,
+                            'legal_expenses' => $paymentValues['legal_expenses'] ?? 0,
+                            'management_collection_expenses' => $paymentValues['management_collection_expenses'] ?? 0,
+                            'other_values' => $paymentValues['other_values'] ?? 0,
+                            'created_by' => $user->id,
+                            'credit_id' => $credit->id,
+                            'business_id' => $credit->business_id,
+                            'campain_id' => $campain->id,
+                        ]);
+
+                        $newPayment->created_at = $parseDateAndAdd5Hours($paymentData['created_at'] ?? null);
+                        $newPayment->updated_at = $parseDateAndAdd5Hours($paymentData['updated_at'] ?? null);
+                        $newPayment->save();
+
+                    } else if ($businessName === 'SEFIL_2') {
+                        // Lógica de FACES para SEFIL_2
+                        // Preparar valores de los rubros para FACES
+                        $paymentValues = [
+                            'capital' => floatval($paymentData['capital'] ?? 0),
+                            'interest' => floatval($paymentData['interes'] ?? 0),
+                            'mora' => floatval($paymentData['mora'] ?? 0),
+                            'safe' => floatval($paymentData['seguro_desgravamen'] ?? 0),
+                            'collection_expenses' => floatval($paymentData['gastos_cobranza'] ?? 0),
+                            'legal_expenses' => floatval($paymentData['gastos_judiciales'] ?? 0),
+                            'management_collection_expenses' => floatval($paymentData['gastos_cobranza_faces'] ?? 0),
+                            'other_values' => floatval($paymentData['otros_valores'] ?? 0),
+                        ];
+
+                        // Crear el pago para FACES
+                        $newPayment = new CollectionPayment([
+                            'payment_date' => $parseDateAndAdd5Hours($paymentData['fecha_pago'] ?? null),
+                            'payment_type' => 'FACES',
+                            'payment_value' => floatval($paymentData['total'] ?? 0),
+                            'financial_institution' => 'FACES',
+                            'payment_reference' => $paymentData['id_comprobante'] ?? 'FACES',
+                            'payment_status' => $paymentData['estado'] ?? null,
+                            'capital' => $paymentValues['capital'],
+                            'interest' => $paymentValues['interest'],
+                            'mora' => $paymentValues['mora'],
+                            'safe' => $paymentValues['safe'],
+                            'collection_expenses' => $paymentValues['collection_expenses'],
+                            'legal_expenses' => $paymentValues['legal_expenses'],
+                            'management_collection_expenses' => $paymentValues['management_collection_expenses'],
+                            'other_values' => $paymentValues['other_values'],
+                            'created_by' => null,
+                            'credit_id' => $credit->id,
+                            'business_id' => $credit->business_id,
+                            'campain_id' => $campain->id,
+                        ]);
+
+                        $newPayment->save();
+                    }
+
+                    $syncedCount++;
+                }
+            });
+
+            return ResponseBase::success(
+                [
+                    'total_payments' => $totalPayments,
+                    'synced' => $syncedCount,
+                    'business_name' => $businessName
+                ],
+                "Sincronización completada exitosamente para {$businessName}: {$syncedCount} pagos sincronizados"
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Error en sincronización masiva de pagos', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al sincronizar pagos',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
 }

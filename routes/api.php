@@ -58,6 +58,7 @@ Route::middleware(['check.token'])->group(function () {
     
     // Generar llamada ASTERISK
     Route::post('calls/dial', [CallController::class, 'dial']);
+    
     //  Colgar llamada ASTERISK
     Route::post('calls/hangup', [CallController::class, 'hangup']);
     Route::get('calls', [CallController::class, 'index']);
@@ -84,6 +85,9 @@ Route::middleware(['check.token'])->group(function () {
     Route::get('managements/{management_id}/calls', [ManagementController::class, 'indexCallsByManagementID']);
     // Sincronización masiva de gestiones
     Route::post('managements/sync', [ManagementController::class, 'syncManagements']);
+
+    // Sincronización masiva de pagos
+    Route::post('payments/sync', [CollectionPaymentController::class, 'syncPayments']);
 
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);
