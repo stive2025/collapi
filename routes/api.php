@@ -30,6 +30,12 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('clients', ClientController::class);
     Route::apiResource('contacts', ContactController::class);
     Route::apiResource('managements', ManagementController::class);
+
+    // Rutas específicas de payments (deben ir ANTES del apiResource)
+    Route::post('payments/sync', [CollectionPaymentController::class, 'syncPayments']);
+    Route::get('payments/summary', [CollectionPaymentController::class, 'getPaymentsResume']);
+    Route::post('payments/revert/{id}', [CollectionPaymentController::class, 'revertPayment']);
+
     Route::apiResource('payments', CollectionPaymentController::class);
     Route::apiResource('businesses', BusinessController::class);
     // Actualizar orden de prelación
@@ -87,13 +93,6 @@ Route::middleware(['check.token'])->group(function () {
     // Sincronización masiva de gestiones
     Route::post('managements/sync', [ManagementController::class, 'syncManagements']);
 
-    // Sincronización masiva de pagos
-    Route::post('payments/sync', [CollectionPaymentController::class, 'syncPayments']);
-    // Obtener resumen de pagos
-    Route::get('payments/summary', [CollectionPaymentController::class, 'getPaymentsResume']);
-    // Revertir pago
-    Route::post('payments/revert/{id}', [CollectionPaymentController::class, 'revertPayment']);
-    
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);
     Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
