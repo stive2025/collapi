@@ -63,6 +63,8 @@ Route::middleware(['check.token'])->group(function () {
     Route::post('agreements/authorize/{id}', [AgreementController::class, 'authorizeAgreement']);
     // Revertir acuerdo
     Route::post('agreements/revert/{id}', [AgreementController::class, 'revert']);
+    // Denegar acuerdo
+    Route::post('agreements/deny/{id}', [AgreementController::class, 'denyAgreement']);
     // --------------------------------------------------------------------------------------------------------------
     
     // Generar llamada ASTERISK
