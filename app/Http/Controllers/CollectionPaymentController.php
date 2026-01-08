@@ -348,6 +348,26 @@ class CollectionPaymentController extends Controller
                 return ResponseBase::error('El pago ya fue revertido previamente', null, 422);
             }
 
+            // Validar que sea el último pago del crédito (excluyendo pagos revertidos)
+            $lastPayment = CollectionPayment::where('credit_id', $payment->credit_id)
+                ->where('payment_status', '!=', 'revertido')
+                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if (!$lastPayment || $lastPayment->id !== $payment->id) {
+                DB::rollBack();
+                return ResponseBase::error(
+                    'Solo se puede revertir el último pago registrado del crédito',
+                    [
+                        'attempted_payment_id' => $payment->id,
+                        'last_payment_id' => $lastPayment?->id,
+                        'message' => 'Revertir pagos anteriores causaría inconsistencias en los valores del crédito'
+                    ],
+                    422
+                );
+            }
+
             $credit = Credit::lockForUpdate()->find($payment->credit_id);
 
             if (!$credit) {
