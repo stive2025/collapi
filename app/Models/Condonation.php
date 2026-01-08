@@ -19,6 +19,10 @@ class Condonation extends Model
         'status',
     ];
 
+    protected $casts = [
+        'reverted_at' => 'datetime',
+    ];
+
     public function credit(): BelongsTo
     {
         return $this->belongsTo(Credit::class);
