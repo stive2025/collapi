@@ -29,10 +29,13 @@ class CondonationController extends Controller
                 $query->where('status', $request->query('status'));
             }
 
-            $condonations = $query->with('credit')->orderBy('created_at', 'desc')->paginate($perPage);
+            // Cargar relaciones necesarias para el Resource
+            $query->with(['credit.clients', 'creator']);
+
+            $condonations = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
             return ResponseBase::success(
-                $condonations,
+                \App\Http\Resources\CondonationResource::collection($condonations),
                 'Condonaciones obtenidas correctamente'
             );
         } catch (\Exception $e) {
@@ -131,8 +134,11 @@ class CondonationController extends Controller
 
             DB::commit();
 
+            // Cargar relaciones para el Resource
+            $condonation->load(['credit.clients', 'creator']);
+
             return ResponseBase::success(
-                $condonation->load('credit', 'creator'),
+                new \App\Http\Resources\CondonationResource($condonation),
                 'Condonación aplicada exitosamente',
                 201
             );
@@ -161,14 +167,14 @@ class CondonationController extends Controller
     public function show(string $id)
     {
         try {
-            $condonation = Condonation::with('credit', 'creator')->find($id);
+            $condonation = Condonation::with(['credit.clients', 'creator'])->find($id);
 
             if (!$condonation) {
                 return ResponseBase::notFound('Condonación no encontrada');
             }
 
             return ResponseBase::success(
-                $condonation,
+                new \App\Http\Resources\CondonationResource($condonation),
                 'Condonación obtenida correctamente'
             );
         } catch (\Exception $e) {
@@ -191,7 +197,7 @@ class CondonationController extends Controller
         $condonation = Condonation::where('credit_id', $id)
             ->where('status', 'PENDIENTE')
             ->first();
-        
+
         if (!$condonation) {
             return ResponseBase::notFound('Condonación no encontrada o no está en estado PENDIENTE');
         }
@@ -199,8 +205,11 @@ class CondonationController extends Controller
         $condonation->updated_by = $request->user()->id;
         $condonation->save();
 
+        // Cargar relaciones para el Resource
+        $condonation->load(['credit.clients', 'creator']);
+
         return ResponseBase::success(
-            $condonation,
+            new \App\Http\Resources\CondonationResource($condonation),
             'Condonación autorizada correctamente'
         );
     }
@@ -273,8 +282,10 @@ class CondonationController extends Controller
 
             DB::commit();
 
+            $condonation->load(['credit.clients', 'creator', 'reverter']);
+
             return ResponseBase::success(
-                $condonation->load('credit', 'creator', 'reverter'),
+                new \App\Http\Resources\CondonationResource($condonation),
                 'Condonación revertida exitosamente'
             );
         } catch (\Exception $e) {
