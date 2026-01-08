@@ -232,7 +232,7 @@ class CollectionPaymentController extends Controller
         $totalPaidFees = 0;
 
         foreach ($feeDetail as $index => &$fee) {
-            if ($index === 0 || (isset($fee['payment_status']) && $fee['payment_status'] === 'PAGADA')) {
+            if ($index === 0 || (isset($fee['payment_status']) && $fee['payment_status'] === 'PAGADO')) {
                 continue;
             }
 
@@ -249,14 +249,14 @@ class CollectionPaymentController extends Controller
             $feeBalance = $feeAmount - $currentPaid;
 
             if ($feeBalance <= 0) {
-                $fee['payment_status'] = 'PAGADA';
+                $fee['payment_status'] = 'PAGADO';
                 $totalPaidFees++;
                 continue;
             }
 
             if ($remainingAmount >= $feeBalance) {
                 $fee['payment_value'] = $feeAmount;
-                $fee['payment_status'] = 'PAGADA';
+                $fee['payment_status'] = 'PAGADO';
                 $fee['payment_date'] = now()->format('Y-m-d');
                 $remainingAmount -= $feeBalance;
                 $totalPaidFees++;
@@ -495,7 +495,7 @@ class CollectionPaymentController extends Controller
                 continue;
             }
 
-            if ($fee['payment_status'] === 'PAGADA') {
+            if ($fee['payment_status'] === 'PAGADO') {
                 $feeAmount = floatval($fee['payment_amount'] ?? 0);
 
                 if ($remainingAmount >= $feeAmount) {
@@ -525,13 +525,11 @@ class CollectionPaymentController extends Controller
 
         $agreement->fee_detail = json_encode($feeDetail);
         $agreement->paid_fees = max(0, ($agreement->paid_fees ?? 0) - $totalRevertedFees);
-        $agreement->pending_fees = min(($agreement->total_fees ?? 0), ($agreement->pending_fees ?? 0) + $totalRevertedFees);
         $agreement->save();
 
         Log::channel('payments')->info('Cuotas del convenio revertidas', [
             'agreement_id' => $agreement->id,
             'paid_fees' => $agreement->paid_fees,
-            'pending_fees' => $agreement->pending_fees,
             'reverted_fees' => $totalRevertedFees
         ]);
     }

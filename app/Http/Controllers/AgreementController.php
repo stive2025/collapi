@@ -120,7 +120,7 @@ class AgreementController extends Controller
             $paidFees = 0;
 
             foreach (array_slice($feeDetailArray, 1) as $fee) {
-                if ($fee['payment_status'] === 'PAGADA') {
+                if ($fee['payment_status'] === 'PAGADO') {
                     $paidFees++;
                 }
             }
@@ -279,7 +279,7 @@ class AgreementController extends Controller
             $paidFees = 0;
 
             foreach (array_slice($feeDetailArray, 1) as $fee) {
-                if ($fee['payment_status'] === 'PAGADA') {
+                if ($fee['payment_status'] === 'PAGADO') {
                     $paidFees++;
                 }
             }
@@ -365,7 +365,7 @@ class AgreementController extends Controller
             $paidFees = 0;
 
             foreach (array_slice($feeDetail, 1) as $fee) {
-                if ($fee['payment_status'] === 'PAGADA') {
+                if ($fee['payment_status'] === 'PAGADO') {
                     $paidFees++;
                 }
             }
