@@ -54,6 +54,8 @@ Route::middleware(['check.token'])->group(function () {
     Route::post('condonations/revert/{id}', [CondonationController::class, 'revert']);
     // Autorizar condonación
     Route::post('condonations/authorize/{id}', [CondonationController::class, 'authorizeCondonation']);
+    // Denegar condonación
+    Route::post('condonations/deny/{id}', [CondonationController::class, 'denyCondonation']);
     
     // -------------------------------------------------------------------------------------------------------------- 
     Route::apiResource('agreements', AgreementController::class);

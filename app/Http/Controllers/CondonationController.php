@@ -86,6 +86,27 @@ class CondonationController extends Controller
                 return ResponseBase::error('Crédito no encontrado', null, 404);
             }
 
+            // Validar que el crédito no esté en convenio de pago
+            if ($credit->collection_state === 'CONVENIO DE PAGO') {
+                DB::rollBack();
+                return ResponseBase::error(
+                    'No se puede crear una condonación para un crédito en convenio de pago',
+                    null,
+                    400
+                );
+            }
+
+            // Validar que no exista una condonación previa
+            $existingCondonation = Condonation::where('credit_id', $validated['credit_id'])->first();
+            if ($existingCondonation) {
+                DB::rollBack();
+                return ResponseBase::error(
+                    'Ya existe una condonación para este crédito',
+                    null,
+                    400
+                );
+            }
+
             $prevDates = [
                 'total_amount' => (float)($credit->total_amount ?? 0),
                 'capital' => (float)($credit->capital ?? 0),
@@ -111,26 +132,40 @@ class CondonationController extends Controller
                 'other_values' => $prevDates['other_values'] - (float)$postDates['other_values'],
             ];
 
-            $condonation = Condonation::create([
+            // Verificar si el usuario es admin
+            $isAdmin = in_array(strtolower($user->role), ['admin', 'superadmin']);
+
+            $condonationData = [
                 'credit_id' => $validated['credit_id'],
                 'prev_dates' => json_encode($prevDates),
                 'post_dates' => json_encode($postDates),
                 'amount' => (float)$condonedAmount['total_amount'],
-                'status' => 'APLICADA',
                 'created_by' => $user->id,
-            ]);
+            ];
 
-            $credit->update([
-                'total_amount' => (float)$postDates['total_amount'],
-                'capital' => (float)$postDates['capital'],
-                'interest' => (float)$postDates['interest'],
-                'mora' => (float)$postDates['mora'],
-                'safe' => (float)$postDates['safe'],
-                'management_collection_expenses' => (float)$postDates['management_collection_expenses'],
-                'collection_expenses' => (float)$postDates['collection_expenses'],
-                'legal_expenses' => (float)$postDates['legal_expenses'],
-                'other_values' => (float)$postDates['other_values'],
-            ]);
+            if ($isAdmin) {
+                // Admin: status APLICADA y updated_by
+                $condonationData['status'] = 'APLICADA';
+                $condonationData['updated_by'] = $user->id;
+
+                // Restar valores del crédito
+                $credit->update([
+                    'total_amount' => (float)$postDates['total_amount'],
+                    'capital' => (float)$postDates['capital'],
+                    'interest' => (float)$postDates['interest'],
+                    'mora' => (float)$postDates['mora'],
+                    'safe' => (float)$postDates['safe'],
+                    'management_collection_expenses' => (float)$postDates['management_collection_expenses'],
+                    'collection_expenses' => (float)$postDates['collection_expenses'],
+                    'legal_expenses' => (float)$postDates['legal_expenses'],
+                    'other_values' => (float)$postDates['other_values'],
+                ]);
+            } else {
+                // No admin: status PENDIENTE, no restar valores
+                $condonationData['status'] = 'PENDIENTE';
+            }
+
+            $condonation = Condonation::create($condonationData);
 
             DB::commit();
 
@@ -244,12 +279,36 @@ class CondonationController extends Controller
                 );
             }
 
-            $prevDates = json_decode($condonation->prev_dates, true);
-
-            if (!$prevDates) {
+            if ($condonation->status !== 'APLICADA') {
                 DB::rollBack();
                 return ResponseBase::error(
-                    'No se encontraron valores previos para revertir',
+                    'Solo se pueden revertir condonaciones en estado APLICADA',
+                    null,
+                    400
+                );
+            }
+
+            // Validar que no hayan pasado más de 24 horas
+            $createdAt = \Carbon\Carbon::parse($condonation->created_at);
+            $now = \Carbon\Carbon::now();
+            $hoursDiff = $createdAt->diffInHours($now);
+
+            if ($hoursDiff > 24) {
+                DB::rollBack();
+                return ResponseBase::error(
+                    'Solo se puede revertir una condonación dentro de las 24 horas de su creación',
+                    ['horas_transcurridas' => $hoursDiff],
+                    400
+                );
+            }
+
+            $prevDates = json_decode($condonation->prev_dates, true);
+            $postDates = json_decode($condonation->post_dates, true);
+
+            if (!$prevDates || !$postDates) {
+                DB::rollBack();
+                return ResponseBase::error(
+                    'No se encontraron valores para revertir',
                     null,
                     400
                 );
@@ -262,16 +321,30 @@ class CondonationController extends Controller
                 return ResponseBase::error('Crédito no encontrado', null, 404);
             }
 
+            // Calcular valores condonados y sumarlos al crédito actual
+            $condonedAmount = [
+                'total_amount' => (float)$prevDates['total_amount'] - (float)$postDates['total_amount'],
+                'capital' => (float)$prevDates['capital'] - (float)$postDates['capital'],
+                'interest' => (float)$prevDates['interest'] - (float)$postDates['interest'],
+                'mora' => (float)$prevDates['mora'] - (float)$postDates['mora'],
+                'safe' => (float)$prevDates['safe'] - (float)$postDates['safe'],
+                'management_collection_expenses' => (float)$prevDates['management_collection_expenses'] - (float)$postDates['management_collection_expenses'],
+                'collection_expenses' => (float)$prevDates['collection_expenses'] - (float)$postDates['collection_expenses'],
+                'legal_expenses' => (float)$prevDates['legal_expenses'] - (float)$postDates['legal_expenses'],
+                'other_values' => (float)$prevDates['other_values'] - (float)$postDates['other_values'],
+            ];
+
+            // Sumar los valores condonados al crédito actual
             $credit->update([
-                'total_amount' => (float)$prevDates['total_amount'],
-                'capital' => (float)$prevDates['capital'],
-                'interest' => (float)$prevDates['interest'],
-                'mora' => (float)$prevDates['mora'],
-                'safe' => (float)$prevDates['safe'],
-                'management_collection_expenses' => (float)$prevDates['management_collection_expenses'],
-                'collection_expenses' => (float)$prevDates['collection_expenses'],
-                'legal_expenses' => (float)$prevDates['legal_expenses'],
-                'other_values' => (float)$prevDates['other_values'],
+                'total_amount' => (float)$credit->total_amount + $condonedAmount['total_amount'],
+                'capital' => (float)$credit->capital + $condonedAmount['capital'],
+                'interest' => (float)$credit->interest + $condonedAmount['interest'],
+                'mora' => (float)$credit->mora + $condonedAmount['mora'],
+                'safe' => (float)$credit->safe + $condonedAmount['safe'],
+                'management_collection_expenses' => (float)$credit->management_collection_expenses + $condonedAmount['management_collection_expenses'],
+                'collection_expenses' => (float)$credit->collection_expenses + $condonedAmount['collection_expenses'],
+                'legal_expenses' => (float)$credit->legal_expenses + $condonedAmount['legal_expenses'],
+                'other_values' => (float)$credit->other_values + $condonedAmount['other_values'],
             ]);
 
             $condonation->update([
@@ -298,6 +371,51 @@ class CondonationController extends Controller
 
             return ResponseBase::error(
                 'Error al revertir la condonación',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
+     * Deny a condonation
+     */
+    public function denyCondonation(string $id, Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return ResponseBase::unauthorized('Usuario no autenticado');
+            }
+
+            $condonation = Condonation::where('credit_id', $id)
+                ->where('status', 'PENDIENTE')
+                ->first();
+
+            if (!$condonation) {
+                return ResponseBase::notFound('Condonación no encontrada o no está en estado PENDIENTE');
+            }
+
+            $condonation->update([
+                'status' => 'DENEGADA',
+                'updated_by' => $user->id,
+            ]);
+
+            // Cargar relaciones para el Resource
+            $condonation->load(['credit.clients', 'creator']);
+
+            return ResponseBase::success(
+                new \App\Http\Resources\CondonationResource($condonation),
+                'Condonación denegada correctamente'
+            );
+        } catch (\Exception $e) {
+            Log::error('Error denegando condonación', [
+                'message' => $e->getMessage(),
+                'credit_id' => $id
+            ]);
+
+            return ResponseBase::error(
+                'Error al denegar la condonación',
                 ['error' => $e->getMessage()],
                 500
             );
