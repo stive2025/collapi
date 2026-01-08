@@ -25,11 +25,22 @@ class LoginController extends Controller
                 return ResponseBase::unauthorized('Credenciales incorrectas');
             }
             
+            $isAdmin = in_array(strtolower($user->role), ['admin', 'superadmin']);
+            if (!$isAdmin) {
+                $currentHour = now()->hour;
+                if ($currentHour < 7 || $currentHour >= 19) {
+                    return ResponseBase::error(
+                        'Acceso denegado fuera del horario permitido (7:00 AM - 7:00 PM)',
+                        ['horario_actual' => now()->format('H:i:s')],
+                        403
+                    );
+                }
+            }
+            
             $user->tokens()->delete();
             $user->update(['status' => 'CONECTADO','updated_at' => now()]);
             $token = $user->createToken('login', ['all']);
-            
-            // Enviar notificación WebSocket - Login
+
             try {
                 $ws = new WebSocketService();
                 $ws->sendLoginUpdate($user->id);
