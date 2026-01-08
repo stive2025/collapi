@@ -229,7 +229,7 @@ class CondonationController extends Controller
     //  Autorizar condonación
     public function authorizeCondonation(string $id, Request $request)
     {
-        $condonation = Condonation::where('credit_id', $id)
+        $condonation = Condonation::where('id', $id)
             ->where('status', 'PENDIENTE')
             ->first();
 
@@ -388,7 +388,7 @@ class CondonationController extends Controller
                 return ResponseBase::unauthorized('Usuario no autenticado');
             }
 
-            $condonation = Condonation::where('credit_id', $id)
+            $condonation = Condonation::where('id', $id)
                 ->where('status', 'PENDIENTE')
                 ->first();
 
