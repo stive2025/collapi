@@ -51,7 +51,7 @@ class CondonationResource extends JsonResource
             // Fechas
             'created_at' => $this->created_at?->format('Y/m/d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y/m/d H:i:s'),
-            'reverted_at' => $this->reverted_at?->format('Y/m/d H:i:s'),
+            'reverted_at' => $this->reverted_at ? $this->reverted_at->format('Y/m/d H:i:s') : null,
         ];
     }
 
