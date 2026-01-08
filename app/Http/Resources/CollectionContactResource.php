@@ -26,6 +26,7 @@ class CollectionContactResource extends JsonResource
             'client_ci' => $this->client?->ci ?? null,
             'client_type' => $this->client?->credits?->first()?->pivot?->type ?? null,
             'sync_id' => $this->client?->credits?->first()?->sync_id ?? null,
+            'is_external' => is_null($this->created_at) && is_null($this->updated_at) && is_null($this->deleted_at),
         ];
     }
 }
