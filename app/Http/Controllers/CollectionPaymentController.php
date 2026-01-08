@@ -215,7 +215,7 @@ class CollectionPaymentController extends Controller
     {
         Log::channel('payments')->info('Actualizando cuotas del convenio', ['credit_id' => $creditId, 'amount_paid' => $amountPaid]);
         $agreement = Agreement::where('credit_id', $creditId)
-            ->where('status', 'autorizado')
+            ->where('status', 'AUTORIZADO')
             ->first();
 
         if (!$agreement || empty($agreement->fee_detail)) {
@@ -275,8 +275,7 @@ class CollectionPaymentController extends Controller
         $agreement->save();
         Log::channel('payments')->info('Cuotas del convenio actualizadas', [
             'agreement_id' => $agreement->id,
-            'paid_fees' => $agreement->paid_fees,
-            'pending_fees' => $agreement->pending_fees
+            'paid_fees' => $agreement->paid_fees
         ]);
     }
 
