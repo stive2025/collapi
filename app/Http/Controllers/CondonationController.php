@@ -144,8 +144,8 @@ class CondonationController extends Controller
             ];
 
             if ($isAdmin) {
-                // Admin: status APLICADA y updated_by
-                $condonationData['status'] = 'APLICADA';
+                // Admin: status AUTORIZADA y updated_by
+                $condonationData['status'] = 'AUTORIZADA';
                 $condonationData['updated_by'] = $user->id;
 
                 // Restar valores del crédito
@@ -229,24 +229,80 @@ class CondonationController extends Controller
     //  Autorizar condonación
     public function authorizeCondonation(string $id, Request $request)
     {
-        $condonation = Condonation::where('id', $id)
-            ->where('status', 'PENDIENTE')
-            ->first();
+        DB::beginTransaction();
 
-        if (!$condonation) {
-            return ResponseBase::notFound('Condonación no encontrada o no está en estado PENDIENTE');
+        try {
+            $user = $request->user();
+            if (!$user) {
+                DB::rollBack();
+                return ResponseBase::unauthorized('Usuario no autenticado');
+            }
+
+            $condonation = Condonation::where('id', $id)
+                ->where('status', 'PENDIENTE')
+                ->first();
+
+            if (!$condonation) {
+                DB::rollBack();
+                return ResponseBase::notFound('Condonación no encontrada o no está en estado PENDIENTE');
+            }
+
+            $credit = Credit::lockForUpdate()->find($condonation->credit_id);
+
+            if (!$credit) {
+                DB::rollBack();
+                return ResponseBase::error('Crédito no encontrado', null, 404);
+            }
+
+            // Obtener los valores post_dates para aplicar al crédito
+            $postDates = json_decode($condonation->post_dates, true);
+
+            if (!$postDates) {
+                DB::rollBack();
+                return ResponseBase::error('No se encontraron valores para aplicar', null, 400);
+            }
+
+            // Restar valores del crédito
+            $credit->update([
+                'total_amount' => (float)$postDates['total_amount'],
+                'capital' => (float)$postDates['capital'],
+                'interest' => (float)$postDates['interest'],
+                'mora' => (float)$postDates['mora'],
+                'safe' => (float)$postDates['safe'],
+                'management_collection_expenses' => (float)$postDates['management_collection_expenses'],
+                'collection_expenses' => (float)$postDates['collection_expenses'],
+                'legal_expenses' => (float)$postDates['legal_expenses'],
+                'other_values' => (float)$postDates['other_values'],
+            ]);
+
+            // Actualizar condonación
+            $condonation->status = 'AUTORIZADA';
+            $condonation->updated_by = $user->id;
+            $condonation->save();
+
+            DB::commit();
+
+            // Cargar relaciones para el Resource
+            $condonation->load(['credit.clients', 'creator']);
+
+            return ResponseBase::success(
+                new \App\Http\Resources\CondonationResource($condonation),
+                'Condonación autorizada correctamente'
+            );
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error autorizando condonación', [
+                'message' => $e->getMessage(),
+                'condonation_id' => $id
+            ]);
+
+            return ResponseBase::error(
+                'Error al autorizar la condonación',
+                ['error' => $e->getMessage()],
+                500
+            );
         }
-        $condonation->status = 'AUTORIZADA';
-        $condonation->updated_by = $request->user()->id;
-        $condonation->save();
-
-        // Cargar relaciones para el Resource
-        $condonation->load(['credit.clients', 'creator']);
-
-        return ResponseBase::success(
-            new \App\Http\Resources\CondonationResource($condonation),
-            'Condonación autorizada correctamente'
-        );
     }
 
     /**
@@ -279,7 +335,7 @@ class CondonationController extends Controller
                 );
             }
 
-            if ($condonation->status !== 'APLICADA') {
+            if ($condonation->status !== 'AUTORIZADA') {
                 DB::rollBack();
                 return ResponseBase::error(
                     'Solo se pueden revertir condonaciones en estado APLICADA',
