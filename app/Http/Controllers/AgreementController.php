@@ -141,7 +141,7 @@ class AgreementController extends Controller
 
             if ($isAdmin) {
                 // Admin: status autorizado y updated_by, actualiza el crédito
-                $agreementData['status'] = 'autorizado';
+                $agreementData['status'] = 'AUTORIZADO';
                 $agreementData['updated_by'] = $user->id;
 
                 $credit->update([
@@ -151,7 +151,7 @@ class AgreementController extends Controller
                 ]);
             } else {
                 // No admin: status pendiente, no actualiza el crédito
-                $agreementData['status'] = 'pendiente';
+                $agreementData['status'] = 'PENDIENTE';
             }
 
             $agreement = Agreement::create($agreementData);
@@ -247,7 +247,7 @@ class AgreementController extends Controller
             }
 
             // Solo se pueden actualizar convenios en estado pendiente
-            if ($agreement->status !== 'pendiente') {
+            if ($agreement->status !== 'PENDIENTE') {
                 DB::rollBack();
                 return ResponseBase::error(
                     'Solo se pueden actualizar convenios en estado pendiente',
@@ -299,7 +299,7 @@ class AgreementController extends Controller
                 'fee_amount' => $validated['fee_amount'],
                 'fee_detail' => json_encode($validated['fee_detail']),
                 'updated_by' => $user->id,
-                'status' => 'autorizado',
+                'status' => 'AUTORIZADO',
             ]);
 
             DB::commit();
@@ -344,7 +344,7 @@ class AgreementController extends Controller
             }
 
             $agreement = Agreement::where('id', $id)
-                ->where('status', 'pendiente')
+                ->where('status', 'PENDIENTE')
                 ->first();
 
             if (!$agreement) {
@@ -379,7 +379,7 @@ class AgreementController extends Controller
 
             // Actualizar convenio
             $agreement->update([
-                'status' => 'autorizado',
+                'status' => 'AUTORIZADO',
                 'updated_by' => $user->id,
             ]);
 
@@ -428,7 +428,7 @@ class AgreementController extends Controller
                 return ResponseBase::notFound('Convenio no encontrado');
             }
 
-            if ($agreement->status === 'revertido') {
+            if ($agreement->status === 'REVERTIDO') {
                 DB::rollBack();
                 return ResponseBase::error(
                     'Este convenio ya fue revertido',
@@ -437,7 +437,7 @@ class AgreementController extends Controller
                 );
             }
 
-            if ($agreement->status !== 'autorizado') {
+            if ($agreement->status !== 'AUTORIZADO') {
                 DB::rollBack();
                 return ResponseBase::error(
                     'Solo se pueden revertir convenios en estado autorizado',
@@ -462,7 +462,7 @@ class AgreementController extends Controller
 
             // Actualizar el convenio
             $agreement->update([
-                'status' => 'revertido',
+                'status' => 'REVERTIDO',
                 'updated_by' => $user->id,
             ]);
 
@@ -502,7 +502,7 @@ class AgreementController extends Controller
             }
 
             $agreement = Agreement::where('id', $id)
-                ->where('status', 'pendiente')
+                ->where('status', 'PENDIENTE')
                 ->first();
 
             if (!$agreement) {
@@ -510,7 +510,7 @@ class AgreementController extends Controller
             }
 
             $agreement->update([
-                'status' => 'denegado',
+                'status' => 'DENEGADO',
                 'updated_by' => $user->id,
             ]);
 
@@ -549,7 +549,7 @@ class AgreementController extends Controller
                 return ResponseBase::notFound('Convenio no encontrado');
             }
 
-            if ($agreement->status === 'autorizado') {
+            if ($agreement->status === 'AUTORIZADO') {
                 $agreement->credit->update([
                     'collection_state' => 'VENCIDO',
                 ]);
@@ -588,6 +588,5 @@ class AgreementController extends Controller
      */
     private function generateCollectionExpense(Credit $credit, array &$validated): void
     {
-        // TODO: Implementar lógica de generación de gasto de cobranza
     }
 }
