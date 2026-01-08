@@ -271,7 +271,6 @@ class CollectionPaymentController extends Controller
 
         $agreement->fee_detail = json_encode($feeDetail);
         $agreement->paid_fees = ($agreement->paid_fees ?? 0) + $totalPaidFees;
-        $agreement->pending_fees = max(0, ($agreement->total_fees ?? 0) - $agreement->paid_fees);
         $agreement->save();
         Log::channel('payments')->info('Cuotas del convenio actualizadas', [
             'agreement_id' => $agreement->id,
