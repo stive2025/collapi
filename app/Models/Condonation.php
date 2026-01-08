@@ -12,7 +12,6 @@ class Condonation extends Model
         'amount',
         'prev_dates',
         'post_dates',
-        'condoned_amount',
         'created_by',
         'updated_by',
         'reverted_by',
