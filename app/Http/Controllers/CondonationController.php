@@ -226,6 +226,133 @@ class CondonationController extends Controller
         }
     }
 
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, string $id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $user = $request->user();
+            if (!$user) {
+                DB::rollBack();
+                return ResponseBase::unauthorized('Usuario no autenticado');
+            }
+
+            // Verificar que el usuario sea admin
+            $isAdmin = in_array(strtolower($user->role), ['admin', 'superadmin']);
+            if (!$isAdmin) {
+                DB::rollBack();
+                return ResponseBase::error(
+                    'Solo los administradores pueden actualizar condonaciones',
+                    null,
+                    403
+                );
+            }
+
+            $condonation = Condonation::find($id);
+
+            if (!$condonation) {
+                DB::rollBack();
+                return ResponseBase::notFound('Condonación no encontrada');
+            }
+
+            // Solo se pueden actualizar condonaciones en estado PENDIENTE
+            if ($condonation->status !== 'PENDIENTE') {
+                DB::rollBack();
+                return ResponseBase::error(
+                    'Solo se pueden actualizar condonaciones en estado PENDIENTE',
+                    null,
+                    400
+                );
+            }
+
+            $validated = $request->validate([
+                'post_dates' => ['required', 'array'],
+                'post_dates.total_amount' => ['required', 'numeric', 'min:0'],
+                'post_dates.capital' => ['required', 'numeric', 'min:0'],
+                'post_dates.interest' => ['required', 'numeric', 'min:0'],
+                'post_dates.mora' => ['required', 'numeric', 'min:0'],
+                'post_dates.safe' => ['required', 'numeric', 'min:0'],
+                'post_dates.management_collection_expenses' => ['required', 'numeric', 'min:0'],
+                'post_dates.collection_expenses' => ['required', 'numeric', 'min:0'],
+                'post_dates.legal_expenses' => ['required', 'numeric', 'min:0'],
+                'post_dates.other_values' => ['required', 'numeric', 'min:0'],
+            ]);
+
+            $credit = Credit::lockForUpdate()->find($condonation->credit_id);
+
+            if (!$credit) {
+                DB::rollBack();
+                return ResponseBase::error('Crédito no encontrado', null, 404);
+            }
+
+            $prevDates = json_decode($condonation->prev_dates, true);
+            $postDates = $validated['post_dates'];
+
+            // Recalcular el monto condonado
+            $condonedAmount = [
+                'total_amount' => ($prevDates['total_amount'] ?? 0) - (float)$postDates['total_amount'],
+                'capital' => ($prevDates['capital'] ?? 0) - (float)$postDates['capital'],
+                'interest' => ($prevDates['interest'] ?? 0) - (float)$postDates['interest'],
+                'mora' => ($prevDates['mora'] ?? 0) - (float)$postDates['mora'],
+                'safe' => ($prevDates['safe'] ?? 0) - (float)$postDates['safe'],
+                'management_collection_expenses' => ($prevDates['management_collection_expenses'] ?? 0) - (float)$postDates['management_collection_expenses'],
+                'collection_expenses' => ($prevDates['collection_expenses'] ?? 0) - (float)$postDates['collection_expenses'],
+                'legal_expenses' => ($prevDates['legal_expenses'] ?? 0) - (float)$postDates['legal_expenses'],
+                'other_values' => ($prevDates['other_values'] ?? 0) - (float)$postDates['other_values'],
+            ];
+
+            // Restar valores del crédito
+            $credit->update([
+                'total_amount' => (float)$postDates['total_amount'],
+                'capital' => (float)$postDates['capital'],
+                'interest' => (float)$postDates['interest'],
+                'mora' => (float)$postDates['mora'],
+                'safe' => (float)$postDates['safe'],
+                'management_collection_expenses' => (float)$postDates['management_collection_expenses'],
+                'collection_expenses' => (float)$postDates['collection_expenses'],
+                'legal_expenses' => (float)$postDates['legal_expenses'],
+                'other_values' => (float)$postDates['other_values'],
+            ]);
+
+            // Actualizar condonación y cambiar status a APLICADA
+            $condonation->update([
+                'post_dates' => json_encode($postDates),
+                'amount' => (float)$condonedAmount['total_amount'],
+                'updated_by' => $user->id,
+                'status' => 'AUTORIZADA',
+            ]);
+
+            DB::commit();
+
+            // Cargar relaciones para el Resource
+            $condonation->load(['credit.clients', 'creator']);
+
+            return ResponseBase::success(
+                new \App\Http\Resources\CondonationResource($condonation),
+                'Condonación actualizada exitosamente'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error updating condonation', [
+                'message' => $e->getMessage(),
+                'id' => $id
+            ]);
+
+            return ResponseBase::error(
+                'Error al actualizar la condonación',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
     //  Autorizar condonación
     public function authorizeCondonation(string $id, Request $request)
     {
