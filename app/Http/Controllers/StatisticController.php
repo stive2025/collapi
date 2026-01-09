@@ -59,14 +59,13 @@ class StatisticController extends Controller
                     MAX(updated_at) as last_update
                 ')
                 ->first();
-
-            // Consulta con join a collection_credits para obtener fecha de entrada a campaña
+            
             $detailedStats = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                 ->where('collection_payments.with_management', 'SI')
                 ->join('credits', 'collection_payments.credit_id', '=', 'credits.id')
                 ->leftJoin('collection_credits', function($join) use ($campainId) {
                     $join->on('credits.id', '=', 'collection_credits.credit_id')
-                         ->where('collection_credits.campain_id', '=', $campainId);
+                        ->where('collection_credits.campain_id', '=', $campainId);
                 })
                 ->selectRaw('
                     SUM(CASE 
@@ -86,6 +85,28 @@ class StatisticController extends Controller
                     END) as total_overdue
                 ', [$firstDayOfMonth])
                 ->first();
+            
+            $agents = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
+                ->where('collection_payments.with_management', 'SI')
+                ->join('credits', 'collection_payments.credit_id', '=', 'credits.id')
+                ->join('collection_credits', function($join) use ($campainId) {
+                    $join->on('credits.id', '=', 'collection_credits.credit_id')
+                        ->where('collection_credits.campain_id', '=', $campainId);
+                })
+                ->join('users', 'collection_credits.user_id', '=', 'users.id')
+                ->where('collection_credits.created_at', '>=', $firstDayOfMonth)
+                ->groupBy('users.id', 'users.name')
+                ->selectRaw('
+                    users.name,
+                    SUM(collection_payments.payment_value) as total_with_management_in_campain
+                ')
+                ->get()
+                ->map(function($agent) {
+                    return [
+                        'name' => $agent->name,
+                        'total_with_management_in_campain' => (float) $agent->total_with_management_in_campain,
+                    ];
+                });
 
             $statistics = [
                 'total_general_with_management' => (float) ($generalStats->total_with_management ?? 0),
@@ -97,6 +118,7 @@ class StatisticController extends Controller
                 'last_update' => $generalStats->last_update ? \Carbon\Carbon::parse($generalStats->last_update)->format('Y-m-d H:i:s') : null,
                 'campain_id' => $campainId,
                 'campain_name' => $activeCampain->name,
+                'agents' => $agents,
             ];
 
             return ResponseBase::success(
