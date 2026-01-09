@@ -59,7 +59,7 @@ class StatisticController extends Controller
                     MAX(updated_at) as last_update
                 ')
                 ->first();
-            
+
             $detailedStats = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                 ->where('collection_payments.with_management', 'SI')
                 ->join('credits', 'collection_payments.credit_id', '=', 'credits.id')
@@ -86,25 +86,28 @@ class StatisticController extends Controller
                 ', [$firstDayOfMonth])
                 ->first();
             
-            $agents = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
-                ->where('collection_payments.with_management', 'SI')
-                ->join('credits', 'collection_payments.credit_id', '=', 'credits.id')
-                ->join('collection_credits', function($join) use ($campainId) {
-                    $join->on('credits.id', '=', 'collection_credits.credit_id')
-                        ->where('collection_credits.campain_id', '=', $campainId);
-                })
+            // Todos los usuarios asignados a créditos en la campaña
+            $agents = \App\Models\CollectionCredit::where('campain_id', $campainId)
                 ->join('users', 'collection_credits.user_id', '=', 'users.id')
-                ->where('collection_credits.created_at', '>=', $firstDayOfMonth)
                 ->groupBy('users.id', 'users.name')
-                ->selectRaw('
-                    users.name,
-                    SUM(collection_payments.payment_value) as total_with_management_in_campain
-                ')
+                ->select('users.id', 'users.name')
                 ->get()
-                ->map(function($agent) {
+                ->map(function($user) use ($campainId, $firstDayOfMonth) {
+                    // Obtener IDs de créditos del usuario activos desde el primer día del mes
+                    $creditIds = \App\Models\CollectionCredit::where('campain_id', $campainId)
+                        ->where('user_id', $user->id)
+                        ->where('created_at', '>=', $firstDayOfMonth)
+                        ->pluck('credit_id');
+                    
+                    // Sumar pagos con gestión de esos créditos
+                    $total = \App\Models\CollectionPayment::where('campain_id', $campainId)
+                        ->where('with_management', 'SI')
+                        ->whereIn('credit_id', $creditIds)
+                        ->sum('payment_value');
+                    
                     return [
-                        'name' => $agent->name,
-                        'total_with_management_in_campain' => (float) $agent->total_with_management_in_campain,
+                        'name' => $user->name,
+                        'total_with_management_in_campain' => (float) $total,
                     ];
                 });
 
