@@ -37,7 +37,7 @@ class StatisticController extends Controller
         try {
             $activeCampain = \App\Models\Campain::where('state', 'ACTIVE')
                 ->where('type', 'api')
-                ->select('id', 'name')
+                ->select('id', 'name', 'agents')
                 ->first();
 
             if (!$activeCampain) {
@@ -50,6 +50,7 @@ class StatisticController extends Controller
 
             $campainId = $activeCampain->id;
             $firstDayOfMonth = now()->startOfMonth();
+            $agentIds = $activeCampain->agents ?? []; // Array de IDs de usuarios
 
             $generalStats = \App\Models\CollectionPayment::where('campain_id', $campainId)
                 ->selectRaw('
@@ -86,11 +87,9 @@ class StatisticController extends Controller
                 ', [$firstDayOfMonth])
                 ->first();
             
-            // Todos los usuarios asignados a créditos en la campaña
-            $agents = \App\Models\CollectionCredit::where('campain_id', $campainId)
-                ->join('users', 'collection_credits.user_id', '=', 'users.id')
-                ->groupBy('users.id', 'users.name')
-                ->select('users.id', 'users.name')
+            // Usuarios registrados en el campo agents de la campaña
+            $agents = \App\Models\User::whereIn('id', $agentIds)
+                ->select('id', 'name')
                 ->get()
                 ->map(function($user) use ($campainId, $firstDayOfMonth) {
                     // Obtener IDs de créditos del usuario activos desde el primer día del mes
@@ -99,17 +98,21 @@ class StatisticController extends Controller
                         ->where('created_at', '>=', $firstDayOfMonth)
                         ->pluck('credit_id');
                     
-                    // Sumar pagos con gestión de esos créditos
-                    $total = \App\Models\CollectionPayment::where('campain_id', $campainId)
-                        ->where('with_management', 'SI')
-                        ->whereIn('credit_id', $creditIds)
-                        ->sum('payment_value');
+                    // Sumar pagos con gestión de esos créditos (devuelve 0 si no hay)
+                    $total = 0;
+                    if ($creditIds->isNotEmpty()) {
+                        $total = \App\Models\CollectionPayment::where('campain_id', $campainId)
+                            ->where('with_management', 'SI')
+                            ->whereIn('credit_id', $creditIds)
+                            ->sum('payment_value');
+                    }
                     
                     return [
                         'name' => $user->name,
-                        'total_with_management_in_campain' => (float) $total,
+                        'total_with_management_in_campain' => (float) ($total ?? 0),
                     ];
-                });
+                })
+                ->values(); // Re-indexar el array
 
             $statistics = [
                 'total_general_with_management' => (float) ($generalStats->total_with_management ?? 0),
