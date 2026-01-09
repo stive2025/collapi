@@ -59,13 +59,18 @@ class StatisticController extends Controller
                     MAX(updated_at) as last_update
                 ')
                 ->first();
-            
+
+            // Consulta con join a collection_credits para obtener fecha de entrada a campaña
             $detailedStats = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                 ->where('collection_payments.with_management', 'SI')
                 ->join('credits', 'collection_payments.credit_id', '=', 'credits.id')
+                ->leftJoin('collection_credits', function($join) use ($campainId) {
+                    $join->on('credits.id', '=', 'collection_credits.credit_id')
+                         ->where('collection_credits.campain_id', '=', $campainId);
+                })
                 ->selectRaw('
                     SUM(CASE 
-                        WHEN credits.campain_id = ? AND credits.created_at >= ? 
+                        WHEN collection_credits.created_at IS NOT NULL AND collection_credits.created_at >= ? 
                         THEN collection_payments.payment_value 
                         ELSE 0 
                     END) as total_in_campain,
@@ -79,7 +84,7 @@ class StatisticController extends Controller
                         THEN collection_payments.payment_value 
                         ELSE 0 
                     END) as total_overdue
-                ', [$campainId, $firstDayOfMonth])
+                ', [$firstDayOfMonth])
                 ->first();
 
             $statistics = [
