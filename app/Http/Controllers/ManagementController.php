@@ -73,7 +73,17 @@ class ManagementController extends Controller
         }
 
         if ($request->filled('credit_id')) {
-            $query->where('sync_id','LIKE','%'. $request->query('credit_id').'%');
+            $syncIdSearch = $request->query('credit_id');
+            
+            // Buscar el crédito por sync_id
+            $credit = \App\Models\Credit::where('sync_id', 'LIKE', '%' . $syncIdSearch . '%')->first();
+            
+            if ($credit) {
+                $query->where('credit_id', $credit->id);
+            } else {
+                // Si no se encuentra, no retornar ningún resultado
+                $query->whereRaw('1 = 0');
+            }
         }
         
         if ($request->filled('campain_id')) {
