@@ -79,6 +79,7 @@ Route::middleware(['check.token'])->group(function () {
     //  Módulos para migraciones masivas
     Route::post('ImportCredits', [ImportController::class, 'importCredits']);
     Route::post('ImportClients', [ImportController::class, 'importClients']);
+    Route::post('ImportContacts', [ImportController::class, 'importContacts']);
 
     // --------------------------------------------------------------------------------------------------------------
     // Desconectar usuario
