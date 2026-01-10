@@ -701,18 +701,18 @@ class CollectionPaymentController extends Controller
             $monthBindings = [$startOfMonth, $endOfMonth];
             $dayBindings = [$startOfDay, $endOfDay];
 
-            $paymentResume = CollectionPayment::select(
-                    'collection_payments.business_id',
+            $paymentResume = DB::table('businesses')
+                ->select(
+                    'businesses.id as business_id',
                     'businesses.name as business_name',
-                    DB::raw('COUNT(DISTINCT collection_payments.credit_id) as nro_credits_with_payment'),
+                    DB::raw('COUNT(DISTINCT CASE WHEN collection_payments.payment_date BETWEEN ? AND ? THEN collection_payments.credit_id END) as nro_credits_with_payment'),
                     DB::raw('COALESCE(SUM(CASE WHEN collection_payments.payment_date BETWEEN ? AND ? THEN collection_payments.payment_value ELSE 0 END), 0) as total_amount_by_month'),
                     DB::raw('COALESCE(SUM(CASE WHEN collection_payments.payment_date BETWEEN ? AND ? THEN collection_payments.payment_value ELSE 0 END), 0) as total_amount_by_day')
                 )
-                ->join('businesses', 'collection_payments.business_id', '=', 'businesses.id')
-                ->whereBetween('collection_payments.payment_date', [$startOfMonth, $endOfMonth])
-                ->groupBy('collection_payments.business_id', 'businesses.name')
+                ->leftJoin('collection_payments', 'businesses.id', '=', 'collection_payments.business_id')
+                ->groupBy('businesses.id', 'businesses.name')
                 ->orderBy('businesses.name')
-                ->addBinding(array_merge($monthBindings, $dayBindings), 'select')
+                ->addBinding(array_merge($monthBindings, $monthBindings, $dayBindings), 'select')
                 ->get();
 
             return ResponseBase::success($paymentResume, 'Resumen de pagos obtenido correctamente');
