@@ -139,4 +139,174 @@ class StatisticController extends Controller
             );
         }
     }
+
+    public function getPaymentsWithManagementDetail(Request $request)
+    {
+        try {
+            $perPage = (int) $request->query('per_page', 15);
+            
+            $query = \App\Models\CollectionPayment::query()
+                ->select(
+                    'collection_payments.id',
+                    'collection_payments.payment_value',
+                    'collection_payments.payment_date',
+                    'collection_payments.with_management',
+                    'collection_payments.management_auto',
+                    'collection_payments.days_past_due_auto',
+                    'collection_payments.credit_id',
+                    'collection_payments.campain_id'
+                )
+                ->with([
+                    'credit' => function($q) {
+                        $q->select('id', 'sync_id', 'collection_state', 'days_past_due', 'agency')
+                            ->with(['clients' => function($clientQuery) {
+                                $clientQuery->select('clients.id', 'clients.name', 'clients.ci');
+                            }]);
+                    }
+                ]);
+
+            // Filtros
+            if ($request->filled('credit_name')) {
+                $query->whereHas('credit.clients', function($q) use ($request) {
+                    $q->where('name', 'LIKE', '%' . $request->query('credit_name') . '%');
+                });
+            }
+
+            if ($request->filled('client_ci')) {
+                $query->whereHas('credit.clients', function($q) use ($request) {
+                    $q->where('ci', 'LIKE', '%' . $request->query('client_ci') . '%');
+                });
+            }
+
+            if ($request->filled('agency')) {
+                $query->whereHas('credit', function($q) use ($request) {
+                    $q->where('agency', $request->query('agency'));
+                });
+            }
+
+            if ($request->filled('collection_state')) {
+                $query->whereHas('credit', function($q) use ($request) {
+                    $q->where('collection_state', $request->query('collection_state'));
+                });
+            }
+
+            if ($request->filled('days_past_due_min')) {
+                $query->whereHas('credit', function($q) use ($request) {
+                    $q->where('days_past_due', '>=', $request->query('days_past_due_min'));
+                });
+            }
+
+            if ($request->filled('days_past_due_max')) {
+                $query->whereHas('credit', function($q) use ($request) {
+                    $q->where('days_past_due', '<=', $request->query('days_past_due_max'));
+                });
+            }
+
+            if ($request->filled('management_type')) {
+                $type = $request->query('management_type');
+                if ($type === 'with') {
+                    $query->where('with_management', 'SI');
+                } elseif ($type === 'without') {
+                    $query->where('with_management', 'NO');
+                }
+            }
+
+            if ($request->filled('agent_id')) {
+                $query->whereHas('managementAuto', function($q) use ($request) {
+                    $q->where('created_by', $request->query('agent_id'));
+                });
+            }
+
+            if ($request->filled('campain_id')) {
+                $query->where('campain_id', $request->query('campain_id'));
+            }
+
+            $orderBy = $request->query('order_by', 'payment_date');
+            $orderDir = $request->query('order_dir', 'desc');
+            $query->orderBy($orderBy, $orderDir);
+
+            $payments = $query->paginate($perPage);
+
+            // Transformar los datos
+            $payments->getCollection()->transform(function($payment) {
+                $credit = $payment->credit;
+                $client = $credit && $credit->clients ? $credit->clients->first() : null;
+
+                // Contar gestiones efectivas y no efectivas del crédito
+                $effectiveCount = \App\Models\Management::where('credit_id', $payment->credit_id)
+                    ->whereIn('substate', [
+                        'COMPROMISO DE PAGO',
+                        'CONVENIO DE PAGO',
+                        'YA PAGO',
+                        'YA PAGÓ',
+                        'ABONO A DEUDA',
+                        'OFERTA DE PAGO'
+                    ])
+                    ->count();
+
+                $nonEffectiveCount = \App\Models\Management::where('credit_id', $payment->credit_id)
+                    ->whereNotIn('substate', [
+                        'COMPROMISO DE PAGO',
+                        'CONVENIO DE PAGO',
+                        'YA PAGO',
+                        'YA PAGÓ',
+                        'ABONO A DEUDA',
+                        'OFERTA DE PAGO'
+                    ])
+                    ->count();
+
+                // Sumar pagos con y sin gestión del mismo crédito
+                $totalWithManagement = \App\Models\CollectionPayment::where('credit_id', $payment->credit_id)
+                    ->where('with_management', 'SI')
+                    ->sum('payment_value');
+
+                $totalWithoutManagement = \App\Models\CollectionPayment::where('credit_id', $payment->credit_id)
+                    ->where('with_management', 'NO')
+                    ->sum('payment_value');
+
+                // Obtener el agente de la gestión
+                $agent = null;
+                if ($payment->management_auto) {
+                    $management = \App\Models\Management::find($payment->management_auto);
+                    if ($management && $management->creator) {
+                        $agent = $management->creator->name;
+                    }
+                }
+
+                return [
+                    'payment_id' => $payment->id,
+                    'credit_name' => $client ? $client->name : 'N/A',
+                    'credit_sync_id' => $credit ? $credit->sync_id : 'N/A',
+                    'client_ci' => $client ? $client->ci : 'N/A',
+                    'agency' => $credit ? $credit->agency : 'N/A',
+                    'collection_state' => $credit ? $credit->collection_state : 'N/A',
+                    'days_past_due' => $credit ? $credit->days_past_due : 0,
+                    'management_type' => $payment->with_management,
+                    'effective_managements_count' => $effectiveCount,
+                    'non_effective_managements_count' => $nonEffectiveCount,
+                    'total_paid_with_management' => (float) $totalWithManagement,
+                    'total_paid_without_management' => (float) $totalWithoutManagement,
+                    'agent' => $agent ?? 'N/A',
+                    'payment_value' => (float) $payment->payment_value,
+                    'payment_date' => $payment->payment_date,
+                ];
+            });
+
+            return ResponseBase::success(
+                $payments,
+                'Detalle de pagos con gestión obtenido correctamente'
+            );
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error al obtener detalle de pagos con gestión', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al obtener detalle de pagos',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
 }

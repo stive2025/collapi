@@ -78,4 +78,14 @@ class CollectionPayment extends Model
     {
         return $this->belongsTo(Campain::class);
     }
+
+    public function managementAuto(): BelongsTo
+    {
+        return $this->belongsTo(Management::class, 'management_auto');
+    }
+
+    public function managementPrev(): BelongsTo
+    {
+        return $this->belongsTo(Management::class, 'management_prev');
+    }
 }
