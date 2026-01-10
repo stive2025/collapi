@@ -732,15 +732,7 @@ class CollectionPaymentController extends Controller
     
     public function syncPayments(Request $request){
         try {
-            $businessName = $request->input('business_name');
-
-            if (!$businessName) {
-                return ResponseBase::error(
-                    'El parámetro business_name es requerido',
-                    ['business_name' => 'Este campo es obligatorio'],
-                    422
-                );
-            }
+            $businessName = $request->input('business_name', 'SEFIL_1');
 
             if (!in_array($businessName, ['SEFIL_1', 'SEFIL_2'])) {
                 return ResponseBase::error(

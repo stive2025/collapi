@@ -244,6 +244,7 @@ class UserController extends Controller
 
             foreach ($users as $user) {
                 $nroCredits = Credit::where('user_id', $user->id)
+                    ->where('sync_status','ACTIVE')
                     ->where('business_id', $activeCampain->business_id)
                     ->count();
 
@@ -268,16 +269,19 @@ class UserController extends Controller
                     ->count();
 
                 $nroPendientes = Credit::where('user_id', $user->id)
+                    ->where('sync_status','ACTIVE')
                     ->where('business_id', $activeCampain->business_id)
                     ->where('management_tray', 'PENDIENTE')
                     ->count();
 
                 $nroProceso = Credit::where('user_id', $user->id)
+                    ->where('sync_status','ACTIVE')
                     ->where('business_id', $activeCampain->business_id)
                     ->where('management_tray', 'EN PROCESO')
                     ->count();
 
                 $nroProcesoDia = Credit::where('user_id', $user->id)
+                    ->where('sync_status','ACTIVE')
                     ->where('business_id', $activeCampain->business_id)
                     ->where('management_tray', 'EN PROCESO')
                     ->whereDate('last_sync_date', $today)
