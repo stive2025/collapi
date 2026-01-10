@@ -26,21 +26,21 @@ class LoginController extends Controller
             }
             
             $isAdmin = in_array(strtolower($user->role), ['admin', 'superadmin']);
-            if (!$isAdmin) {
-                $localTime = now()->subHours(5);
-                $currentHour = $localTime->hour;
+            // if (!$isAdmin) {
+            //     $localTime = now()->subHours(5);
+            //     $currentHour = $localTime->hour;
                 
-                if ($currentHour < 7 || $currentHour >= 19) {
-                    return ResponseBase::error(
-                        'Acceso denegado fuera del horario permitido (7:00 AM - 7:00 PM)',
-                        [
-                            'horario_local' => $localTime->format('H:i:s'),
-                            'horario_servidor' => now()->format('H:i:s')
-                        ],
-                        403
-                    );
-                }
-            }
+            //     if ($currentHour < 7 || $currentHour >= 19) {
+            //         return ResponseBase::error(
+            //             'Acceso denegado fuera del horario permitido (7:00 AM - 7:00 PM)',
+            //             [
+            //                 'horario_local' => $localTime->format('H:i:s'),
+            //                 'horario_servidor' => now()->format('H:i:s')
+            //             ],
+            //             403
+            //         );
+            //     }
+            // }
             
             $user->tokens()->delete();
             $user->update(['status' => 'CONECTADO','updated_at' => now()]);
