@@ -25,7 +25,7 @@ class UserController extends Controller
         $query = User::query();
 
         if ($request->filled('agents')) {
-            $query->whereNotIn('role',['superadmin','admin','supervisor','query']);
+            $query->whereNotIn('role',['superadmin','query']);
         }
 
         if ($request->filled('is_active')) {
