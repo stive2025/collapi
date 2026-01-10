@@ -96,8 +96,8 @@ class StatisticController extends Controller
                     $paymentsData = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                         ->where('collection_payments.with_management', 'SI')
                         ->whereNotNull('collection_payments.management_auto')
-                        ->join('managements', 'collection_payments.management_auto', '=', 'managements.id')
-                        ->where('managements.created_by', $user->id)
+                        ->join('management', 'collection_payments.management_auto', '=', 'management.id')
+                        ->where('management.created_by', $user->id)
                         ->selectRaw('SUM(collection_payments.payment_value) as total, COUNT(DISTINCT collection_payments.credit_id) as nro_credits')
                         ->first();
                     
