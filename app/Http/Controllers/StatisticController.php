@@ -92,30 +92,19 @@ class StatisticController extends Controller
                 ->select('id', 'name')
                 ->get()
                 ->map(function($user) use ($campainId, $firstDayOfMonth) {
-                    // Obtener IDs de créditos del usuario activos desde el primer día del mes
-                    $creditIds = \App\Models\CollectionCredit::where('campain_id', $campainId)
-                        ->where('user_id', $user->id)
-                        ->where('created_at', '>=', $firstDayOfMonth)
-                        ->pluck('credit_id');
-                    
-                    // Sumar pagos con gestión y contar créditos distintos
-                    $total = 0;
-                    $nroCredits = 0;
-                    if ($creditIds->isNotEmpty()) {
-                        $paymentsData = \App\Models\CollectionPayment::where('campain_id', $campainId)
-                            ->where('with_management', 'SI')
-                            ->whereIn('credit_id', $creditIds)
-                            ->selectRaw('SUM(payment_value) as total, COUNT(DISTINCT credit_id) as nro_credits')
-                            ->first();
-                        
-                        $total = $paymentsData->total ?? 0;
-                        $nroCredits = $paymentsData->nro_credits ?? 0;
-                    }
+                    // Obtener pagos con gestión donde el usuario creó la gestión asociada
+                    $paymentsData = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
+                        ->where('collection_payments.with_management', 'SI')
+                        ->whereNotNull('collection_payments.management_auto')
+                        ->join('managements', 'collection_payments.management_auto', '=', 'managements.id')
+                        ->where('managements.created_by', $user->id)
+                        ->selectRaw('SUM(collection_payments.payment_value) as total, COUNT(DISTINCT collection_payments.credit_id) as nro_credits')
+                        ->first();
                     
                     return [
                         'name' => $user->name,
-                        'total_with_management_in_campain' => (float) $total,
-                        'nro_credits' => (int) $nroCredits,
+                        'total_with_management_in_campain' => (float) ($paymentsData->total ?? 0),
+                        'nro_credits' => (int) ($paymentsData->nro_credits ?? 0),
                     ];
                 })
                 ->values(); // Re-indexar el array

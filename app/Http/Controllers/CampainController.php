@@ -323,8 +323,34 @@ class CampainController extends Controller
 
             $this->utilService->associateManagementsToPayment($validated['date']);
 
+            // Obtener los pagos procesados de esa fecha
+            $payments = \App\Models\CollectionPayment::whereDate('payment_date', $validated['date'])
+                ->with(['credit:id,sync_id'])
+                ->get();
+
+            $summary = [
+                'date' => $validated['date'],
+                'total_payments' => $payments->count(),
+                'with_management' => $payments->where('with_management', 'SI')->count(),
+                'without_management' => $payments->where('with_management', 'NO')->count(),
+                'post_management' => $payments->where('post_management', 'SI')->count(),
+                'payments' => $payments->map(function($payment) {
+                    return [
+                        'id' => $payment->id,
+                        'credit_sync_id' => $payment->credit->sync_id ?? null,
+                        'payment_value' => $payment->payment_value,
+                        'with_management' => $payment->with_management,
+                        'management_auto' => $payment->management_auto,
+                        'management_prev' => $payment->management_prev,
+                        'days_past_due_auto' => $payment->days_past_due_auto,
+                        'days_past_due_prev' => $payment->days_past_due_prev,
+                        'post_management' => $payment->post_management
+                    ];
+                })
+            ];
+
             return ResponseBase::success(
-                ['date' => $validated['date']],
+                $summary,
                 'Asociación de gestiones a pagos completada exitosamente'
             );
         } catch (\Illuminate\Validation\ValidationException $e) {
