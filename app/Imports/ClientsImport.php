@@ -19,7 +19,7 @@ class ClientsImport implements ToCollection, WithHeadingRow, WithValidation
                 ['ci' => strval($row['ci'])],
                 [
                     'name' => $row['name'],
-                    'type' => $row['type'],
+                    'type' => 'TITULAR',
                     'gender' => $row['gender'],
                     'civil_status' => $row['civil_status'],
                     'economic_activity' => $row['economic_activity'],
