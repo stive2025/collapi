@@ -5,12 +5,20 @@ namespace App\Http\Controllers;
 use App\Http\Responses\ResponseBase;
 use App\Models\Campain;
 use App\Models\Credit;
+use App\Services\UtilService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class CampainController extends Controller
 {
+    private UtilService $utilService;
+
+    public function __construct(UtilService $utilService)
+    {
+        $this->utilService = $utilService;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -302,4 +310,38 @@ class CampainController extends Controller
         
         return $distribution;
     }
+
+    /**
+     * Associate managements to payments for a specific date
+     */
+    public function associateManagements(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'date' => ['required', 'date_format:Y-m-d']
+            ]);
+
+            $this->utilService->associateManagementsToPayment($validated['date']);
+
+            return ResponseBase::success(
+                ['date' => $validated['date']],
+                'Asociación de gestiones a pagos completada exitosamente'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Error associating managements to payments', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'date' => $request->input('date')
+            ]);
+
+            return ResponseBase::error(
+                'Error al asociar gestiones a pagos',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
 }

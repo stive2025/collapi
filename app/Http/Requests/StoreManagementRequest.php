@@ -58,22 +58,22 @@ class StoreManagementRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
-            if ($this->substate === 'OFERTA DE PAGO') {
-                $existingOffer = \App\Models\Management::where('substate', 'OFERTA DE PAGO')
-                    ->where('campain_id', $this->campain_id)
-                    ->where('credit_id', $this->credit_id)
-                    ->exists();
+            // if ($this->substate === 'OFERTA DE PAGO') {
+            //     $existingOffer = \App\Models\Management::where('substate', 'OFERTA DE PAGO')
+            //         ->where('campain_id', $this->campain_id)
+            //         ->where('credit_id', $this->credit_id)
+            //         ->exists();
 
-                if ($existingOffer) {
-                    throw new HttpResponseException(
-                        ResponseBase::error(
-                            'Ya existe una oferta de pago registrada para este crédito en esta campaña',
-                            [],
-                            400
-                        )
-                    );
-                }
-            }
+            //     if ($existingOffer) {
+            //         throw new HttpResponseException(
+            //             ResponseBase::error(
+            //                 'Ya existe una oferta de pago registrada para este crédito en esta campaña',
+            //                 [],
+            //                 400
+            //             )
+            //         );
+            //     }
+            // }
 
             if ($this->substate === 'NOTIFICADO') {
                 if (empty($this->nro_notification)) {
