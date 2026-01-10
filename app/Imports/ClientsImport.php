@@ -88,7 +88,6 @@ class ClientsImport implements ToCollection, WithHeadingRow, WithValidation
         return [
             '*.name' => ['nullable', 'string'],
             '*.ci' => ['required'],
-            '*.type' => ['required', 'string'],
             '*.gender' => ['required', 'string'],
             '*.civil_status' => ['required', 'string'],
             '*.sync_id' => ['required'],
