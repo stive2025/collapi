@@ -73,7 +73,7 @@ class ManagementController extends Controller
         }
 
         if ($request->filled('credit_id')) {
-            $query->where('credit_id', $request->query('credit_id'));
+            $query->where('sync_id','LIKE','%'. $request->query('credit_id').'%');
         }
         
         if ($request->filled('campain_id')) {
