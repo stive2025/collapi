@@ -75,6 +75,12 @@ class ManagementController extends Controller
         if ($request->filled('credit_id')) {
             $syncIdSearch = $request->query('credit_id');
             
+            // Si contiene "-", extraer solo lo que está después del "-"
+            if (strpos($syncIdSearch, '-') !== false) {
+                $parts = explode('-', $syncIdSearch);
+                $syncIdSearch = end($parts);
+            }
+            
             // Buscar el crédito por sync_id
             $credit = \App\Models\Credit::where('sync_id', 'LIKE', '%' . $syncIdSearch . '%')->first();
             
