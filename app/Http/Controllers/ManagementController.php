@@ -204,6 +204,16 @@ class ManagementController extends Controller
         try {
             $campainId = $request->campain_id;
             $parseCampainId = $request->parse_campain_id;
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+
+            if (!$startDate || !$endDate) {
+                return ResponseBase::error(
+                    'Los parámetros start_date y end_date son requeridos',
+                    ['start_date' => 'Campo obligatorio', 'end_date' => 'Campo obligatorio'],
+                    422
+                );
+            }
 
             $parseDateAndAdd5Hours = function($dateString) use (&$debugCounter) {
                 static $callCount = 0;
@@ -248,7 +258,7 @@ class ManagementController extends Controller
             $lastPage = 1;
 
             do {
-                $apiUrl = "https://core.sefil.com.ec/api/public/api/managments?campain_id={$campainId}&page={$currentPage}&per_page=100";
+                $apiUrl = "https://core.sefil.com.ec/api/public/api/managments?campain_id={$campainId}&page={$currentPage}&per_page=100&start_date={$startDate}&end_date={$endDate}";
                 $response = file_get_contents($apiUrl);
                 $managementsData = json_decode($response, true);
 

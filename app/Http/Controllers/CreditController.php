@@ -207,6 +207,7 @@ class CreditController extends Controller
             $traysGrouped = (clone $query)
                 ->selectRaw('management_tray, COUNT(*) as count')
                 ->groupBy('management_tray')
+                ->where('sync_status', 'ACTIVE')
                 ->get()
                 ->pluck('count', 'management_tray')
                 ->toArray();
