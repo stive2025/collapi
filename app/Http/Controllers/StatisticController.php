@@ -98,18 +98,24 @@ class StatisticController extends Controller
                         ->where('created_at', '>=', $firstDayOfMonth)
                         ->pluck('credit_id');
                     
-                    // Sumar pagos con gestión de esos créditos (devuelve 0 si no hay)
+                    // Sumar pagos con gestión y contar créditos distintos
                     $total = 0;
+                    $nroCredits = 0;
                     if ($creditIds->isNotEmpty()) {
-                        $total = \App\Models\CollectionPayment::where('campain_id', $campainId)
+                        $paymentsData = \App\Models\CollectionPayment::where('campain_id', $campainId)
                             ->where('with_management', 'SI')
                             ->whereIn('credit_id', $creditIds)
-                            ->sum('payment_value');
+                            ->selectRaw('SUM(payment_value) as total, COUNT(DISTINCT credit_id) as nro_credits')
+                            ->first();
+                        
+                        $total = $paymentsData->total ?? 0;
+                        $nroCredits = $paymentsData->nro_credits ?? 0;
                     }
                     
                     return [
                         'name' => $user->name,
-                        'total_with_management_in_campain' => (float) ($total ?? 0),
+                        'total_with_management_in_campain' => (float) $total,
+                        'nro_credits' => (int) $nroCredits,
                     ];
                 })
                 ->values(); // Re-indexar el array
