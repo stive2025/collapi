@@ -203,6 +203,7 @@ class CreditController extends Controller
                 $credit->days_past_due ?? 0
             );
             $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
+            $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
             return $credit;
         });
 
@@ -276,6 +277,7 @@ class CreditController extends Controller
             $credit->days_past_due ?? 0
         );
         $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
+        $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
 
         return ResponseBase::success(
             new CreditResource($credit),
