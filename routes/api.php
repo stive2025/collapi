@@ -94,11 +94,20 @@ Route::middleware(['check.token'])->group(function () {
     Route::get('statistics/payments-with-management', [StatisticController::class, 'getPaymentsWithManagement']);
     Route::get('statistics/payments-with-management-details', [StatisticController::class, 'getPaymentsWithManagementDetails']);
     Route::get('statistics/metrics', [StatisticController::class, 'getMetrics']);
-    
+
     // Obtener llamadas por gestión
     Route::get('managements/{management_id}/calls', [ManagementController::class, 'indexCallsByManagementID']);
     // Sincronización masiva de gestiones
     Route::post('managements/sync', [ManagementController::class, 'syncManagements']);
+
+    // Sincronización de gastos de cobranza (invoices)
+    Route::post('sync/invoices', [SyncController::class, 'syncInvoices']);
+    
+    // Sincronización de condonaciones
+    Route::post('sync/condonations', [SyncController::class, 'syncCondonations']);
+    
+    // Sincronización de convenios de pago
+    Route::post('sync/agreements', [SyncController::class, 'syncAgreements']);
 
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);

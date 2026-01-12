@@ -5,11 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Credit;
 use App\Http\Resources\CreditResource;
 use App\Http\Responses\ResponseBase;
+use App\Services\UtilService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class CreditController extends Controller
 {
+    protected $utilService;
+
+    public function __construct(UtilService $utilService)
+    {
+        $this->utilService = $utilService;
+    }
     /**
      * Eager load relaciones estándar de créditos con clientes y direcciones
      */
@@ -188,6 +195,17 @@ class CreditController extends Controller
 
         $credits = $query->paginate(request('per_page', 15));
 
+        // Calcular management_collection_expenses para cada crédito
+        $credits->getCollection()->transform(function ($credit) {
+            $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
+            $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
+                $credit->total_amount ?? 0,
+                $credit->days_past_due ?? 0
+            );
+            $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
+            return $credit;
+        });
+
         return ResponseBase::success(
             CreditResource::collection($credits)->response()->getData(),
             'Créditos obtenidos correctamente'
@@ -250,6 +268,14 @@ class CreditController extends Controller
             'user',
             'business'
         ]);
+
+        // Calcular management_collection_expenses
+        $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
+        $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
+            $credit->total_amount ?? 0,
+            $credit->days_past_due ?? 0
+        );
+        $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
 
         return ResponseBase::success(
             new CreditResource($credit),
