@@ -82,7 +82,7 @@ class TemplateController extends Controller
                 'parent_ids' => ['nullable', 'array'],
                 'parent_ids.*' => ['exists:template_models,id'],
                 'roles' => ['nullable', 'array'],
-                'roles.*' => ['string', 'in:all,campo,call,supervisor,admin'],
+                'roles.*' => ['string', 'in:all,campo,call,supervisor,admin,legal,collector'],
                 'days_past_due_min' => ['nullable', 'integer', 'min:0'],
                 'is_active' => ['sometimes', 'boolean']
             ]);
@@ -143,7 +143,7 @@ class TemplateController extends Controller
                 'parent_ids' => ['nullable', 'array'],
                 'parent_ids.*' => ['exists:template_models,id'],
                 'roles' => ['nullable', 'array'],
-                'roles.*' => ['string', 'in:all,campo,call,supervisor,admin'],
+                'roles.*' => ['string', 'in:all,campo,call,supervisor,admin,legal,collector'],
                 'days_past_due_min' => ['nullable', 'integer', 'min:0'],
                 'is_active' => ['sometimes', 'boolean']
             ]);
