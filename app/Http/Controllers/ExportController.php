@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Exports\AccountingExport;
 use App\Exports\CampainExport;
 use App\Exports\CampainAssignExport;
+use App\Exports\DireccionesExport;
 use App\Http\Responses\ResponseBase;
 use App\Models\Business;
 use App\Models\Campain;
@@ -153,6 +154,58 @@ class ExportController extends Controller
 
             return ResponseBase::error(
                 'Error al exportar asignación de campaña',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    public function exportDirecciones(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'business_id' => ['required', 'integer', 'exists:businesses,id'],
+                'user_id' => ['required', 'integer', 'exists:users,id'],
+                'agencies' => ['required', 'string']
+            ]);
+
+            $businessId = $validated['business_id'];
+            $userId = $validated['user_id'];
+            $agencies = $validated['agencies'];
+
+            $business = Business::findOrFail($businessId);
+            $businessName = $business->name;
+
+            $user = \App\Models\User::find($userId);
+            $userName = $user ? $user->name : 'Sistema';
+
+            $monthsInSpanish = [
+                1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO', 4 => 'ABRIL',
+                5 => 'MAYO', 6 => 'JUNIO', 7 => 'JULIO', 8 => 'AGOSTO',
+                9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE'
+            ];
+
+            $day = date('d');
+            $monthNumber = (int) date('m');
+            $monthName = $monthsInSpanish[$monthNumber];
+
+            $fileName = 'Direcciones-dia_' . $day . '-' . $monthName . '-' . strtoupper($businessName) . '.xlsx';
+
+            return Excel::download(
+                new DireccionesExport($businessId, $userId, $agencies, $businessName, $userName),
+                $fileName
+            );
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Error exporting direcciones', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al exportar direcciones',
                 ['error' => $e->getMessage()],
                 500
             );

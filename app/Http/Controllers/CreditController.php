@@ -87,9 +87,17 @@ class CreditController extends Controller
                 }
                 return $q->where('agency', 'REGEXP', $value);
             })
-            ->when(request()->filled('sync_id'), fn($q) =>
-                $q->where('sync_id', request('sync_id'))
-            )
+            ->when(request()->filled('sync_id'), function($q) {
+                $syncIdSearch = request('sync_id');
+
+                if (strpos($syncIdSearch, '-') !== false) {
+                    $parts = explode('-', $syncIdSearch);
+                    $syncIdSearch = end($parts);
+                }
+
+                $q->where('sync_id',$syncIdSearch);
+            
+            })
             ->when(request()->filled('sync_ids'), fn($q) =>
                 $q->whereIn('sync_id', $this->toArray(request('sync_ids')))
             )

@@ -123,3 +123,4 @@ Route::middleware(['check.token'])->group(function () {
 Route::get('exports/campain', [ExportController::class, 'exportCampain']);
 Route::get('exports/accounting', [ExportController::class, 'exportAccounting']);
 Route::get('exports/campain-assignments', [ExportController::class, 'exportCampainAssign']);
+Route::get('exports/direcciones', [ExportController::class, 'exportDirecciones']);
