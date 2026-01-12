@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\AdjustsTimestamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Agreement extends Model
 {
     /** @use HasFactory<\Database\Factories\AgreementFactory> */
-    use HasFactory;
+    use HasFactory, AdjustsTimestamps;
 
     protected $fillable = [
         'credit_id',

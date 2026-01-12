@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\AdjustsTimestamps;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Condonation extends Model
 {
+    use AdjustsTimestamps;
+
     protected $fillable = [
         'credit_id',
         'amount',

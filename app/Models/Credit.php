@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\AdjustsTimestamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Credit extends Model
 {
     /** @use HasFactory<\Database\Factories\CreditFactory> */
-    use HasFactory;
+    use HasFactory, AdjustsTimestamps;
 
     protected $fillable = [
         'sync_id',

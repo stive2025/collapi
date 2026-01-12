@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\AdjustsTimestamps;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CollectionDirection extends Model
 {
     /** @use HasFactory<\Database\Factories\CollectionDirectionFactory> */
-    use HasFactory;
+    use HasFactory, AdjustsTimestamps;
     protected $fillable=[
         'client_id',
         'direction',
