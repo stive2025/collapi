@@ -203,15 +203,24 @@ class CreditController extends Controller
 
         $credits = $query->paginate(request('per_page', 15));
 
-        // Calcular management_collection_expenses para cada crédito
+        // Calcular management_collection_expenses solo para SEFIL_1 y SEFIL_2
         $credits->getCollection()->transform(function ($credit) {
-            $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
-            $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
-                $credit->total_amount ?? 0,
-                $credit->days_past_due ?? 0
-            );
-            $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
-            $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
+            // Verificar si la empresa del crédito es SEFIL_1 o SEFIL_2
+            $shouldCalculateExpenses = false;
+            if ($credit->business && in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2'])) {
+                $shouldCalculateExpenses = true;
+            }
+
+            if ($shouldCalculateExpenses) {
+                $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
+                $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
+                    $credit->total_amount ?? 0,
+                    $credit->days_past_due ?? 0
+                );
+                $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
+                $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
+            }
+
             return $credit;
         });
 
@@ -278,14 +287,21 @@ class CreditController extends Controller
             'business'
         ]);
 
-        // Calcular management_collection_expenses
-        $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
-        $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
-            $credit->total_amount ?? 0,
-            $credit->days_past_due ?? 0
-        );
-        $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
-        $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
+        // Calcular management_collection_expenses solo para SEFIL_1 y SEFIL_2
+        $shouldCalculateExpenses = false;
+        if ($credit->business && in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2'])) {
+            $shouldCalculateExpenses = true;
+        }
+
+        if ($shouldCalculateExpenses) {
+            $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
+            $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
+                $credit->total_amount ?? 0,
+                $credit->days_past_due ?? 0
+            );
+            $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
+            $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
+        }
 
         return ResponseBase::success(
             new CreditResource($credit),

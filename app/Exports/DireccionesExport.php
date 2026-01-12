@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Services\UtilService;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
@@ -23,6 +24,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
     protected $agencies;
     protected $business_name;
     protected $user_name;
+    protected $utilService;
 
     public function __construct($business_id, $user_id, $agencies, $business_name, $user_name)
     {
@@ -31,6 +33,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
         $this->agencies = $agencies;
         $this->business_name = $business_name;
         $this->user_name = $user_name;
+        $this->utilService = new UtilService();
     }
 
    public function columnFormats(): array
@@ -166,6 +169,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
                 'cc.type as client_type',
                 'cr.days_past_due as days_overdue',
                 'cr.total_amount as total_pending',
+                'cr.management_collection_expenses',
                 'cd_dom.province as province',
                 'cd_dom.canton as canton',
                 'cd_dom.parish as parroquia',
@@ -200,6 +204,22 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
             ->whereIn('cr.agency', $agencies_array)
             ->orderBy('cr.sync_id')
             ->get();
+
+        // Aplicar cálculo de gastos de cobranza solo para SEFIL_1 y SEFIL_2
+        $shouldCalculateExpenses = in_array($this->business_name, ['SEFIL_1', 'SEFIL_2']);
+
+        if ($shouldCalculateExpenses) {
+            $data_direcciones->transform(function ($credit) {
+                $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
+                $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
+                    $credit->total_pending ?? 0,
+                    $credit->days_overdue ?? 0
+                );
+                $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
+                $credit->total_pending = floatval($credit->total_pending ?? 0) + $calculatedExpenses;
+                return $credit;
+            });
+        }
 
         return collect($data_direcciones);
     }
