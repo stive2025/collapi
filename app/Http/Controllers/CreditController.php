@@ -219,6 +219,9 @@ class CreditController extends Controller
                 );
                 $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
                 $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
+            } else {
+                // Para empresas que no son SEFIL_1 o SEFIL_2, establecer gastos de cobranza en 0
+                $credit->management_collection_expenses = 0;
             }
 
             return $credit;
@@ -301,6 +304,9 @@ class CreditController extends Controller
             );
             $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
             $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
+        } else {
+            // Para empresas que no son SEFIL_1 o SEFIL_2, establecer gastos de cobranza en 0
+            $credit->management_collection_expenses = 0;
         }
 
         return ResponseBase::success(
