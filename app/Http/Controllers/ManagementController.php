@@ -546,7 +546,7 @@ class ManagementController extends Controller
             }
 
             if (!empty($validated['status'])) {
-                $query->where('credits.status', $validated['status']);
+                $query->where('credits.sync_status', $validated['status']);
             }
 
             // Filtro especial: not_effective_managements
