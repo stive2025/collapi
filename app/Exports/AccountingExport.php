@@ -362,17 +362,17 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             ($payment->comprobante_number ?? $payment->id),
             $payment->payment_deposit_date,
             $payment->payment_date,
-            round($condonation, 2),
-            round($amounts['capital'], 2),
-            round($amounts['interest'], 2),
-            round($amounts['mora'], 2),
-            round($amounts['managementExpenses'], 2),
-            0,
-            round($amounts['collectionExpenses'], 2),
-            round($amounts['legalExpenses'], 2),
-            round($amounts['otherValues'], 2),
-            round($amounts['total'], 2),
-            round($amounts['capital'] * 0.07, 2),
+            $this->formatForExcel($condonation),
+            $this->formatForExcel($amounts['capital']),
+            $this->formatForExcel($amounts['interest']),
+            $this->formatForExcel($amounts['mora']),
+            $this->formatForExcel($amounts['managementExpenses']),
+            $this->formatForExcel(0),
+            $this->formatForExcel($amounts['collectionExpenses']),
+            $this->formatForExcel($amounts['legalExpenses']),
+            $this->formatForExcel($amounts['otherValues']),
+            $this->formatForExcel($amounts['total']),
+            $this->formatForExcel($amounts['capital'] * 0.07),
             $payment->payment_method,
             $payment->financial_institution ?? 'efectivo',
             $payment->payment_reference ?? 'efectivo',
@@ -453,20 +453,35 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
                 0,
                 0,
                 0,
-                round($baseValue, 2),
-                round($taxValue, 2),
+                $this->formatForExcel($baseValue),
+                $this->formatForExcel($taxValue),
                 0,
                 0,
                 0,
-                round($invoiceValue, 2),
+                $this->formatForExcel($invoiceValue),
                 0,
                 $invoice->invoice_method,
                 $invoice->invoice_institution,
-                $invoice->invoice_access_key,
+                $invoice->invoice_reference,
                 $this->utilService->setState($invoice->collection_state),
                 $invoice->status === 'finalizado' ? 'Facturado' : $invoice->status
             ];
         }
+    }
+
+    private function formatForExcel($value)
+    {
+        $num = floatval($value);
+
+        if ($num < 0) {
+            return '';
+        }
+
+        if ($num == 0) {
+            return 0;
+        }
+
+        return round($num, 2);
     }
 
     private function calculateTotals($dataBox)
