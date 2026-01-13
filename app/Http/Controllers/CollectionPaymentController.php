@@ -290,6 +290,53 @@ class CollectionPaymentController extends Controller
             // Cargar relación con crédito y sus clientes
             $payment->load(['credit.clients', 'campain']);
 
+            // Si el pago tiene error de suma, incluir información adicional
+            if ($payment->payment_status === 'ERROR_SUM') {
+                $credit = $payment->credit;
+
+                $creditRubros = null;
+                if ($credit) {
+                    $creditRubros = [
+                        'capital' => $credit->capital,
+                        'interest' => $credit->interest,
+                        'mora' => $credit->mora,
+                        'safe' => $credit->safe,
+                        'collection_expenses' => $credit->collection_expenses,
+                        'legal_expenses' => $credit->legal_expenses,
+                        'management_collection_expenses' => $credit->management_collection_expenses,
+                        'other_values' => $credit->other_values,
+                        'total_amount' => $credit->total_amount,
+                        'collection_state' => $credit->collection_state,
+                    ];
+                }
+
+                // Determinar qué rubros propone restar el pago (campos de pago > 0)
+                $rubros = [
+                    'capital',
+                    'interest',
+                    'mora',
+                    'safe',
+                    'collection_expenses',
+                    'legal_expenses',
+                    'management_collection_expenses',
+                    'other_values'
+                ];
+
+                $rubrosToSubtract = [];
+                foreach ($rubros as $rubro) {
+                    $value = floatval($payment->{$rubro} ?? 0);
+                    if ($value > 0) {
+                        $rubrosToSubtract[$rubro] = $value;
+                    }
+                }
+
+                return ResponseBase::success([
+                    'payment' => new \App\Http\Resources\CollectionPaymentResource($payment),
+                    'credit_current_rubros' => $creditRubros,
+                    'payment_rubros_to_subtract' => $rubrosToSubtract,
+                ], 'Pago obtenido correctamente (ERROR_SUM)');
+            }
+
             return ResponseBase::success(
                 new \App\Http\Resources\CollectionPaymentResource($payment),
                 'Pago obtenido correctamente'

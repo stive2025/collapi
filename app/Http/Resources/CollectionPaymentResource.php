@@ -14,7 +14,7 @@ class CollectionPaymentResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'created_by' => $this->created_by,
             'payment_date' => $this->payment_date?->format('Y/m/d H:i:s'),
@@ -58,6 +58,51 @@ class CollectionPaymentResource extends JsonResource
             'created_at' => $this->created_at?->format('Y/m/d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y/m/d H:i:s'),
         ];
+
+        // Si el pago tiene error de suma, añadir rubros del crédito y los rubros del pago que se restarán
+        if ($this->payment_status === 'ERROR_SUM') {
+            $credit = $this->credit;
+
+            $creditRubros = null;
+            if ($credit) {
+                $creditRubros = [
+                    'capital' => $credit->capital,
+                    'interest' => $credit->interest,
+                    'mora' => $credit->mora,
+                    'safe' => $credit->safe,
+                    'collection_expenses' => $credit->collection_expenses,
+                    'legal_expenses' => $credit->legal_expenses,
+                    'management_collection_expenses' => $credit->management_collection_expenses,
+                    'other_values' => $credit->other_values,
+                    'total_amount' => $credit->total_amount,
+                    'collection_state' => $credit->collection_state,
+                ];
+            }
+
+            $rubros = [
+                'capital',
+                'interest',
+                'mora',
+                'safe',
+                'collection_expenses',
+                'legal_expenses',
+                'management_collection_expenses',
+                'other_values'
+            ];
+
+            $rubrosToSubtract = [];
+            foreach ($rubros as $rubro) {
+                $value = floatval($this->{$rubro} ?? 0);
+                if ($value > 0) {
+                    $rubrosToSubtract[$rubro] = $value;
+                }
+            }
+
+            $data['credit_current_rubros'] = $creditRubros;
+            $data['payment_rubros_to_subtract'] = $rubrosToSubtract;
+        }
+
+        return $data;
     }
 
     /**
