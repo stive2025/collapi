@@ -181,11 +181,19 @@ class ImportController extends Controller
             $import = new PaymentsImport($businessId, $campainId);
             Excel::import($import, $request->file('file'));
 
+            $skippedDetails = $import->getSkippedDetails();
+            $message = 'Importación completada correctamente.';
+
+            if (!empty($skippedDetails)) {
+                $message .= ' Se omitieron ' . count($skippedDetails) . ' pago(s).';
+            }
+
             return response()->json([
-                'message' => 'Importación completada correctamente.',
+                'message' => $message,
                 'imported' => $import->getImportedCount(),
                 'skipped' => $import->getSkippedCount(),
-                'total' => $import->getImportedCount() + $import->getSkippedCount()
+                'total' => $import->getImportedCount() + $import->getSkippedCount(),
+                'skipped_details' => $skippedDetails
             ], 200);
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();

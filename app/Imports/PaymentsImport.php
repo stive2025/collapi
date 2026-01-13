@@ -33,6 +33,7 @@ class PaymentsImport implements
     protected $campainId;
     protected $importedCount = 0;
     protected $skippedCount = 0;
+    protected $skippedDetails = [];
 
     public function __construct($businessId, $campainId = null)
     {
@@ -77,6 +78,10 @@ class PaymentsImport implements
             if (!$credit) {
                 Log::warning("Crédito no encontrado: {$row['CREDITO']}");
                 $this->skippedCount++;
+                $this->skippedDetails[] = [
+                    'credito' => $row['CREDITO'],
+                    'razon' => 'Crédito no encontrado'
+                ];
                 return null;
             }
 
@@ -85,6 +90,10 @@ class PaymentsImport implements
             if (!$paymentDate) {
                 Log::warning("Fecha de recaudación inválida para crédito: {$row['CREDITO']}");
                 $this->skippedCount++;
+                $this->skippedDetails[] = [
+                    'credito' => $row['CREDITO'],
+                    'razon' => 'Fecha de recaudación inválida'
+                ];
                 return null;
             }
 
@@ -116,6 +125,10 @@ class PaymentsImport implements
             if ($existingPayment) {
                 Log::info("Pago duplicado omitido para crédito: {$row['CREDITO']}");
                 $this->skippedCount++;
+                $this->skippedDetails[] = [
+                    'credito' => $row['CREDITO'],
+                    'razon' => 'Pago duplicado (misma fecha y valor)'
+                ];
                 return null;
             }
 
@@ -256,6 +269,10 @@ class PaymentsImport implements
                 'trace' => $e->getTraceAsString()
             ]);
             $this->skippedCount++;
+            $this->skippedDetails[] = [
+                'credito' => $row['CREDITO'] ?? 'N/A',
+                'razon' => 'Error: ' . $e->getMessage()
+            ];
             return null;
         }
     }
@@ -296,5 +313,10 @@ class PaymentsImport implements
     public function getSkippedCount(): int
     {
         return $this->skippedCount;
+    }
+
+    public function getSkippedDetails(): array
+    {
+        return $this->skippedDetails;
     }
 }
