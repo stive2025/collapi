@@ -22,7 +22,8 @@ class Agreement extends Model
         'fee_detail', // {[payment_amount,payment_date,payment_value,payment_status]}
         'created_by',
         'updated_by',
-        'status'
+        'status',
+        'concept'
     ];
 
     public function credit(): BelongsTo

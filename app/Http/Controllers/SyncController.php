@@ -381,7 +381,7 @@ class SyncController extends Controller
             foreach ($agreementsData as $agreementData) {
                 try {
                     // Validar que tenga credito (sync_id del crédito)
-                    if (empty($agreementData['credito'])) {
+                    if (empty($agreementData['sync_id'])) {
                         $errors[] = [
                             'sync_id' => $agreementData['sync_id'] ?? 'unknown',
                             'error' => 'credito es requerido'
@@ -390,14 +390,14 @@ class SyncController extends Controller
                     }
 
                     // Buscar el crédito por sync_id o por id
-                    $credit = \App\Models\Credit::where('sync_id', $agreementData['credito'])
-                        ->orWhere('id', $agreementData['credito'])
+                    $credit = \App\Models\Credit::where('sync_id', $agreementData['sync_id'])
+                        ->orWhere('id', $agreementData['sync_id'])
                         ->first();
                     
                     if (!$credit) {
                         $errors[] = [
                             'sync_id' => $agreementData['sync_id'] ?? 'unknown',
-                            'credito' => $agreementData['credito'],
+                            'credito' => $agreementData['sync_id'] ?? 'unknown',
                             'error' => 'Crédito no encontrado'
                         ];
                         continue;
@@ -476,6 +476,7 @@ class SyncController extends Controller
                         'fee_detail' => json_encode($feeDetail),
                         'created_by' => $createdBy,
                         'status' => $status,
+                        'concept' => $agreementData['concept'] ?? null,
                     ];
 
                     $agreement = \App\Models\Agreement::updateOrCreate(
