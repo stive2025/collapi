@@ -27,8 +27,6 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
     protected $businessName;
     protected $userName;
     protected $utilService;
-    // Contador secuencial para el ID COMPROBANTE dentro del reporte por cartera
-    private $comprobanteCounter = 0;
 
     public function __construct($businessId, $group, $startDate, $endDate, $monthName, $businessName, $userName)
     {
@@ -220,9 +218,6 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
 
         $dataBox = [];
 
-        // Reiniciar contador por exportación
-        $this->comprobanteCounter = 0;
-
         if ($this->group === 'true') {
             $dataBox = $this->processGroupedPayments($payments);
         } else {
@@ -284,13 +279,22 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             DB::raw('(SELECT c.agency FROM credits c WHERE c.id = cp.credit_id) as agency'),
             DB::raw('(SELECT c.collection_state FROM credits c WHERE c.id = cp.credit_id) as collection_state'),
             DB::raw('(SELECT cl.name FROM clients cl
-                    INNER JOIN client_credit cc ON cc.client_id = cl.id
-                    WHERE cc.credit_id = cp.credit_id AND cc.type = "TITULAR"
-                    LIMIT 1) as client_name'),
+                INNER JOIN client_credit cc ON cc.client_id = cl.id
+                WHERE cc.credit_id = cp.credit_id AND cc.type = "TITULAR"
+                LIMIT 1) as client_name'),
             DB::raw('(SELECT cl.ci FROM clients cl
-                    INNER JOIN client_credit cc ON cc.client_id = cl.id
-                    WHERE cc.credit_id = cp.credit_id AND cc.type = "TITULAR"
-                    LIMIT 1) as client_ci')
+                INNER JOIN client_credit cc ON cc.client_id = cl.id
+                WHERE cc.credit_id = cp.credit_id AND cc.type = "TITULAR"
+                LIMIT 1) as client_ci'),
+            DB::raw('(
+            SELECT COUNT(1)
+            FROM collection_payments cp2
+            WHERE cp2.business_id = cp.business_id
+              AND (
+                cp2.payment_date < cp.payment_date
+                OR (cp2.payment_date = cp.payment_date AND cp2.id <= cp.id)
+              )
+            ) as comprobante_number')
         );
     }
 
@@ -304,9 +308,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             $firstPayment = $creditPayments->first();
             $condonation = $this->getCondonationAmount($creditId, $firstPayment->payment_date);
 
-            // Incrementar contador secuencial de comprobante por cada fila de pago
-            $this->comprobanteCounter++;
-            $dataBox[] = $this->buildPaymentRow($firstPayment, $amounts, $condonation, $this->comprobanteCounter);
+            $dataBox[] = $this->buildPaymentRow($firstPayment, $amounts, $condonation);
         }
 
         return $dataBox;
@@ -320,9 +322,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             $amounts = $this->sumPaymentAmounts(collect([$payment]));
             $condonation = $this->getCondonationAmount($payment->credit_id, $payment->payment_date);
 
-            // Incrementar contador secuencial de comprobante por cada fila de pago
-            $this->comprobanteCounter++;
-            $dataBox[] = $this->buildPaymentRow($payment, $amounts, $condonation, $this->comprobanteCounter);
+            $dataBox[] = $this->buildPaymentRow($payment, $amounts, $condonation);
         }
 
         return $dataBox;
@@ -352,14 +352,14 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         return $amounts;
     }
 
-    private function buildPaymentRow($payment, $amounts, $condonation, int $comprobanteNumber)
+    private function buildPaymentRow($payment, $amounts, $condonation)
     {
         return [
             $payment->agency,
             $payment->client_ci,
             $payment->client_name,
             $this->businessName . '-' . $payment->sync_id,
-            $comprobanteNumber,
+            ($payment->comprobante_number ?? $payment->id),
             $payment->payment_deposit_date,
             $payment->payment_date,
             round($condonation, 2),

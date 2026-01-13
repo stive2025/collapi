@@ -259,12 +259,12 @@ class UserController extends Controller
 
                 $nroGestionsEfec = Management::where('created_by', $user->id)
                     ->where('campain_id', $activeCampain->id)
-                    ->whereIn('state', ['EFECTIVA', 'PROMESA_PAGO', 'COMPROMISO_PAGO'])
+                    ->whereIn('state', ['CONVENIO DE PAGO', 'OFERTA DE PAGO', 'COMPROMISO_PAGO'])
                     ->count();
 
                 $nroGestionsEfecDia = Management::where('created_by', $user->id)
                     ->where('campain_id', $activeCampain->id)
-                    ->whereIn('state', ['EFECTIVA', 'PROMESA_PAGO', 'COMPROMISO_PAGO'])
+                    ->whereIn('state', ['CONVENIO DE PAGO', 'OFERTA DE PAGO', 'COMPROMISO_PAGO'])
                     ->whereDate('created_at', $today)
                     ->count();
 
