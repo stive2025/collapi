@@ -619,10 +619,22 @@ class ManagementController extends Controller
                         ->orderBy('id', 'DESC')
                         ->first();
 
+                    // Obtener tipo de cliente desde la tabla pivot client_credit y nombre del cliente
+                    $pivot = DB::table('client_credit')
+                        ->where('credit_id', $credit->id)
+                        ->where('client_id', $contact->client_id)
+                        ->first();
+
+                    $clientType = $pivot->type ?? '';
+                    $clientRow = DB::table('clients')->where('id', $contact->client_id)->first();
+                    $clientName = $clientRow->name ?? '';
+
+                    $formattedName = trim('Sr(a) ' . ($clientType ? $clientType . ' ' : '') . $clientName);
+
                     $data[] = [
                         'id' => $credit->id,
                         'telefono' => $contact->phone_number,
-                        'name' => 'Sr(a). ' . ($contact->phone_type ?? '') . ' ' . ($contact->phone_number ?? ''),
+                        'name' => $formattedName,
                         'dias_vencidos' => $credit->days_past_due,
                         'total_pendiente' => $credit->total_amount,
                         'credito' => $credit->sync_id,
