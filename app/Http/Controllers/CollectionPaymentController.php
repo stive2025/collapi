@@ -940,4 +940,91 @@ class CollectionPaymentController extends Controller
         }
     }
 
+    /**
+     * Aplicar un pago con ERROR_SUM al crédito
+     * Este método permite forzar la aplicación de un pago que tenía errores de suma
+     */
+    public function applyPayment(int $paymentId)
+    {
+        try {
+            // Buscar el pago
+            $payment = CollectionPayment::find($paymentId);
+
+            if (!$payment) {
+                return ResponseBase::notFound('Pago no encontrado');
+            }
+
+            // Verificar que el pago esté en estado ERROR_SUM
+            if ($payment->payment_status !== 'ERROR_SUM') {
+                return ResponseBase::error(
+                    'El pago no está en estado ERROR_SUM',
+                    ['current_status' => $payment->payment_status],
+                    400
+                );
+            }
+
+            // Buscar el crédito asociado
+            $credit = Credit::find($payment->credit_id);
+
+            if (!$credit) {
+                return ResponseBase::notFound('Crédito no encontrado');
+            }
+
+            // Aplicar el pago al crédito (restando los valores)
+            $credit->capital = floatval($credit->capital ?? 0) - floatval($payment->capital ?? 0);
+            $credit->interest = floatval($credit->interest ?? 0) - floatval($payment->interest ?? 0);
+            $credit->mora = floatval($credit->mora ?? 0) - floatval($payment->mora ?? 0);
+            $credit->safe = floatval($credit->safe ?? 0) - floatval($payment->safe ?? 0);
+            $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) - floatval($payment->management_collection_expenses ?? 0);
+            $credit->collection_expenses = floatval($credit->collection_expenses ?? 0) - floatval($payment->collection_expenses ?? 0);
+            $credit->legal_expenses = floatval($credit->legal_expenses ?? 0) - floatval($payment->legal_expenses ?? 0);
+            $credit->other_values = floatval($credit->other_values ?? 0) - floatval($payment->other_values ?? 0);
+
+            // Recalcular total_amount
+            $credit->total_amount = $credit->capital + $credit->interest + $credit->mora +
+                                   $credit->safe + $credit->management_collection_expenses +
+                                   $credit->collection_expenses + $credit->legal_expenses +
+                                   $credit->other_values;
+
+            // Actualizar cuotas pagadas si hay información de cuota
+            if ($payment->fee !== null) {
+                $credit->paid_fees = $payment->fee;
+                $credit->pending_fees = intval($credit->total_fees ?? 0) - $payment->fee;
+            }
+
+            // Actualizar fecha de pago
+            $credit->payment_date = $payment->payment_date;
+
+            // Actualizar estado si está cancelado
+            if ($credit->total_amount <= 0) {
+                $credit->collection_state = 'Cancelado';
+            }
+
+            // Guardar el crédito
+            $credit->save();
+
+            // Actualizar el estado del pago a GUARDADO
+            $payment->payment_status = 'GUARDADO';
+            $payment->save();
+
+            return ResponseBase::success([
+                'payment' => $payment,
+                'credit' => $credit
+            ], 'Pago aplicado correctamente al crédito');
+
+        } catch (\Exception $e) {
+            Log::error('Error al aplicar pago', [
+                'payment_id' => $paymentId,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al aplicar el pago',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
 }

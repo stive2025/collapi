@@ -35,6 +35,7 @@ Route::middleware(['check.token'])->group(function () {
     Route::post('payments/sync', [CollectionPaymentController::class, 'syncPayments']);
     Route::get('payments/summary', [CollectionPaymentController::class, 'getPaymentsResume']);
     Route::post('payments/revert/{id}', [CollectionPaymentController::class, 'revertPayment']);
+    Route::post('payments/apply/{id}', [CollectionPaymentController::class, 'applyPayment']);
 
     Route::apiResource('payments', CollectionPaymentController::class);
     Route::apiResource('businesses', BusinessController::class);
@@ -81,6 +82,7 @@ Route::middleware(['check.token'])->group(function () {
     Route::post('ImportCredits', [ImportController::class, 'importCredits']);
     Route::post('ImportClients', [ImportController::class, 'importClients']);
     Route::post('ImportContacts', [ImportController::class, 'importContacts']);
+    Route::post('ImportPayments', [ImportController::class, 'importPayments']);
 
     // --------------------------------------------------------------------------------------------------------------
     // Desconectar usuario

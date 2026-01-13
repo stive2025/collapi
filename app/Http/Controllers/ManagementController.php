@@ -335,8 +335,9 @@ class ManagementController extends Controller
 
             Log::info("Llamadas cargadas en cache: " . count($callsCache));
 
-            DB::transaction(function () use ($managements, $campainId, $parseCampainId, $parseDateAndAdd5Hours, $parsePromiseDate, $callsCache, &$syncedCount) {
-                foreach ($managements as $index => $managementData) {
+            // Procesar gestiones sin transacción para evitar bloqueos del sistema
+            foreach ($managements as $index => $managementData) {
+                try {
                     $user = \App\Models\User::where('name', $managementData['byUser'])->first();
                     if (!$user) {
                         Log::warning("Usuario '{$managementData['byUser']}' no encontrado en índice {$index}, se omite");
@@ -348,7 +349,7 @@ class ManagementController extends Controller
                         Log::warning("Cliente con CI '{$managementData['client_ci']}' no encontrado en índice {$index}, se omite");
                         continue;
                     }
-                    
+
                     $credit = \App\Models\Credit::where('sync_id', $managementData['sync_id'])->first();
 
                     if (!$credit) {
@@ -418,8 +419,12 @@ class ManagementController extends Controller
                     $newManagement->save();
 
                     $syncedCount++;
+                } catch (\Exception $e) {
+                    Log::error("Error al sincronizar gestión en índice {$index}: {$e->getMessage()}");
+                    // Continuar con la siguiente gestión sin detener el proceso
+                    continue;
                 }
-            });
+            }
 
             return ResponseBase::success(
                 [

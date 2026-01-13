@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Imports\ClientsImport;
 use App\Imports\ContactsImport;
+use App\Imports\PaymentsImport;
 use Illuminate\Http\Request;
 use App\Imports\CreditsImport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -128,6 +129,63 @@ class ImportController extends Controller
 
             return response()->json([
                 'message' => 'Importación completada correctamente.'
+            ], 200);
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = $e->failures();
+
+            $errors = [];
+
+            foreach ($failures as $failure) {
+                $errors[] = [
+                    'row' => $failure->row(),
+                    'attribute' => $failure->attribute(),
+                    'errors' => $failure->errors(),
+                    'values' => $failure->values(),
+                ];
+            }
+
+            return response()->json([
+                'message' => 'Errores en la validación de datos.',
+                'failures' => $errors
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Ocurrió un error inesperado durante la importación.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Importación de pagos desde archivo Excel.
+     */
+    public function importPayments(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:xlsx,xls,csv',
+            'business_id' => 'required|integer|exists:businesses,id',
+            'campain_id' => 'nullable|integer|exists:campains,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error en la validación del archivo.',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $businessId = $request->business_id;
+            $campainId = $request->campain_id;
+
+            $import = new PaymentsImport($businessId, $campainId);
+            Excel::import($import, $request->file('file'));
+
+            return response()->json([
+                'message' => 'Importación completada correctamente.',
+                'imported' => $import->getImportedCount(),
+                'skipped' => $import->getSkippedCount(),
+                'total' => $import->getImportedCount() + $import->getSkippedCount()
             ], 200);
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();
