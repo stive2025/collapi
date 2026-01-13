@@ -605,7 +605,7 @@ class ManagementController extends Controller
                     $phoneState = 'No efectivo';
                     $hasContactedCalls = DB::table('collection_calls')
                         ->where('phone_number', $contact->phone_number)
-                        ->where('phone_status', 'CONTACTADO')
+                        ->where('state', 'CONTACTADO')
                         ->exists();
 
                     if ($hasContactedCalls) {
