@@ -506,7 +506,7 @@ class ManagementController extends Controller
                     'credits.collection_state',
                     'agencies.name as agency_name'
                 )
-                ->leftJoin('agencies', 'credits.agencie_id', '=', 'agencies.id')
+                ->leftJoin('agencies', 'credits.agency_id', '=', 'agencies.id')
                 ->where('credits.business_id', $businessId);
 
             // Aplicar filtros opcionales
