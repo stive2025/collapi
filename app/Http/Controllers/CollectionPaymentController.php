@@ -179,19 +179,18 @@ class CollectionPaymentController extends Controller
 
             $data['created_by'] = $user->id;
 
-            // Si el pago pertenece a SEFIL_1 o SEFIL_2, asignar payment_number incremental
-            if (!empty($data['business_id'])) {
-                $businessName = DB::table('businesses')->where('id', $data['business_id'])->value('name');
-                if (in_array($businessName, ['SEFIL_1', 'SEFIL_2'])) {
-                    $lastNumber = DB::table('collection_payments')
-                        ->where('business_id', $data['business_id'])
-                        ->whereNotNull('payment_number')
-                        ->orderByDesc('payment_number')
-                        ->lockForUpdate()
-                        ->value('payment_number');
+            // Asignar payment_number secuencial por credit_id (si aplica)
+            if (!empty($data['credit_id'])) {
+                // Obtener el último payment_number para este crédito dentro de la transacción
+                $lastNumber = DB::table('collection_payments')
+                    ->where('credit_id', $data['credit_id'])
+                    ->whereNotNull('payment_number')
+                    ->orderByDesc('payment_number')
+                    ->lockForUpdate()
+                    ->value('payment_number');
 
-                    $data['payment_number'] = $lastNumber ? (int)$lastNumber + 1 : 1;
-                }
+                // Si existe un último número, incrementar; si no, dejar null (se manejará como FACES)
+                $data['payment_number'] = $lastNumber ? (int)$lastNumber + 1 : null;
             }
 
             $payment = CollectionPayment::create($data);
