@@ -1017,21 +1017,39 @@ class CollectionPaymentController extends Controller
                 return ResponseBase::notFound('Crédito no encontrado');
             }
 
-            // Aplicar el pago al crédito (restando los valores)
-            $credit->capital = floatval($credit->capital ?? 0) - floatval($payment->capital ?? 0);
-            $credit->interest = floatval($credit->interest ?? 0) - floatval($payment->interest ?? 0);
-            $credit->mora = floatval($credit->mora ?? 0) - floatval($payment->mora ?? 0);
-            $credit->safe = floatval($credit->safe ?? 0) - floatval($payment->safe ?? 0);
-            $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) - floatval($payment->management_collection_expenses ?? 0);
-            $credit->collection_expenses = floatval($credit->collection_expenses ?? 0) - floatval($payment->collection_expenses ?? 0);
-            $credit->legal_expenses = floatval($credit->legal_expenses ?? 0) - floatval($payment->legal_expenses ?? 0);
-            $credit->other_values = floatval($credit->other_values ?? 0) - floatval($payment->other_values ?? 0);
+            // Aplicar el pago al crédito: restar por rubro pero evitar negativos.
+            // Si una resta produciría un valor negativo, se clampeará a 0.
+            $rubros = [
+                'capital',
+                'interest',
+                'mora',
+                'safe',
+                'management_collection_expenses',
+                'collection_expenses',
+                'legal_expenses',
+                'other_values'
+            ];
 
-            // Recalcular total_amount
-            $credit->total_amount = $credit->capital + $credit->interest + $credit->mora +
-                                   $credit->safe + $credit->management_collection_expenses +
-                                   $credit->collection_expenses + $credit->legal_expenses +
-                                   $credit->other_values;
+            foreach ($rubros as $r) {
+                $current = floatval($credit->{$r} ?? 0);
+                $toSubtract = floatval($payment->{$r} ?? 0);
+                $new = $current - $toSubtract;
+                if ($new < 0) {
+                    $new = 0; // No permitir saldo negativo en el rubro
+                }
+                $credit->{$r} = $new;
+            }
+
+            // Recalcular total_amount usando los rubros resultantes (sin permitir negativos)
+            $credit->total_amount =
+                floatval($credit->capital ?? 0) +
+                floatval($credit->interest ?? 0) +
+                floatval($credit->mora ?? 0) +
+                floatval($credit->safe ?? 0) +
+                floatval($credit->management_collection_expenses ?? 0) +
+                floatval($credit->collection_expenses ?? 0) +
+                floatval($credit->legal_expenses ?? 0) +
+                floatval($credit->other_values ?? 0);
 
             // Actualizar cuotas pagadas si hay información de cuota
             if ($payment->fee !== null) {
