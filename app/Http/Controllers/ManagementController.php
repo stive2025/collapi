@@ -639,7 +639,7 @@ class ManagementController extends Controller
                         'total_pendiente' => $credit->total_amount,
                         'credito' => $credit->sync_id,
                         'agencia' => $credit->agency_name,
-                        'ci' => '',
+                        'ci' => $clientRow->ci ?? '',
                         'bandeja' => $credit->management_tray,
                         'type' => $contact->phone_type,
                         'cuota' => floatval($credit->monthly_fee_amount ?? 0),
