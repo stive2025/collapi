@@ -179,6 +179,21 @@ class CollectionPaymentController extends Controller
 
             $data['created_by'] = $user->id;
 
+            // Si el pago pertenece a SEFIL_1 o SEFIL_2, asignar payment_number incremental
+            if (!empty($data['business_id'])) {
+                $businessName = DB::table('businesses')->where('id', $data['business_id'])->value('name');
+                if (in_array($businessName, ['SEFIL_1', 'SEFIL_2'])) {
+                    $lastNumber = DB::table('collection_payments')
+                        ->where('business_id', $data['business_id'])
+                        ->whereNotNull('payment_number')
+                        ->orderByDesc('payment_number')
+                        ->lockForUpdate()
+                        ->value('payment_number');
+
+                    $data['payment_number'] = $lastNumber ? (int)$lastNumber + 1 : 1;
+                }
+            }
+
             $payment = CollectionPayment::create($data);
 
             // Cargar relaciones para el Resource
@@ -830,8 +845,7 @@ class CollectionPaymentController extends Controller
             $totalPayments = count($payments);
             $syncedCount = 0;
 
-            DB::transaction(function () use ($payments, $parseDateAndAdd5Hours, $businessName, &$syncedCount) {
-                foreach ($payments as $index => $paymentData) {
+            foreach ($payments as $index => $paymentData) {
                     // Buscar crédito por sync_id
                     $credit = \App\Models\Credit::where('sync_id', $paymentData['sync_id'])->first();
                     if (!$credit) {
@@ -901,6 +915,7 @@ class CollectionPaymentController extends Controller
                             'financial_institution' => $paymentData['institucion_financiera'] ?? null,
                             'payment_reference' => $paymentData['codigo_deposito'] ?? null,
                             'payment_status' => $paymentData['status'] ?? null,
+                            'payment_number' => $paymentData['id'] ?? null,
                             'payment_prints' => intval($paymentData['status_print'] ?? 0),
                             'prev_dates' => $paymentData['prevDates'] ?? null,
                             'capital' => $paymentValues['capital'] ?? 0,
@@ -943,6 +958,7 @@ class CollectionPaymentController extends Controller
                             'financial_institution' => 'FACES',
                             'payment_reference' => $paymentData['id_comprobante'] ?? 'FACES',
                             'payment_status' => $paymentData['estado'] ?? null,
+                            'payment_number' => $paymentData['id'] ?? null,
                             'capital' => $paymentValues['capital'],
                             'interest' => $paymentValues['interest'],
                             'mora' => $paymentValues['mora'],
@@ -962,7 +978,6 @@ class CollectionPaymentController extends Controller
 
                     $syncedCount++;
                 }
-            });
 
             return ResponseBase::success(
                 [

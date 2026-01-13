@@ -24,6 +24,7 @@ class CollectionPayment extends Model
         'payment_reference',
         'payment_status',
         'payment_prints',
+        'payment_number',
         'fee',
         'capital',
         'interest',
