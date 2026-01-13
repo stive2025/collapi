@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\Business;
 use App\Models\CollectionPayment;
 use App\Models\Credit;
 use App\Models\Client;
@@ -71,10 +72,7 @@ class PaymentsImport implements
     public function model(array $row)
     {
         try {
-            // Buscar el crédito por sync_id
-            $credit = Credit::where('sync_id', $row['CREDITO'])
-                ->where('business_id', $this->businessId)
-                ->first();
+            $credit = Credit::where('sync_id', $row['CREDITO'])->first();
 
             if (!$credit) {
                 Log::warning("Crédito no encontrado: {$row['CREDITO']}");
@@ -188,9 +186,9 @@ class PaymentsImport implements
 
                 // Actualizar total_amount
                 $credit->total_amount = $credit->capital + $credit->interest + $credit->mora +
-                                       $credit->safe + $credit->management_collection_expenses +
-                                       $credit->collection_expenses + $credit->legal_expenses +
-                                       $credit->other_values;
+                                    $credit->safe + $credit->management_collection_expenses +
+                                    $credit->collection_expenses + $credit->legal_expenses +
+                                    $credit->other_values;
 
                 // Actualizar cuotas pagadas si hay información de cuota
                 if ($fee !== null) {

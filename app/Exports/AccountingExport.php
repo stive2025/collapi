@@ -279,13 +279,13 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             DB::raw('(SELECT c.agency FROM credits c WHERE c.id = cp.credit_id) as agency'),
             DB::raw('(SELECT c.collection_state FROM credits c WHERE c.id = cp.credit_id) as collection_state'),
             DB::raw('(SELECT cl.name FROM clients cl
-                      INNER JOIN client_credit cc ON cc.client_id = cl.id
-                      WHERE cc.credit_id = cp.credit_id AND cc.type = "TITULAR"
-                      LIMIT 1) as client_name'),
+                    INNER JOIN client_credit cc ON cc.client_id = cl.id
+                    WHERE cc.credit_id = cp.credit_id AND cc.type = "TITULAR"
+                    LIMIT 1) as client_name'),
             DB::raw('(SELECT cl.ci FROM clients cl
-                      INNER JOIN client_credit cc ON cc.client_id = cl.id
-                      WHERE cc.credit_id = cp.credit_id AND cc.type = "TITULAR"
-                      LIMIT 1) as client_ci')
+                    INNER JOIN client_credit cc ON cc.client_id = cl.id
+                    WHERE cc.credit_id = cp.credit_id AND cc.type = "TITULAR"
+                    LIMIT 1) as client_ci')
         );
     }
 
@@ -337,8 +337,8 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         }
 
         $amounts['total'] = $amounts['capital'] + $amounts['interest'] + $amounts['mora'] +
-                           $amounts['managementExpenses'] + $amounts['collectionExpenses'] +
-                           $amounts['legalExpenses'] + $amounts['otherValues'];
+                        $amounts['managementExpenses'] + $amounts['collectionExpenses'] +
+                        $amounts['legalExpenses'] + $amounts['otherValues'];
 
         return $amounts;
     }
@@ -404,7 +404,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             ->join('client_credit as cc', 'cc.credit_id', '=', 'c.id')
             ->join('clients as cl', function($join) {
                 $join->on('cl.id', '=', 'cc.client_id')
-                     ->where('cc.type', '=', 'TITULAR');
+                    ->where('cc.type', '=', 'TITULAR');
             })
             ->where('c.business_id', $businessId)
             ->whereIn('i.status', ['finalizado', 'anulado']);
@@ -413,7 +413,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             $year = date('Y');
             $monthNumber = $this->utilService->getMonthNumber($this->monthName);
             $invoicesQuery->whereYear('i.invoice_date', $year)
-                         ->whereMonth('i.invoice_date', $monthNumber);
+                        ->whereMonth('i.invoice_date', $monthNumber);
         } else {
             $invoicesQuery->whereBetween('i.invoice_date', [$this->startDate, $this->endDate]);
         }
