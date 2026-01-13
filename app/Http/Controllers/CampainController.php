@@ -170,6 +170,8 @@ class CampainController extends Controller
                 'status_management.*' => ['string'],
                 'collection_state' => ['nullable', 'array'],
                 'collection_state.*' => ['string'],
+                'management_tray' => ['nullable', 'array'],
+                'management_tray.*' => ['string'],
                 'sync_ids' => ['nullable'],
                 'sync_status' => ['nullable', 'string'],
             ]);
@@ -210,6 +212,7 @@ class CampainController extends Controller
             $this->applyInFilter($query, 'agency', $validated, 'agency');
             $this->applyInFilter($query, 'management_status', $validated, 'status_management');
             $this->applyInFilter($query, 'collection_state', $validated, 'collection_state');
+            $this->applyInFilter($query, 'management_tray', $validated, 'management_tray');
             $this->applyInFilter($query, 'sync_id', $validated, 'sync_ids');
 
             if (isset($validated['sync_status'])) {
