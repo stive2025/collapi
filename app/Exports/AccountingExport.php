@@ -27,6 +27,8 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
     protected $businessName;
     protected $userName;
     protected $utilService;
+    // Contador secuencial para el ID COMPROBANTE dentro del reporte por cartera
+    private $comprobanteCounter = 0;
 
     public function __construct($businessId, $group, $startDate, $endDate, $monthName, $businessName, $userName)
     {
@@ -218,6 +220,9 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
 
         $dataBox = [];
 
+        // Reiniciar contador por exportación
+        $this->comprobanteCounter = 0;
+
         if ($this->group === 'true') {
             $dataBox = $this->processGroupedPayments($payments);
         } else {
@@ -299,7 +304,9 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             $firstPayment = $creditPayments->first();
             $condonation = $this->getCondonationAmount($creditId, $firstPayment->payment_date);
 
-            $dataBox[] = $this->buildPaymentRow($firstPayment, $amounts, $condonation);
+            // Incrementar contador secuencial de comprobante por cada fila de pago
+            $this->comprobanteCounter++;
+            $dataBox[] = $this->buildPaymentRow($firstPayment, $amounts, $condonation, $this->comprobanteCounter);
         }
 
         return $dataBox;
@@ -313,7 +320,9 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             $amounts = $this->sumPaymentAmounts(collect([$payment]));
             $condonation = $this->getCondonationAmount($payment->credit_id, $payment->payment_date);
 
-            $dataBox[] = $this->buildPaymentRow($payment, $amounts, $condonation);
+            // Incrementar contador secuencial de comprobante por cada fila de pago
+            $this->comprobanteCounter++;
+            $dataBox[] = $this->buildPaymentRow($payment, $amounts, $condonation, $this->comprobanteCounter);
         }
 
         return $dataBox;
@@ -343,14 +352,14 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         return $amounts;
     }
 
-    private function buildPaymentRow($payment, $amounts, $condonation)
+    private function buildPaymentRow($payment, $amounts, $condonation, int $comprobanteNumber)
     {
         return [
             $payment->agency,
             $payment->client_ci,
             $payment->client_name,
-            'credits-' . $payment->sync_id,
-            $payment->id,
+            $this->businessName . '-' . $payment->sync_id,
+            $comprobanteNumber,
             $payment->payment_deposit_date,
             $payment->payment_date,
             round($condonation, 2),
@@ -436,7 +445,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
                 $invoice->agency,
                 $invoice->client_ci,
                 $invoice->client_name,
-                'credits-' . $invoice->sync_id,
+                $this->businessName.'-'.$invoice->sync_id,
                 $invoice->invoice_number,
                 $invoice->invoice_date,
                 $invoice->invoice_date,
