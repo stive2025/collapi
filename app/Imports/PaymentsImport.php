@@ -250,7 +250,7 @@ class PaymentsImport implements
                 'days_past_due_prev' => null,
                 'post_management' => 'NO',
                 'credit_id' => $credit->id,
-                'business_id' => $this->businessId,
+                'business_id' => 2,
                 'campain_id' => 2,
             ]);
 
