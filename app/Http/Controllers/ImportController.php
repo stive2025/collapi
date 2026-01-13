@@ -182,10 +182,15 @@ class ImportController extends Controller
             Excel::import($import, $request->file('file'));
 
             $skippedDetails = $import->getSkippedDetails();
+            $errorSumPayments = $import->getErrorSumPayments();
             $message = 'Importación completada correctamente.';
 
             if (!empty($skippedDetails)) {
                 $message .= ' Se omitieron ' . count($skippedDetails) . ' pago(s).';
+            }
+
+            if (!empty($errorSumPayments)) {
+                $message .= ' Se marcaron ' . count($errorSumPayments) . ' pago(s) con ERROR_SUM.';
             }
 
             return response()->json([
@@ -193,7 +198,9 @@ class ImportController extends Controller
                 'imported' => $import->getImportedCount(),
                 'skipped' => $import->getSkippedCount(),
                 'total' => $import->getImportedCount() + $import->getSkippedCount(),
-                'skipped_details' => $skippedDetails
+                'skipped_details' => $skippedDetails,
+                'error_sum_count' => count($errorSumPayments),
+                'error_sum_payments' => $errorSumPayments
             ], 200);
         } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
             $failures = $e->failures();

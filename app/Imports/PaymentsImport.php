@@ -2,10 +2,8 @@
 
 namespace App\Imports;
 
-use App\Models\Business;
 use App\Models\CollectionPayment;
 use App\Models\Credit;
-use App\Models\Client;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -34,6 +32,7 @@ class PaymentsImport implements
     protected $importedCount = 0;
     protected $skippedCount = 0;
     protected $skippedDetails = [];
+    protected $errorSumPayments = [];
 
     public function __construct($businessId, $campainId = null)
     {
@@ -256,6 +255,15 @@ class PaymentsImport implements
 
             $this->importedCount++;
 
+            // Si el pago quedó en ERROR_SUM, guardar referencia para retorno
+            if ($paymentStatus === 'ERROR_SUM') {
+                // Asociar la relación credit al modelo de pago para que el Resource pueda resolverla
+                $payment->setRelation('credit', $credit);
+                // Usar el Resource para resolver al formato esperado por la API
+                $resource = new \App\Http\Resources\CollectionPaymentResource($payment);
+                $this->errorSumPayments[] = $resource->resolve();
+            }
+
             return $payment;
 
         } catch (\Exception $e) {
@@ -313,5 +321,15 @@ class PaymentsImport implements
     public function getSkippedDetails(): array
     {
         return $this->skippedDetails;
+    }
+
+    /**
+     * Obtener los pagos que quedaron en estado ERROR_SUM durante la importación
+     *
+     * @return array
+     */
+    public function getErrorSumPayments(): array
+    {
+        return $this->errorSumPayments;
     }
 }
