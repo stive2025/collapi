@@ -24,6 +24,7 @@ class CollectionPaymentResource extends JsonResource
             'payment_type' => $this->payment_type,
             'payment_method' => $this->payment_method,
             'financial_institution' => $this->financial_institution,
+            'payment_number' => $this->payment_number,
             'payment_reference' => $this->payment_reference,
             'payment_status' => $this->payment_status,
             'payment_prints' => $this->payment_prints,
