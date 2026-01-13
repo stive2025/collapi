@@ -447,4 +447,195 @@ class ManagementController extends Controller
             );
         }
     }
+
+    /**
+     * Buscar créditos para envío de mensajes
+     */
+    public function getCreditsForMessages(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'campain_id' => 'required|integer|exists:campains,id',
+                'sync_ids' => 'nullable|array',
+                'sync_ids.*' => 'string',
+                'user_id' => 'nullable|integer|exists:users,id',
+                'exclude_ids' => 'nullable|array',
+                'exclude_ids.*' => 'integer',
+                'include_ids' => 'nullable|array',
+                'include_ids.*' => 'integer',
+                'not_in_management' => 'nullable|array',
+                'not_in_management.*' => 'string',
+                'days_past_due_min' => 'nullable|integer',
+                'days_past_due_max' => 'nullable|integer',
+                'management_trays' => 'nullable|array',
+                'management_trays.*' => 'string',
+                'collection_state' => 'nullable|string',
+                'status' => 'nullable|string',
+                'limit' => 'nullable|integer|max:5000',
+                'not_effective_managements' => 'nullable|boolean'
+            ]);
+
+            $campainId = $validated['campain_id'];
+
+            // Construir query base
+            $query = DB::table('credits')
+                ->select(
+                    'credits.id',
+                    'credits.sync_id',
+                    'credits.days_past_due',
+                    'credits.total_amount',
+                    'credits.monthly_fee_amount',
+                    'credits.payment_date',
+                    'credits.user_id',
+                    'credits.management_tray',
+                    'credits.collection_state',
+                    'agencies.name as agency_name'
+                )
+                ->leftJoin('agencies', 'credits.agencie_id', '=', 'agencies.id')
+                ->where('credits.campain_id', $campainId);
+
+            // Aplicar filtros opcionales
+            if (!empty($validated['sync_ids'])) {
+                $query->whereIn('credits.sync_id', $validated['sync_ids']);
+            }
+
+            if (!empty($validated['user_id'])) {
+                $query->where('credits.user_id', $validated['user_id']);
+            }
+
+            if (!empty($validated['exclude_ids'])) {
+                $query->whereNotIn('credits.id', $validated['exclude_ids']);
+            }
+
+            if (!empty($validated['include_ids'])) {
+                $query->whereIn('credits.id', $validated['include_ids']);
+            }
+
+            if (!empty($validated['days_past_due_min']) && !empty($validated['days_past_due_max'])) {
+                $query->whereBetween('credits.days_past_due', [
+                    $validated['days_past_due_min'],
+                    $validated['days_past_due_max']
+                ]);
+            }
+
+            if (!empty($validated['management_trays'])) {
+                $query->whereIn('credits.management_tray', $validated['management_trays']);
+            }
+
+            if (!empty($validated['collection_state'])) {
+                $query->where('credits.collection_state', $validated['collection_state']);
+            }
+
+            if (!empty($validated['status'])) {
+                $query->where('credits.status', $validated['status']);
+            }
+
+            // Filtro especial: not_effective_managements
+            // Excluir créditos que tengan gestiones efectivas en la campaña
+            if (!empty($validated['not_effective_managements']) && $validated['not_effective_managements'] === true) {
+                $query->whereNotExists(function ($subQuery) use ($campainId) {
+                    $subQuery->select(DB::raw(1))
+                        ->from('managements')
+                        ->whereColumn('managements.credit_id', 'credits.id')
+                        ->where('managements.campain_id', $campainId)
+                        ->whereIn('managements.substate', [
+                            'OFERTA DE PAGO',
+                            'VISITA CAMPO',
+                            'MENSAJE DE TEXTO'
+                        ]);
+                });
+            }
+
+            // Filtro de estados de gestión excluidos
+            if (!empty($validated['not_in_management'])) {
+                $query->whereNotExists(function ($subQuery) use ($campainId, $validated) {
+                    $subQuery->select(DB::raw(1))
+                        ->from('managements')
+                        ->whereColumn('managements.credit_id', 'credits.id')
+                        ->where('managements.campain_id', $campainId)
+                        ->whereIn('managements.substate', $validated['not_in_management']);
+                });
+            }
+
+            // Aplicar límite
+            if (!empty($validated['limit'])) {
+                $query->limit($validated['limit']);
+            }
+
+            $credits = $query->get();
+
+            $data = [];
+
+            foreach ($credits as $credit) {
+                // Obtener contactos activos del crédito
+                $contacts = DB::table('collection_contacts')
+                    ->where('credit_id', $credit->id)
+                    ->where('state', 'ACTIVE')
+                    ->get();
+
+                foreach ($contacts as $contact) {
+                    // Verificar si el teléfono es efectivo (tiene llamadas contactadas)
+                    $phoneState = 'No efectivo';
+                    $hasContactedCalls = DB::table('collection_calls')
+                        ->where('phone', $contact->phone)
+                        ->where('state_call', 'CONTACTADO')
+                        ->exists();
+
+                    if ($hasContactedCalls) {
+                        $phoneState = 'Efectivo';
+                    }
+
+                    // Obtener última gestión del crédito en la campaña
+                    $lastManagement = DB::table('managements')
+                        ->where('credit_id', $credit->id)
+                        ->where('campain_id', $campainId)
+                        ->orderBy('id', 'DESC')
+                        ->first();
+
+                    $data[] = [
+                        'id' => $credit->id,
+                        'telefono' => $contact->phone,
+                        'name' => 'Sr(a). ' . ($contact->relationship ?? '') . ' ' . ($contact->name ?? ''),
+                        'dias_vencidos' => $credit->days_past_due,
+                        'total_pendiente' => $credit->total_amount,
+                        'credito' => $credit->sync_id,
+                        'agencia' => $credit->agency_name,
+                        'ci' => $contact->ci,
+                        'bandeja' => $credit->management_tray,
+                        'type' => $contact->relationship,
+                        'cuota' => floatval($credit->monthly_fee_amount ?? 0),
+                        'ult_gestion' => $lastManagement ? $lastManagement->substate : '',
+                        'fecha_ult_gestion' => $lastManagement ? $lastManagement->created_at : '',
+                        'agente_actual' => $credit->user_id,
+                        'fecha_pago' => $credit->payment_date,
+                        'fecha_contacto' => $contact->created_at,
+                        'estado_contacto' => $phoneState
+                    ];
+                }
+            }
+
+            return ResponseBase::success(
+                $data,
+                'Créditos obtenidos correctamente para envío de mensajes'
+            );
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::error(
+                'Error de validación',
+                $e->errors(),
+                422
+            );
+        } catch (\Exception $e) {
+            Log::error('Error al obtener créditos para mensajes', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al obtener créditos para mensajes',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
 }

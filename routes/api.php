@@ -101,6 +101,8 @@ Route::middleware(['check.token'])->group(function () {
     Route::get('managements/{management_id}/calls', [ManagementController::class, 'indexCallsByManagementID']);
     // Sincronización masiva de gestiones
     Route::post('managements/sync', [ManagementController::class, 'syncManagements']);
+    // Obtener créditos para envío de mensajes
+    Route::post('managements/credits-for-messages', [ManagementController::class, 'getCreditsForMessages']);
 
     // Sincronización de gastos de cobranza (invoices)
     Route::post('sync/invoices', [SyncController::class, 'syncInvoices']);
