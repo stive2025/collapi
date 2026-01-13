@@ -454,7 +454,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
                 0,
                 0,
                 $this->formatForExcel($baseValue),
-                $this->formatForExcel($taxValue),
+                $this->formatForExcel($this->calculateTaxPercent($taxValue, $invoiceValue)),
                 0,
                 0,
                 0,
@@ -484,6 +484,15 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         return round($num, 2);
     }
 
+    private function calculateTaxPercent($taxValue, $invoiceValue)
+    {
+        $inv = floatval($invoiceValue);
+        if ($inv <= 0) return 0;
+
+        $percent = (floatval($taxValue) / $inv) * 100;
+        return $percent;
+    }
+
     private function calculateTotals($dataBox)
     {
         $totals = [
@@ -508,7 +517,17 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
                 $totals['interes'] += floatval($row[9]);       // INTERES
                 $totals['mora'] += floatval($row[10]);         // MORA
                 $totals['gestion_sefil'] += floatval($row[11]); // GESTIÓN COBRANZA SEFIL
-                $totals['iva'] += floatval($row[12]);          // IVA GAS. COB.
+                // IVA: for payment rows this column is monetary tax; for invoice rows we show
+                // percentage in the column, so compute monetary tax as invoice_value - base_value
+                $ivaValue = floatval($row[12]);
+                $isInvoiceRow = (floatval($row[8]) == 0 && floatval($row[16]) > 0 && floatval($row[11]) >= 0);
+
+                if ($isInvoiceRow) {
+                    $monetaryIva = floatval($row[16]) - floatval($row[11]);
+                    $totals['iva'] += $monetaryIva;
+                } else {
+                    $totals['iva'] += $ivaValue;
+                }
                 $totals['gestion_faces'] += floatval($row[13]); // GESTIÓN COBRANZA FACES
                 $totals['judicial'] += floatval($row[14]);     // GASTOS JUDICIALES
                 $totals['otros'] += floatval($row[15]);        // OTROS
