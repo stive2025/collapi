@@ -433,6 +433,54 @@ class CondonationController extends Controller
     }
 
     /**
+     * Comprueba si un crédito ya tuvo (o tiene) condonaciones.
+     *
+     * @param int $creditId
+     * @param array|null $statuses Opcional: lista de estados a filtrar (si es null comprueba cualquier condonación)
+     * @return bool
+     */
+    protected function creditHasCondonation(int $creditId, ?array $statuses = null): bool
+    {
+        $query = Condonation::where('credit_id', $creditId);
+
+        if (is_array($statuses) && count($statuses) > 0) {
+            $query->whereIn('status', $statuses);
+        }
+
+        return $query->exists();
+    }
+
+    /**
+     * Endpoint público para comprobar si un crédito ya tuvo condonaciones.
+     * Query param opcional `statuses` acepta lista separada por comas para filtrar por estados.
+     */
+    public function checkCreditCondonation(Request $request, int $creditId)
+    {
+        try {
+            $statusesParam = $request->query('statuses');
+            $statuses = null;
+            if (!empty($statusesParam)) {
+                $statuses = array_filter(array_map('trim', explode(',', $statusesParam)));
+            }
+
+            $exists = $this->creditHasCondonation($creditId, $statuses);
+
+            return ResponseBase::success([
+                'credit_id' => $creditId,
+                'has_condonation' => $exists,
+                'statuses' => $statuses
+            ], 'Comprobación de condonación realizada correctamente');
+        } catch (\Exception $e) {
+            Log::error('Error checking credit condonation', [
+                'message' => $e->getMessage(),
+                'credit_id' => $creditId
+            ]);
+
+            return ResponseBase::error('Error al comprobar condonaciones del crédito', ['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Revert a condonation (restore previous credit values)
      */
     public function revert(string $id, Request $request)

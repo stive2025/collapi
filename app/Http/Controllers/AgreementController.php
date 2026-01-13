@@ -215,6 +215,24 @@ class AgreementController extends Controller
     }
 
     /**
+     * Comprueba si un crédito ya tuvo (o tiene) convenios de pago.
+     *
+     * @param int $creditId
+     * @param array|null $statuses Opcional: lista de estados a filtrar (si es null comprueba cualquier convenio)
+     * @return bool
+     */
+    protected function creditHasAgreement(int $creditId, ?array $statuses = null): bool
+    {
+        $query = Agreement::where('credit_id', $creditId);
+
+        if (is_array($statuses) && count($statuses) > 0) {
+            $query->whereIn('status', $statuses);
+        }
+
+        return $query->exists();
+    }
+
+    /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, string $id)
@@ -404,6 +422,36 @@ class AgreementController extends Controller
                 ['error' => $e->getMessage()],
                 500
             );
+        }
+    }
+
+    /**
+     * Endpoint público para comprobar si un crédito ya tuvo/contempla convenios.
+     * Query param opcional `statuses` acepta lista separada por comas para filtrar por estados.
+     */
+    public function checkCreditAgreement(Request $request, int $creditId)
+    {
+        try {
+            $statusesParam = $request->query('statuses');
+            $statuses = null;
+            if (!empty($statusesParam)) {
+                $statuses = array_filter(array_map('trim', explode(',', $statusesParam)));
+            }
+
+            $exists = $this->creditHasAgreement($creditId, $statuses);
+
+            return ResponseBase::success([
+                'credit_id' => $creditId,
+                'has_agreement' => $exists,
+                'statuses' => $statuses
+            ], 'Comprobación realizada correctamente');
+        } catch (\Exception $e) {
+            Log::error('Error checking credit agreement', [
+                'message' => $e->getMessage(),
+                'credit_id' => $creditId
+            ]);
+
+            return ResponseBase::error('Error al comprobar convenios del crédito', ['error' => $e->getMessage()], 500);
         }
     }
 

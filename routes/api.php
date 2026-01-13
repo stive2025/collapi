@@ -58,6 +58,8 @@ Route::middleware(['check.token'])->group(function () {
     Route::post('condonations/authorize/{id}', [CondonationController::class, 'authorizeCondonation']);
     // Denegar condonación
     Route::post('condonations/deny/{id}', [CondonationController::class, 'denyCondonation']);
+    // Comprobar si un crédito ya tuvo condonaciones
+    Route::get('condonations/credit/{creditId}/has', [CondonationController::class, 'checkCreditCondonation']);
     
     // -------------------------------------------------------------------------------------------------------------- 
     Route::apiResource('agreements', AgreementController::class);
@@ -67,6 +69,8 @@ Route::middleware(['check.token'])->group(function () {
     Route::post('agreements/revert/{id}', [AgreementController::class, 'revert']);
     // Denegar acuerdo
     Route::post('agreements/deny/{id}', [AgreementController::class, 'denyAgreement']);
+    // Comprobar si un crédito ya tuvo/contempla convenios
+    Route::get('agreements/credit/{creditId}/has', [AgreementController::class, 'checkCreditAgreement']);
     // --------------------------------------------------------------------------------------------------------------
     
     // Generar llamada ASTERISK
