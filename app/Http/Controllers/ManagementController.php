@@ -477,6 +477,19 @@ class ManagementController extends Controller
 
             $campainId = $validated['campain_id'];
 
+            // Obtener el business_id de la campaña
+            $campain = DB::table('campains')->where('id', $campainId)->first();
+
+            if (!$campain) {
+                return ResponseBase::error(
+                    'Campaña no encontrada',
+                    [],
+                    404
+                );
+            }
+
+            $businessId = $campain->business_id;
+
             // Construir query base
             $query = DB::table('credits')
                 ->select(
@@ -492,7 +505,7 @@ class ManagementController extends Controller
                     'agencies.name as agency_name'
                 )
                 ->leftJoin('agencies', 'credits.agencie_id', '=', 'agencies.id')
-                ->where('credits.campain_id', $campainId);
+                ->where('credits.business_id', $businessId);
 
             // Aplicar filtros opcionales
             if (!empty($validated['sync_ids'])) {
