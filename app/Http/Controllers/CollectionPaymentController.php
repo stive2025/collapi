@@ -1033,23 +1033,20 @@ class CollectionPaymentController extends Controller
             foreach ($rubros as $r) {
                 $current = floatval($credit->{$r} ?? 0);
                 $toSubtract = floatval($payment->{$r} ?? 0);
-                $new = $current - $toSubtract;
-                if ($new < 0) {
-                    $new = 0; // No permitir saldo negativo en el rubro
-                }
-                $credit->{$r} = $new;
+                // Registrar el resultado, incluso si queda negativo
+                $credit->{$r} = $current - $toSubtract;
             }
 
-            // Recalcular total_amount usando los rubros resultantes (sin permitir negativos)
+            // Recalcular total_amount: sumar los rubros pero tratar los negativos como 0
             $credit->total_amount =
-                floatval($credit->capital ?? 0) +
-                floatval($credit->interest ?? 0) +
-                floatval($credit->mora ?? 0) +
-                floatval($credit->safe ?? 0) +
-                floatval($credit->management_collection_expenses ?? 0) +
-                floatval($credit->collection_expenses ?? 0) +
-                floatval($credit->legal_expenses ?? 0) +
-                floatval($credit->other_values ?? 0);
+                max(0, floatval($credit->capital ?? 0)) +
+                max(0, floatval($credit->interest ?? 0)) +
+                max(0, floatval($credit->mora ?? 0)) +
+                max(0, floatval($credit->safe ?? 0)) +
+                max(0, floatval($credit->management_collection_expenses ?? 0)) +
+                max(0, floatval($credit->collection_expenses ?? 0)) +
+                max(0, floatval($credit->legal_expenses ?? 0)) +
+                max(0, floatval($credit->other_values ?? 0));
 
             // Actualizar cuotas pagadas si hay información de cuota
             if ($payment->fee !== null) {
