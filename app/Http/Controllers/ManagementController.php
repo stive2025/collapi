@@ -535,10 +535,10 @@ class ManagementController extends Controller
             if (!empty($validated['not_effective_managements']) && $validated['not_effective_managements'] === true) {
                 $query->whereNotExists(function ($subQuery) use ($campainId) {
                     $subQuery->select(DB::raw(1))
-                        ->from('managements')
-                        ->whereColumn('managements.credit_id', 'credits.id')
-                        ->where('managements.campain_id', $campainId)
-                        ->whereIn('managements.substate', [
+                        ->from('management')
+                        ->whereColumn('management.credit_id', 'credits.id')
+                        ->where('management.campain_id', $campainId)
+                        ->whereIn('management.substate', [
                             'OFERTA DE PAGO',
                             'VISITA CAMPO',
                             'MENSAJE DE TEXTO'
@@ -550,10 +550,10 @@ class ManagementController extends Controller
             if (!empty($validated['not_in_management'])) {
                 $query->whereNotExists(function ($subQuery) use ($campainId, $validated) {
                     $subQuery->select(DB::raw(1))
-                        ->from('managements')
-                        ->whereColumn('managements.credit_id', 'credits.id')
-                        ->where('managements.campain_id', $campainId)
-                        ->whereIn('managements.substate', $validated['not_in_management']);
+                        ->from('management')
+                        ->whereColumn('management.credit_id', 'credits.id')
+                        ->where('management.campain_id', $campainId)
+                        ->whereIn('management.substate', $validated['not_in_management']);
                 });
             }
 
