@@ -586,7 +586,7 @@ class ManagementController extends Controller
                     }
 
                     // Obtener última gestión del crédito en la campaña
-                    $lastManagement = DB::table('managements')
+                    $lastManagement = DB::table('management')
                         ->where('credit_id', $credit->id)
                         ->where('campain_id', $campainId)
                         ->orderBy('id', 'DESC')
