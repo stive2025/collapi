@@ -359,7 +359,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             $payment->client_ci,
             $payment->client_name,
             $this->businessName . '-' . $payment->sync_id,
-            ($payment->comprobante_number ?? $payment->id),
+            ($payment->payment_number !== null ? $payment->payment_number : 'FACES'),
             $payment->payment_deposit_date,
             $payment->payment_date,
             $this->formatForExcel($condonation),
