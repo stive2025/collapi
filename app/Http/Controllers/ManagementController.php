@@ -469,6 +469,8 @@ class ManagementController extends Controller
                 'days_past_due_max' => 'nullable|integer',
                 'management_trays' => 'nullable|array',
                 'management_trays.*' => 'string',
+                'agencies' => 'nullable|array',
+                'agencies.*' => 'string',
                 'collection_state' => 'nullable|string',
                 'status' => 'nullable|string',
                 'limit' => 'nullable|integer|max:5000',
@@ -535,12 +537,16 @@ class ManagementController extends Controller
                 $query->whereIn('credits.management_tray', $validated['management_trays']);
             }
 
+            if (!empty($validated['agencies'])) {
+                $query->whereIn('agencies.name', $validated['agencies']);
+            }
+
             if (!empty($validated['collection_state'])) {
                 $query->where('credits.collection_state', $validated['collection_state']);
             }
-            
+
             if (!empty($validated['status'])) {
-                $query->where('credits.sync_status', $validated['status']);
+                $query->where('credits.status', $validated['status']);
             }
 
             // Filtro especial: not_effective_managements
