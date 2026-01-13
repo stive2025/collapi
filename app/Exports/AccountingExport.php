@@ -445,7 +445,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
                 $invoice->agency,
                 $invoice->client_ci,
                 $invoice->client_name,
-                $this->businessName.'-'.$invoice->sync_id,
+                $this->formatInvoiceAccessForIdCredito($invoice->invoice_access_key) ?: ($this->businessName.'-'.$invoice->sync_id),
                 $invoice->invoice_number,
                 $invoice->invoice_date,
                 $invoice->invoice_date,
@@ -467,6 +467,26 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
                 $invoice->status === 'finalizado' ? 'Facturado' : $invoice->status
             ];
         }
+    }
+
+    private function formatInvoiceAccessForIdCredito($accessKey)
+    {
+        if (empty($accessKey) || strlen($accessKey) < 35) {
+            return null;
+        }
+
+        // substr offset 20 (0-based) length 15 => characters 21..35 (1-based)
+        $segment = substr($accessKey, 20, 15);
+        if ($segment === false || strlen($segment) < 15) {
+            return null;
+        }
+
+        // format as 3-3-9
+        $part1 = substr($segment, 0, 3);
+        $part2 = substr($segment, 3, 3);
+        $part3 = substr($segment, 6); // rest 9 chars
+
+        return sprintf('%s-%s-%s', $part1, $part2, $part3);
     }
 
     private function formatForExcel($value)
