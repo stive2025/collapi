@@ -395,15 +395,89 @@ class ManagementController extends Controller
                         }
                     }
 
+                    // Preparar campos para verificación de existencia exacta
+                    $stateVal = $managementData['state_gestion'] ?? null;
+                    $substateVal = $managementData['substate_gestion'] ?? null;
+                    $observationVal = $managementData['observation'] ?? null;
+                    $promiseDateObj = $parsePromiseDate($managementData['date_promise'] ?? null);
+                    $promiseDateVal = $promiseDateObj ? $promiseDateObj->format('Y-m-d H:i:s') : null;
+                    $promiseAmountVal = isset($managementData['monto_a_pagar']) ? floatval($managementData['monto_a_pagar']) : null;
+                    $createdByVal = $user->id;
+                    $callIdVal = null;
+                    $callCollectionVal = json_encode($newCallIds);
+
+                    // Verificar existencia exacta de la gestión por todos los campos requeridos
+                    $exists = Management::where('credit_id', $credit->id)
+                        ->where('campain_id', $parseCampainId)
+                        ->where('state', $stateVal)
+                        ->where('substate', $substateVal)
+                        ->where(function ($q) use ($observationVal) {
+                            if ($observationVal === null) {
+                                $q->whereNull('observation');
+                            } else {
+                                $q->where('observation', $observationVal);
+                            }
+                        })
+                        ->where(function ($q) use ($promiseDateVal) {
+                            if ($promiseDateVal === null) {
+                                $q->whereNull('promise_date');
+                            } else {
+                                $q->where('promise_date', $promiseDateVal);
+                            }
+                        })
+                        ->where(function ($q) use ($promiseAmountVal) {
+                            if ($promiseAmountVal === null) {
+                                $q->whereNull('promise_amount');
+                            } else {
+                                $q->where('promise_amount', $promiseAmountVal);
+                            }
+                        })
+                        ->where('created_by', $createdByVal)
+                        ->where(function ($q) use ($callIdVal) {
+                            if ($callIdVal === null) {
+                                $q->whereNull('call_id');
+                            } else {
+                                $q->where('call_id', $callIdVal);
+                            }
+                        })
+                        ->where(function ($q) use ($callCollectionVal) {
+                            if ($callCollectionVal === null) {
+                                $q->whereNull('call_collection');
+                            } else {
+                                $q->where('call_collection', $callCollectionVal);
+                            }
+                        })
+                        ->exists();
+
+                    if ($exists) {
+                        // Ya existe una gestión igual; registrar en logs y omitir creación
+                        Log::info('Gestión duplicada omitida en sincronización', [
+                            'credit_sync_id' => $managementData['sync_id'] ?? null,
+                            'credit_id' => $credit->id ?? null,
+                            'campain_id' => $parseCampainId,
+                            'state' => $stateVal,
+                            'substate' => $substateVal,
+                            'observation' => $observationVal,
+                            'promise_date' => $promiseDateVal,
+                            'promise_amount' => $promiseAmountVal,
+                            'created_by' => $createdByVal,
+                            'call_collection' => $callCollectionVal,
+                            'index' => $index
+                        ]);
+
+                        $syncedCount++;
+                        continue;
+                    }
+
                     $newManagement = new Management([
-                        'state' => $managementData['state_gestion'],
-                        'substate' => $managementData['substate_gestion'],
-                        'observation' => $managementData['observation'] ?? null,
-                        'promise_date' => $parsePromiseDate($managementData['date_promise'] ?? null),
-                        'promise_amount' => floatval($managementData['monto_a_pagar']) ?? null,
-                        'created_by' => $user->id,
-                        'call_id' => null,
-                        'call_collection' => json_encode($newCallIds),
+                        'state' => $stateVal,
+                        'substate' => $substateVal,
+                        'observation' => $observationVal,
+                        'promise_date' => $promiseDateObj,
+                        'promise_amount' => $promiseAmountVal,
+                        'created_by' => $createdByVal,
+                        'call_id' => $callIdVal,
+                        'call_collection' => $callCollectionVal,
                         'days_past_due' => intval($managementData['dias_vencidos']) ?? 0,
                         'paid_fees' => intval($managementData['cuotas_pagadas']) ?? 0,
                         'pending_fees' => intval($managementData['cuotas_pendientes']) ?? 0,
@@ -417,6 +491,17 @@ class ManagementController extends Controller
                     $newManagement->created_at = $parseDateAndAdd5Hours($managementData['fecha'] ?? null);
                     $newManagement->updated_at = $parseDateAndAdd5Hours($managementData['updated_at'] ?? null);
                     $newManagement->save();
+
+                    Log::info('Gestión creada por sincronización', [
+                        'management_id' => $newManagement->id,
+                        'credit_sync_id' => $managementData['sync_id'] ?? null,
+                        'credit_id' => $credit->id ?? null,
+                        'campain_id' => $parseCampainId,
+                        'state' => $stateVal,
+                        'substate' => $substateVal,
+                        'created_by' => $createdByVal,
+                        'index' => $index
+                    ]);
 
                     $syncedCount++;
                 } catch (\Exception $e) {
