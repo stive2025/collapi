@@ -254,11 +254,6 @@ class PaymentsImport implements
                 'campain_id' => $this->campainId,
             ]);
 
-            // Agregar información adicional como atributos calculados
-            $payment->sync_id = $syncId;
-            $payment->client_name = $clientName;
-            $payment->client_ci = $clientCi;
-
             $this->importedCount++;
 
             return $payment;

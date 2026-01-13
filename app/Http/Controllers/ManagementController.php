@@ -585,9 +585,18 @@ class ManagementController extends Controller
             $data = [];
 
             foreach ($credits as $credit) {
-                // Obtener contactos activos del crédito
-                $contacts = DB::table('collection_contacts')
+                // Obtener los clientes del crédito
+                $clientIds = DB::table('client_credit')
                     ->where('credit_id', $credit->id)
+                    ->pluck('client_id');
+
+                if ($clientIds->isEmpty()) {
+                    continue;
+                }
+
+                // Obtener contactos activos de los clientes
+                $contacts = DB::table('collection_contacts')
+                    ->whereIn('client_id', $clientIds)
                     ->where('state', 'ACTIVE')
                     ->get();
 
@@ -595,8 +604,8 @@ class ManagementController extends Controller
                     // Verificar si el teléfono es efectivo (tiene llamadas contactadas)
                     $phoneState = 'No efectivo';
                     $hasContactedCalls = DB::table('collection_calls')
-                        ->where('phone', $contact->phone)
-                        ->where('state_call', 'CONTACTADO')
+                        ->where('phone_number', $contact->phone_number)
+                        ->where('state', 'CONTACTADO')
                         ->exists();
 
                     if ($hasContactedCalls) {
@@ -612,15 +621,15 @@ class ManagementController extends Controller
 
                     $data[] = [
                         'id' => $credit->id,
-                        'telefono' => $contact->phone,
-                        'name' => 'Sr(a). ' . ($contact->relationship ?? '') . ' ' . ($contact->name ?? ''),
+                        'telefono' => $contact->phone_number,
+                        'name' => 'Sr(a). ' . ($contact->phone_type ?? '') . ' ' . ($contact->phone_number ?? ''),
                         'dias_vencidos' => $credit->days_past_due,
                         'total_pendiente' => $credit->total_amount,
                         'credito' => $credit->sync_id,
                         'agencia' => $credit->agency_name,
-                        'ci' => $contact->ci,
+                        'ci' => '',
                         'bandeja' => $credit->management_tray,
-                        'type' => $contact->relationship,
+                        'type' => $contact->phone_type,
                         'cuota' => floatval($credit->monthly_fee_amount ?? 0),
                         'ult_gestion' => $lastManagement ? $lastManagement->substate : '',
                         'fecha_ult_gestion' => $lastManagement ? $lastManagement->created_at : '',
