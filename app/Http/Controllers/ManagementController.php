@@ -597,7 +597,7 @@ class ManagementController extends Controller
                 // Obtener contactos activos de los clientes
                 $contacts = DB::table('collection_contacts')
                     ->whereIn('client_id', $clientIds)
-                    ->where('state', 'ACTIVE')
+                    ->where('phone_status', 'ACTIVE')
                     ->get();
 
                 foreach ($contacts as $contact) {
@@ -605,7 +605,7 @@ class ManagementController extends Controller
                     $phoneState = 'No efectivo';
                     $hasContactedCalls = DB::table('collection_calls')
                         ->where('phone_number', $contact->phone_number)
-                        ->where('state', 'CONTACTADO')
+                        ->where('phone_status', 'CONTACTADO')
                         ->exists();
 
                     if ($hasContactedCalls) {
