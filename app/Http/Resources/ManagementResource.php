@@ -30,6 +30,7 @@ class ManagementResource extends JsonResource
             'paid_fees' => $this->paid_fees,
             'pending_fees' => $this->pending_fees,
             'managed_amount' => $this->managed_amount,
+            'nro_notification' => $this->nro_notification,
             'client_id' => $this->client_id,
             'client_name' => $this->client->name ?? null,
             'client_ci' => $this->client->ci ?? null,
