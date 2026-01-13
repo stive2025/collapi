@@ -205,9 +205,11 @@ class CreditController extends Controller
 
         // Calcular management_collection_expenses solo para SEFIL_1 y SEFIL_2
         $credits->getCollection()->transform(function ($credit) {
-            // Verificar si la empresa del crédito es SEFIL_1 o SEFIL_2
+            // Verificar si la empresa del crédito es SEFIL_1 o SEFIL_2 y el estado no es Cancelado ni Convenio de pago
             $shouldCalculateExpenses = false;
-            if ($credit->business && in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2'])) {
+            if ($credit->business &&
+                in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2']) &&
+                !in_array($credit->collection_state, ['Cancelado', 'Convenio de pago'])) {
                 $shouldCalculateExpenses = true;
             }
 
@@ -220,7 +222,7 @@ class CreditController extends Controller
                 $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
                 $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
             } else {
-                // Para empresas que no son SEFIL_1 o SEFIL_2, establecer gastos de cobranza en 0
+                // Para empresas que no son SEFIL_1 o SEFIL_2, o créditos Cancelados/Convenio de pago, establecer gastos de cobranza en 0
                 $credit->management_collection_expenses = 0;
             }
 
@@ -290,9 +292,11 @@ class CreditController extends Controller
             'business'
         ]);
 
-        // Calcular management_collection_expenses solo para SEFIL_1 y SEFIL_2
+        // Calcular management_collection_expenses solo para SEFIL_1 y SEFIL_2 y el estado no es Cancelado ni Convenio de pago
         $shouldCalculateExpenses = false;
-        if ($credit->business && in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2'])) {
+        if ($credit->business &&
+            in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2']) &&
+            !in_array($credit->collection_state, ['Cancelado', 'Convenio de pago'])) {
             $shouldCalculateExpenses = true;
         }
 
@@ -305,7 +309,7 @@ class CreditController extends Controller
             $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
             $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
         } else {
-            // Para empresas que no son SEFIL_1 o SEFIL_2, establecer gastos de cobranza en 0
+            // Para empresas que no son SEFIL_1 o SEFIL_2, o créditos Cancelados/Convenio de pago, establecer gastos de cobranza en 0
             $credit->management_collection_expenses = 0;
         }
 
