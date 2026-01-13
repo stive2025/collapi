@@ -504,9 +504,8 @@ class ManagementController extends Controller
                     'credits.user_id',
                     'credits.management_tray',
                     'credits.collection_state',
-                    'agencies.name as agency_name'
+                    'credits.agency as agency_name'
                 )
-                ->leftJoin('agencies', 'credits.agency_id', '=', 'agencies.id')
                 ->where('credits.business_id', $businessId);
 
             // Aplicar filtros opcionales
@@ -538,7 +537,7 @@ class ManagementController extends Controller
             }
 
             if (!empty($validated['agencies'])) {
-                $query->whereIn('agencies.name', $validated['agencies']);
+                $query->whereIn('credits.agency', $validated['agencies']);
             }
 
             if (!empty($validated['collection_state'])) {
