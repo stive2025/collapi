@@ -251,7 +251,7 @@ class PaymentsImport implements
                 'post_management' => 'NO',
                 'credit_id' => $credit->id,
                 'business_id' => $this->businessId,
-                'campain_id' => $this->campainId,
+                'campain_id' => 2,
             ]);
 
             $this->importedCount++;
