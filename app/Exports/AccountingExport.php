@@ -239,27 +239,30 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
     {
         if (empty($creditIds)) return;
 
-        $startDate = $this->startDate;
-        $endDate = $this->endDate;
-
-        if ($this->monthName) {
-            $year = date('Y');
-            $monthNumber = $this->utilService->getMonthNumber($this->monthName);
-            $startDate = date('Y-m-01', strtotime("$year-$monthNumber-01"));
-            $endDate = date('Y-m-t', strtotime("$year-$monthNumber-01"));
-        }
-
         $condonations = DB::table('condonations')
             ->whereIn('credit_id', $creditIds)
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->where('status', '!=', 'rechazado')
-            ->select('credit_id', 'amount', DB::raw('DATE(created_at) as condonation_date'))
+            ->where('status', 'autorizado')
+            ->select('credit_id', 'amount')
             ->get();
 
+        Log::info('AccountingExport: Condonaciones cargadas', [
+            'total_credits' => count($creditIds),
+            'total_condonations' => $condonations->count(),
+            'condonations' => $condonations->toArray()
+        ]);
+
         foreach ($condonations as $cond) {
-            $key = $cond->credit_id . '_' . $cond->condonation_date;
-            $this->condonationsCache[$key] = floatval($cond->amount);
+            // Si ya existe una condonación para este crédito, sumar los montos
+            if (isset($this->condonationsCache[$cond->credit_id])) {
+                $this->condonationsCache[$cond->credit_id] += floatval($cond->amount);
+            } else {
+                $this->condonationsCache[$cond->credit_id] = floatval($cond->amount);
+            }
         }
+
+        Log::info('AccountingExport: Cache de condonaciones', [
+            'cache' => $this->condonationsCache
+        ]);
     }
 
     private function getPaymentsQuery()
@@ -307,7 +310,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         foreach ($groupedPayments as $creditId => $creditPayments) {
             $amounts = $this->sumPaymentAmounts($creditPayments);
             $firstPayment = $creditPayments->first();
-            $condonation = $this->getCondonationAmount($creditId, $firstPayment->payment_date);
+            $condonation = $this->getCondonationAmount($creditId);
 
             $dataBox[] = $this->buildPaymentRow($firstPayment, $amounts, $condonation);
         }
@@ -321,7 +324,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
 
         foreach ($payments as $payment) {
             $amounts = $this->sumPaymentAmounts(collect([$payment]));
-            $condonation = $this->getCondonationAmount($payment->credit_id, $payment->payment_date);
+            $condonation = $this->getCondonationAmount($payment->credit_id);
 
             $dataBox[] = $this->buildPaymentRow($payment, $amounts, $condonation);
         }
@@ -423,12 +426,18 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         $dataBox[] = ["Hora y fecha:", date('Y/m/d H:i:s')];
     }
 
-    private function getCondonationAmount($creditId, $paymentDate)
+    private function getCondonationAmount($creditId)
     {
-        $dateOnly = date('Y-m-d', strtotime($paymentDate));
-        $key = $creditId . '_' . $dateOnly;
+        $amount = $this->condonationsCache[$creditId] ?? 0;
 
-        return $this->condonationsCache[$key] ?? 0;
+        if ($amount > 0) {
+            Log::info('AccountingExport: Condonación encontrada', [
+                'credit_id' => $creditId,
+                'amount' => $amount
+            ]);
+        }
+
+        return $amount;
     }
 
     private function addInvoices(&$dataBox, $businessId)
