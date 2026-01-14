@@ -296,7 +296,7 @@ class CreditController extends Controller
         $shouldCalculateExpenses = false;
         if ($credit->business &&
             in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2']) &&
-            !in_array($credit->collection_state, ['Cancelado', 'Convenio de pago'])) {
+            !in_array($credit->collection_state, ['Cancelado', 'Convenio de pago','CONVENIO DE PAGO'])) {
             $shouldCalculateExpenses = true;
         }
 
