@@ -739,7 +739,23 @@ class CollectionPaymentController extends Controller
             $config = $this->sofiaService->getConfig();
 
             if ($config === null) {
-                return ResponseBase::error('Error al obtener configuración de Sofia', null, 500);
+                Log::warning('getSofiaConfig: No se pudo obtener configuración de Sofia, usando valores por defecto');
+
+                // Devolver estructura vacía pero válida para que el frontend no falle
+                return response()->json([
+                    'contribuyentes' => [
+                        'contrib' => [
+                            [
+                                'cuentasBancarias' => [
+                                    'cuenta' => []
+                                ]
+                            ]
+                        ]
+                    ],
+                    'formasPago' => [
+                        'formaPago' => []
+                    ]
+                ]);
             }
 
             return response()->json($config);
@@ -748,7 +764,21 @@ class CollectionPaymentController extends Controller
                 'message' => $e->getMessage()
             ]);
 
-            return ResponseBase::error('Error al obtener configuración de Sofia', ['error' => $e->getMessage()], 500);
+            // Devolver estructura vacía pero válida para que el frontend no falle
+            return response()->json([
+                'contribuyentes' => [
+                    'contrib' => [
+                        [
+                            'cuentasBancarias' => [
+                                'cuenta' => []
+                            ]
+                        ]
+                    ]
+                ],
+                'formasPago' => [
+                    'formaPago' => []
+                ]
+            ]);
         }
     }
 
