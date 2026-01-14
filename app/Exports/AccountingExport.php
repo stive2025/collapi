@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Services\UtilService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithCustomStartCell;
@@ -354,6 +355,30 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
 
     private function buildPaymentRow($payment, $amounts, $condonation)
     {
+        // Determine raw method from stored columns (null means unknown)
+        $rawMethod = $payment->payment_method ?? $payment->payment_type ?? null;
+        // method used for display: fallback to 'efectivo' when unknown
+        $method = $rawMethod ?? 'efectivo';
+
+        // Read stored institution/reference as-is
+        $institution = $payment->financial_institution ?? null;
+        $reference = $payment->payment_reference ?? null;
+
+        // If the raw method explicitly indicates 'efectivo' then institution and reference must be empty
+        if (is_string($rawMethod) && strtolower(trim($rawMethod)) === 'efectivo') {
+            $institution = '';
+            $reference = '';
+        } else {
+            // If institution is empty (no data) and method is unknown, treat as FACES
+            if (empty($institution) && $rawMethod === null) {
+                $institution = 'FACES';
+            }
+
+            // Normalize to empty strings instead of nulls for Excel
+            $institution = $institution ?? '';
+            $reference = $reference ?? '';
+        }
+
         return [
             $payment->agency,
             $payment->client_ci,
@@ -373,9 +398,9 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             $this->formatForExcel($amounts['otherValues']),
             $this->formatForExcel($amounts['total']),
             $this->formatForExcel($amounts['capital'] * 0.07),
-            $payment->payment_method,
-            $payment->financial_institution ?? 'efectivo',
-            $payment->payment_reference ?? 'efectivo',
+            $method,
+            $institution,
+            $reference,
             $this->utilService->setState($payment->collection_state),
             $payment->payment_status
         ];
@@ -448,20 +473,22 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
                 $baseValue = 0;
             }
 
+            $monetaryIva = $invoiceValue - $baseValue;
+
             $dataBox[] = [
                 $invoice->agency,
                 $invoice->client_ci,
                 $invoice->client_name,
                 $invoice->business_name . '-' . $invoice->sync_id,
-                $this->formatInvoiceAccessForIdCredito($invoice->invoice_access_key) ?: ($this->businessName.'-'.$invoice->sync_id),
+                $this->formatInvoiceAccessForIdCredito($invoice->invoice_access_key),
                 $invoice->invoice_date,
                 $invoice->invoice_date,
                 0,
                 0,
                 0,
                 0,
-                $this->formatForExcel($baseValue - ($this->calculateTaxPercent($taxPercent, $invoiceValue))),
-                $this->formatForExcel($this->calculateTaxPercent($taxPercent, $invoiceValue)),
+                $this->formatForExcel($baseValue),
+                $this->formatForExcel($monetaryIva),
                 0,
                 0,
                 0,
@@ -483,15 +510,14 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         }
 
         // substr offset 20 (0-based) length 15 => characters 21..35 (1-based)
-        $segment = substr($accessKey, 20, 15);
-        if ($segment === false || strlen($segment) < 15) {
-            return null;
-        }
+        // Use 14 characters starting at offset 20 and format as 3-3-8
 
-        // format as 3-3-9
+        $segment = substr($accessKey, 24, 15);
+        Log::info('Formatting invoice access key segment', ['segment' => $segment]);
+        
         $part1 = substr($segment, 0, 3);
         $part2 = substr($segment, 3, 3);
-        $part3 = substr($segment, 6); // rest 9 chars
+        $part3 = substr($segment, 6); 
 
         return sprintf('%s-%s-%s', $part1, $part2, $part3);
     }

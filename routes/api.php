@@ -133,3 +133,17 @@ Route::get('exports/campain', [ExportController::class, 'exportCampain']);
 Route::get('exports/accounting', [ExportController::class, 'exportAccounting']);
 Route::get('exports/campain-assignments', [ExportController::class, 'exportCampainAssign']);
 Route::get('exports/direcciones', [ExportController::class, 'exportDirecciones']);
+
+// DEBUG route: return a collection_contact by id (only in local env)
+Route::get('debug/contact/{id}', function ($id) {
+    if (env('APP_ENV') !== 'local') {
+        return response()->json(['message' => 'Not allowed'], 403);
+    }
+
+    $contact = \App\Models\CollectionContact::find($id);
+    if (!$contact) {
+        return response()->json(['message' => 'Not found'], 404);
+    }
+
+    return response()->json(['contact' => $contact], 200);
+});
