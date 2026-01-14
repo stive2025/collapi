@@ -636,6 +636,16 @@ class CollectionPaymentController extends Controller
                 ->where('phone_status', 'ACTIVE')
                 ->value('phone_number');
 
+            // Obtener la dirección del cliente (primer dirección activa)
+            $direction = DB::table('collection_directions')
+                ->where('client_id', $client->id)
+                ->where('status', 'ACTIVE')
+                ->value('address');
+
+            if (!$direction) {
+                $direction = 'Sin dirección registrada';
+            }
+
             // Obtener el nombre del business/cartera
             $cartera = $request->input('cartera');
             $businessName = null;
@@ -667,7 +677,7 @@ class CollectionPaymentController extends Controller
                 'credit_id' => $creditId,
                 'payload' => $syntheticPayload
             ]);
-            
+
             $syntheticRequest = \Illuminate\Http\Request::create('/', 'POST', $syntheticPayload);
             $sofiaResult = $this->sofiaService->facturar($syntheticRequest, $paymentValue);
             Log::info('SofiaService.facturar result', ['result' => $sofiaResult]);
@@ -735,8 +745,14 @@ class CollectionPaymentController extends Controller
                 }
 
                 return ResponseBase::success([
-                    "fecha" => date('Y/m/d H:i:s', time() - 18000),
+                    "ci" => $client->ci,
+                    "name" => $client->name,
+                    "direction" => $direction,
+                    "access_key" => $sofiaResult['response']->claveAcceso,
                     "clave_acceso" => $sofiaResult['response']->claveAcceso,
+                    "date" => date('Y/m/d H:i:s', time() - 18000),
+                    "fecha" => date('Y/m/d H:i:s', time() - 18000),
+                    "value" => $paymentValue,
                     "subtotal_sin_iva" => $subtotalSinIva,
                     "valor_iva" => $valorIva,
                     "total_con_iva" => $totalConIva,
