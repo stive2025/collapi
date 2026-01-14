@@ -40,6 +40,21 @@ class ManagementController extends Controller
             $query->whereDate('promise_date', $request->query('promise_date'));
         }
 
+        // Filtrar por rango de fechas de creación (acepta formatos YY/MM/DD y YY-MM-DD)
+        if ($request->filled('start_date')) {
+            $start = $this->parseIncomingDate($request->query('start_date'));
+            if ($start) {
+                $query->whereDate('created_at', '>=', $start);
+            }
+        }
+
+        if ($request->filled('end_date')) {
+            $end = $this->parseIncomingDate($request->query('end_date'));
+            if ($end) {
+                $query->whereDate('created_at', '<=', $end);
+            }
+        }
+
         if ($request->filled('created_by')) {
             $query->where('created_by', $request->query('created_by'));
         }
@@ -531,6 +546,36 @@ class ManagementController extends Controller
                 500
             );
         }
+    }
+
+    /**
+     * Intenta parsear fechas entrantes en varios formatos y devuelve YYYY-MM-DD o null.
+     * Acepta formatos como YY/MM/DD, YY-MM-DD, YYYY/MM/DD, YYYY-MM-DD.
+     */
+    private function parseIncomingDate(?string $dateStr): ?string
+    {
+        if (empty($dateStr)) return null;
+
+        $formats = ['y/m/d', 'y-m-d', 'Y/m/d', 'Y-m-d'];
+
+        foreach ($formats as $fmt) {
+            try {
+                $d = \Carbon\Carbon::createFromFormat($fmt, $dateStr);
+                if ($d !== false) {
+                    return $d->format('Y-m-d');
+                }
+            } catch (\Exception $e) {
+                // continuar con el siguiente formato
+            }
+        }
+
+        // Fallback: intentar strtotime para formatos comunes
+        $ts = strtotime($dateStr);
+        if ($ts !== false) {
+            return date('Y-m-d', $ts);
+        }
+
+        return null;
     }
 
     /**

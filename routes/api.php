@@ -24,12 +24,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('login', [LoginController::class, 'login']);
 
+Route::apiResource('managements', ManagementController::class);
+
 Route::middleware(['check.token'])->group(function () {
     Route::apiResource('users', UserController::class);
     Route::apiResource('credits', CreditController::class);
     Route::apiResource('clients', ClientController::class);
     Route::apiResource('contacts', ContactController::class);
-    Route::apiResource('managements', ManagementController::class);
 
     // Rutas específicas de payments (deben ir ANTES del apiResource)
     Route::post('payments/sync', [CollectionPaymentController::class, 'syncPayments']);
