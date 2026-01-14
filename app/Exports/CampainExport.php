@@ -73,7 +73,7 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
             'oferta',
             'compromiso',
             'notificacion',
-            'updated_at',
+            'created_at',
             'id',
         ];
     }
@@ -137,7 +137,7 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
                 'c.date_offer as oferta',
                 'c.date_promise as compromiso',
                 'c.date_notification as notificacion',
-                DB::raw("DATE_FORMAT(c.updated_at, '%d/%m/%Y %H:%i:%s') as updated_at"),
+                DB::raw("DATE_FORMAT(c.created_at, '%d/%m/%Y %H:%i:%s') as created_at"),
                 'c.id as id'
             )
             ->where('c.business_id', $businessId)

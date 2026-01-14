@@ -410,6 +410,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
     {
         $invoicesQuery = DB::table('invoices as i')
             ->join('credits as c', 'c.id', '=', 'i.credit_id')
+            ->join('businesses as b', 'b.id', '=', 'c.business_id')
             ->join('client_credit as cc', 'cc.credit_id', '=', 'c.id')
             ->join('clients as cl', function($join) {
                 $join->on('cl.id', '=', 'cc.client_id')
@@ -432,29 +433,35 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             'c.sync_id',
             'c.agency',
             'c.collection_state',
+            'b.name as business_name',
             'cl.name as client_name',
             'cl.ci as client_ci'
         )->get();
 
         foreach ($invoices as $invoice) {
             $invoiceValue = floatval($invoice->invoice_value);
-            $taxValue = floatval($invoice->tax_value);
-            $baseValue = $invoiceValue - $taxValue;
+            $taxPercent = floatval($invoice->tax_value);
+
+            if ($taxPercent > 0) {
+                $baseValue = $invoiceValue / (1 + ($taxPercent / 100));
+            } else {
+                $baseValue = 0;
+            }
 
             $dataBox[] = [
                 $invoice->agency,
                 $invoice->client_ci,
                 $invoice->client_name,
+                $invoice->business_name . '-' . $invoice->sync_id,
                 $this->formatInvoiceAccessForIdCredito($invoice->invoice_access_key) ?: ($this->businessName.'-'.$invoice->sync_id),
-                $invoice->invoice_number,
                 $invoice->invoice_date,
                 $invoice->invoice_date,
                 0,
                 0,
                 0,
                 0,
-                $this->formatForExcel($baseValue),
-                $this->formatForExcel($this->calculateTaxPercent($taxValue, $invoiceValue)),
+                $this->formatForExcel($baseValue - ($this->calculateTaxPercent($taxPercent, $invoiceValue))),
+                $this->formatForExcel($this->calculateTaxPercent($taxPercent, $invoiceValue)),
                 0,
                 0,
                 0,
@@ -509,7 +516,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         $inv = floatval($invoiceValue);
         if ($inv <= 0) return 0;
 
-        $percent = (floatval($taxValue) / $inv) * 100;
+        $percent = (floatval($taxValue) / 100) * $inv;
         return $percent;
     }
 
