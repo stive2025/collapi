@@ -636,10 +636,10 @@ class CollectionPaymentController extends Controller
                 ->where('phone_status', 'ACTIVE')
                 ->value('phone_number');
 
-            // Obtener la dirección del cliente (primer dirección activa)
+            // Obtener la dirección del cliente (primera dirección disponible)
             $direction = DB::table('collection_directions')
                 ->where('client_id', $client->id)
-                ->where('status', 'ACTIVE')
+                ->orderBy('id', 'desc')
                 ->value('address');
 
             if (!$direction) {
