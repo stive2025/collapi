@@ -668,7 +668,7 @@ class CollectionPaymentController extends Controller
                 'name' => $client->name,
                 'telefono' => $phone ?? '0000000000',
                 'email' => $client->ci . '@sinmail.com',
-                'formaPago' => $request->input('formaPago', 'SIN_UTILIZACION_DEL_SISTEMA_FINANCIERO'),
+                'formaPago' => $request->input('formaPago', 'OTROS_FINANCIERO'),
                 'cartera' => $businessName,
             ];
 
