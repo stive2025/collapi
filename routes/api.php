@@ -37,6 +37,8 @@ Route::middleware(['check.token'])->group(function () {
     Route::get('payments/summary', [CollectionPaymentController::class, 'getPaymentsResume']);
     Route::post('payments/revert/{id}', [CollectionPaymentController::class, 'revertPayment']);
     Route::post('payments/apply/{id}', [CollectionPaymentController::class, 'applyPayment']);
+    Route::post('payments/process-invoice', [CollectionPaymentController::class, 'processInvoice']);
+    Route::get('sofiaconfig', [CollectionPaymentController::class, 'getSofiaConfig']);
 
     Route::apiResource('payments', CollectionPaymentController::class);
     Route::apiResource('businesses', BusinessController::class);

@@ -702,9 +702,18 @@ class CollectionPaymentController extends Controller
                     }
                 }
 
+                // Calcular desglose de IVA (15%)
+                $ivaPercent = 15;
+                $totalConIva = round($paymentValue, 2);
+                $subtotalSinIva = round($totalConIva / (1 + ($ivaPercent / 100)), 2);
+                $valorIva = round($totalConIva - $subtotalSinIva, 2);
+
                 return ResponseBase::success([
                     "fecha" => date('Y/m/d H:i:s', time() - 18000),
                     "clave_acceso" => $sofiaResult['response']->claveAcceso,
+                    "subtotal_sin_iva" => $subtotalSinIva,
+                    "valor_iva" => $valorIva,
+                    "total_con_iva" => $totalConIva,
                     "sofia_response" => $sofiaResult['response']
                 ], 'Factura procesada correctamente', 200);
             }
@@ -719,6 +728,30 @@ class CollectionPaymentController extends Controller
             return ResponseBase::error('Error al procesar la factura', ['error' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * @description Obtiene la configuración de Sofia (cuentas bancarias, formas de pago, etc.)
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSofiaConfig()
+    {
+        try {
+            $config = $this->sofiaService->getConfig();
+
+            if ($config === null) {
+                return ResponseBase::error('Error al obtener configuración de Sofia', null, 500);
+            }
+
+            return response()->json($config);
+        } catch (\Exception $e) {
+            Log::error('Error getting Sofia config', [
+                'message' => $e->getMessage()
+            ]);
+
+            return ResponseBase::error('Error al obtener configuración de Sofia', ['error' => $e->getMessage()], 500);
+        }
+    }
+
     private function validatePaymentRubros(Credit $credit, array $data): ?array
     {
         $rubros = [
