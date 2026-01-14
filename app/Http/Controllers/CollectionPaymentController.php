@@ -612,35 +612,13 @@ class CollectionPaymentController extends Controller
                 return ResponseBase::validationError(['credito' => ['El id del crédito es obligatorio.']]);
             }
 
-            $invoice = Invoice::where('credito', $creditId)->where('status', 'pendiente')->first();
-
-            if ($invoice === null) {
-                $cartera = $request->input('cartera');
-                $creditoRow = null;
-                if ($cartera) {
-                    $creditoRow = DB::table($cartera)->where('ci', $request->input('ci'))->first();
-                }
-
-                $invoice = Invoice::create([
-                    "fecha" => date('Y/m/d H:i:s', time() - 18000),
-                    "byUser" => $request->user()->name ?? 'system',
-                    "credito" => $creditoRow->id ?? $creditId,
-                    "prevDates" => "N/D",
-                    "status" => "pendiente",
-                    "postDates" => json_encode([
-                        "monto" => 0,
-                        "days" => 0,
-                        "value" => floatval($request->input('value', 0))
-                    ]),
-                    "cartera" => $cartera ?? null,
-                ]);
-            }
-
-            $paymentValue = $request->input('payment_value', $request->input('value', round(json_decode($invoice->postDates)->value ?? 0, 2)));
+            $cartera = $request->input('cartera');
+            $paymentValue = floatval($request->input('payment_value', $request->input('value', 0)));
             $paymentMethod = $request->input('payment_method', $request->input('metodo'));
             $financialInstitution = $request->input('financial_institution', $request->input('idBanco'));
             $paymentReference = $request->input('payment_reference', $request->input('referencia'));
 
+            // Preparar datos para Sofia
             $syntheticPayload = [
                 'value' => $paymentValue,
                 'metodo' => $paymentMethod,
@@ -651,29 +629,52 @@ class CollectionPaymentController extends Controller
                 'telefono' => $request->input('telefono', null),
                 'email' => $request->input('email', null),
                 'formaPago' => $request->input('formaPago', $paymentMethod),
-                'cartera' => $request->input('cartera', $invoice->cartera ?? null),
+                'cartera' => $cartera,
             ];
 
-            $syntheticRequest = \Illuminate\Http\Request::create('/', 'POST', $syntheticPayload);
-            $sofiaResult = $this->sofiaService->facturar($syntheticRequest, $paymentValue);
+            // LOG: Data que se enviará a Sofia
+            Log::info('processInvoice: Data a enviar a Sofia', [
+                'credit_id' => $creditId,
+                'payload' => $syntheticPayload
+            ]);
 
-            Log::info('SofiaService.facturar result', ['result' => $sofiaResult]);
+            // TODO: Descomentar cuando se quiera enviar a Sofia
+            // $syntheticRequest = \Illuminate\Http\Request::create('/', 'POST', $syntheticPayload);
+            // $sofiaResult = $this->sofiaService->facturar($syntheticRequest, $paymentValue);
+            // Log::info('SofiaService.facturar result', ['result' => $sofiaResult]);
+
+            // TEMPORAL: Simular respuesta exitosa de Sofia para pruebas
+            $sofiaResult = [
+                'state' => 200,
+                'response' => (object)[
+                    'claveAcceso' => 'TEST_' . date('YmdHis') . '_' . $creditId
+                ]
+            ];
 
             if (isset($sofiaResult['state']) && $sofiaResult['state'] === 200 && isset($sofiaResult['response']->claveAcceso)) {
-                $prev_invoice = json_decode($invoice->postDates);
-
-                $invoice->update([
+                // Crear el invoice solo si Sofia respondió correctamente
+                $invoice = Invoice::create([
                     "fecha" => date('Y/m/d H:i:s', time() - 18000),
+                    "byUser" => $request->user()->name ?? 'system',
+                    "credito" => $creditId,
+                    "prevDates" => "N/D",
                     "status" => "finalizado",
                     "clave_acceso" => $sofiaResult['response']->claveAcceso,
                     "postDates" => json_encode([
-                        "monto" => $prev_invoice->monto ?? 0,
-                        "days" => $prev_invoice->days ?? 0,
+                        "monto" => 0,
+                        "days" => 0,
                         "value" => round($paymentValue, 2)
                     ]),
+                    "cartera" => $cartera ?? null,
                     "pay_way" => $paymentMethod,
                     "code_reference" => $paymentReference,
                     "financial_institution" => $financialInstitution
+                ]);
+
+                Log::info('processInvoice: Invoice creado', [
+                    'invoice_id' => $invoice->id,
+                    'credit_id' => $creditId,
+                    'clave_acceso' => $sofiaResult['response']->claveAcceso
                 ]);
 
                 // Si el crédito tiene convenio de pago, marcar la primera cuota (gasto de cobranza) como PAGADA
