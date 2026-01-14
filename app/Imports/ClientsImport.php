@@ -15,26 +15,39 @@ class ClientsImport implements ToCollection, WithHeadingRow, WithValidation
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
+            // Normalizar valores recibidos
+            $rowArr = $row instanceof \Illuminate\Support\Collection ? $row->toArray() : (array)$row;
+
+            // Determinar el tipo de cliente
+            // Si viene la columna 'type' en el Excel, usar ese valor
+            // Si no, usar 'TITULAR' por defecto
+            $clientType = isset($rowArr['type']) && !empty($rowArr['type'])
+                ? strtoupper(trim($rowArr['type']))
+                : 'TITULAR';
+
             $client = Client::firstOrCreate(
                 ['ci' => strval($row['ci'])],
                 [
                     'name' => $row['name'],
-                    'type' => 'TITULAR',
-                    'gender' => $row['gender'],
-                    'civil_status' => $row['civil_status'],
-                    'economic_activity' => $row['economic_activity'],
+                    'type' => $clientType,
+                    'gender' => $row['gender'] ?? '',
+                    'civil_status' => $row['civil_status'] ?? '',
+                    'economic_activity' => $row['economic_activity'] ?? '',
                 ]
             );
 
             $credit = Credit::where('sync_id', $row['sync_id'])->first();
 
             if ($credit) {
+                // Usar el tipo del cliente para la relación con el crédito
                 $client->credits()->syncWithoutDetaching([
-                    $credit->id => ['type' => 'TITULAR']
+                    $credit->id => ['type' => $clientType]
                 ]);
             }
 
-            if (isset($row['contactos']) && !empty($row['contactos'])) {
+            // Solo procesar contactos si NO viene la columna 'type'
+            // (modo de importación completa vs modo de contactos)
+            if (!isset($rowArr['type']) && isset($row['contactos']) && !empty($row['contactos'])) {
                 $contactos = json_decode($row['contactos'], true);
 
                 if (is_array($contactos)) {

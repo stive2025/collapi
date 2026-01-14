@@ -16,11 +16,14 @@ class ContactsImport implements ToCollection, WithHeadingRow, WithValidation
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
-            // Normalizar valores recibidos
-            $rawCi = isset($row['client_ci']) ? trim((string)$row['client_ci']) : '';
+            // Normalizar valores recibidos y aceptar múltiples nombres de columna
+            $rowArr = $row instanceof \Illuminate\Support\Collection ? $row->toArray() : (array)$row;
+
+            $rawCi = $this->getRowValue($rowArr, ['client_ci', 'ci', 'cedula', 'cédula']);
             $ci = $rawCi;
+
             // intentar buscar cliente por CI tal cual
-            $client = Client::where('ci', $ci)->first();
+            $client = $rawCi ? Client::where('ci', $ci)->first() : null;
 
             // si no existe, intentar con solo dígitos (por si vienen con guiones/espacios)
             if (!$client) {
@@ -31,26 +34,81 @@ class ContactsImport implements ToCollection, WithHeadingRow, WithValidation
             }
 
             if (!$client) {
-                // Si no existe el cliente, registrar y continuar con el siguiente registro
-                Log::warning('ContactsImport: cliente no encontrado, fila omitida', [
+                // Si no existe el cliente, crear uno nuevo con CI y nombre (si viene)
+                $ciToUse = $rawCi;
+                // fallback to digits-only CI if available
+                $ciDigits = $rawCi ? preg_replace('/\D+/', '', $rawCi) : '';
+                if (empty($ciToUse) && !empty($ciDigits)) {
+                    $ciToUse = $ciDigits;
+                }
+
+                $clientName = $this->getRowValue($rowArr, ['client_name', 'name', 'nombre']) ?? 'SIN NOMBRE';
+
+                try {
+                    $client = Client::create([
+                        'name' => $clientName,
+                        'ci' => $ciToUse,
+                    ]);
+
+                    Log::info('ContactsImport: cliente creado automaticamente', [
+                        'client_ci' => $ciToUse,
+                        'client_name' => $clientName,
+                        'client_id' => $client->id
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('ContactsImport: error al crear cliente automaticamente', [
+                        'client_ci' => $ciToUse,
+                        'client_name' => $clientName,
+                        'error' => $e->getMessage(),
+                        'row' => $rowArr
+                    ]);
+
+                    // Si no pudimos crear el cliente, omitimos la fila
+                    continue;
+                }
+            }
+
+            // Normalizar número de teléfono (acepta varios nombres de columna)
+            $rawPhone = $this->getRowValue($rowArr, ['phone_number', 'phone', 'telefono', 'telefono_contacto']);
+            if (empty($rawPhone)) {
+                Log::warning('ContactsImport: fila omitida sin phone_number', [
                     'client_ci' => $rawCi,
-                    'phone' => isset($row['phone_number']) ? $row['phone_number'] : null,
-                    'row' => is_array($row) ? $row : (array)$row
+                    'row' => $rowArr
+                ]);
+
+                continue; // sin teléfono no tiene sentido crear contacto
+            }
+
+            // Normalizar a solo dígitos (mantener prefijo + si existe)
+            $phoneDigits = preg_replace('/[^0-9]+/', '', (string)$rawPhone);
+            if (empty($phoneDigits)) {
+                Log::warning('ContactsImport: telefono normalizado vacío, fila omitida', [
+                    'client_ci' => $rawCi,
+                    'raw_phone' => $rawPhone,
+                    'row' => $rowArr
                 ]);
 
                 continue;
             }
 
-            // Normalizar número de teléfono
-            $rawPhone = isset($row['phone_number']) ? trim((string)$row['phone_number']) : '';
-            $phone = $rawPhone;
-            if (empty($phone)) {
-                Log::warning('ContactsImport: fila omitida sin phone_number', [
-                    'client_ci' => $rawCi,
-                    'row' => is_array($row) ? $row : (array)$row
-                ]);
+            // Intentar preservar o reconstruir un cero inicial perdido por Excel
+            $phone = $phoneDigits;
 
-                continue; // sin teléfono no tiene sentido crear contacto
+            // Si el rawPhone original es string y comienza con 0, preserve
+            $rawIsStringWithZero = is_string($rawPhone) && preg_match('/^0+\d+$/', $rawPhone);
+            if ($rawIsStringWithZero) {
+                // Ensure preserved leading zeros from original string
+                $phone = $rawPhone;
+            } else {
+                // Heurística: si quedaron 8 dígitos, es probable que falte un 0 inicial (móvil URUY: 9 dígitos)
+                if (strlen($phoneDigits) === 8) {
+                    $phone = '0' . $phoneDigits;
+                    Log::info('ContactsImport: agregado cero inicial al telefono reconstruido', [
+                        'original' => $rawPhone,
+                        'normalized' => $phone,
+                        'client_ci' => $rawCi
+                    ]);
+                }
             }
 
             // Crear o actualizar contacto
@@ -60,15 +118,15 @@ class ContactsImport implements ToCollection, WithHeadingRow, WithValidation
                     'phone_number' => $phone,
                 ],
                 [
-                    'phone_type' => $row['phone_type'] ?? 'MOVIL',
-                    'phone_status' => $row['phone_status'] ?? 'ACTIVE',
-                    'created_by' => $row['created_by'] ?? null,
-                    'updated_by' => $row['updated_by'] ?? null,
-                    'deleted_by' => $row['deleted_by'] ?? null,
+                    'phone_type' => $this->getRowValue($rowArr, ['phone_type']) ?? 'MOVIL',
+                    'phone_status' => $this->getRowValue($rowArr, ['phone_status']) ?? 'ACTIVE',
+                    'created_by' => $this->getRowValue($rowArr, ['created_by']) ?? null,
+                    'updated_by' => $this->getRowValue($rowArr, ['updated_by']) ?? null,
+                    'deleted_by' => $this->getRowValue($rowArr, ['deleted_by']) ?? null,
                 ]
             );
 
-            if (isset($contact->wasRecentlyCreated) && $contact->wasRecentlyCreated) {
+            if (!empty($contact->wasRecentlyCreated)) {
                 Log::info('ContactsImport: contacto creado', [
                     'client_id' => $client->id,
                     'client_ci' => $rawCi,
@@ -84,60 +142,42 @@ class ContactsImport implements ToCollection, WithHeadingRow, WithValidation
                 ]);
             }
 
-            // Verificar inmediatamente que el registro existe en la BD y loguearlo
-            try {
-                $found = CollectionContact::find($contact->id);
-                Log::debug('ContactsImport: verificacion en DB', [
-                    'found' => $found ? $found->toArray() : null,
-                    'database' => DB::getDatabaseName(),
-                    'contact_id' => $contact->id
-                ]);
-            } catch (\Exception $e) {
-                Log::error('ContactsImport: error al verificar en DB', ['error' => $e->getMessage()]);
-            }
+            // (Removed) no recuperar el contacto inmediatamente después de crearlo.
 
             // Si se activa el modo debug por variable de entorno, detener la importación
             if (env('CONTACTS_IMPORT_DEBUG', false)) {
                 throw new \Exception('ContactsImport: debug stop after contact_id=' . $contact->id);
             }
 
-            // Verificar lectura desde la base de datos inmediatamente después de guardar
-            try {
-                $dbName = DB::connection()->getDatabaseName();
-            } catch (\Exception $e) {
-                $dbName = 'unknown';
-            }
+            // (Removed) skip post-save retrieval to avoid extra DB read.
+        }
+    }
 
-            $found = CollectionContact::where('id', $contact->id)->first();
-
-            if ($found) {
-                Log::info('ContactsImport: verificación exitosa, registro recuperado', [
-                    'contact' => $found->toArray(),
-                    'database' => $dbName
-                ]);
-            } else {
-                Log::error('ContactsImport: registro NO encontrado tras guardar', [
-                    'expected_contact_id' => $contact->id,
-                    'client_id' => $client->id,
-                    'client_ci' => $rawCi,
-                    'phone' => $phone,
-                    'database' => $dbName,
-                    'row' => is_array($row) ? $row : (array)$row
-                ]);
+    /**
+     * Get the first non-empty value from the row for a list of possible keys.
+     */
+    private function getRowValue(array $row, array $keys)
+    {
+        foreach ($keys as $k) {
+            if (array_key_exists($k, $row) && $row[$k] !== null && trim((string)$row[$k]) !== '') {
+                return trim((string)$row[$k]);
             }
         }
+
+        return null;
     }
 
     public function rules(): array
     {
         return [
-            '*.phone_number' => ['required', 'string'],
+            // Allow phone_number to be numeric or string (Excel may provide it as numeric cell)
+            '*.phone_number' => ['required'],
             '*.phone_type' => ['nullable', 'string'],
             '*.phone_status' => ['nullable', 'string'],
             '*.created_by' => ['nullable', 'integer'],
             '*.updated_by' => ['nullable', 'integer'],
             '*.deleted_by' => ['nullable', 'integer'],
-            '*.client_ci' => ['required', 'string'],
+            '*.client_ci' => ['required'],
         ];
     }
 
