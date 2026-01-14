@@ -612,9 +612,39 @@ class CollectionPaymentController extends Controller
                 return ResponseBase::validationError(['credito' => ['El id del crédito es obligatorio.']]);
             }
 
+            // Obtener el crédito
+            $credit = Credit::find($creditId);
+            if (!$credit) {
+                return ResponseBase::error('Crédito no encontrado', null, 404);
+            }
+
+            // Obtener el cliente titular del crédito con sus datos
+            $client = DB::table('client_credit as cc')
+                ->join('clients as cl', 'cl.id', '=', 'cc.client_id')
+                ->where('cc.credit_id', $creditId)
+                ->where('cc.type', 'TITULAR')
+                ->select('cl.id', 'cl.ci', 'cl.name')
+                ->first();
+
+            if (!$client) {
+                return ResponseBase::error('No se encontró cliente titular para el crédito', null, 404);
+            }
+
+            // Obtener el teléfono del cliente (primer contacto activo)
+            $phone = DB::table('collection_contacts')
+                ->where('client_id', $client->id)
+                ->where('phone_status', 'ACTIVE')
+                ->value('phone_number');
+
+            // Obtener el nombre del business/cartera
             $cartera = $request->input('cartera');
+            $businessName = null;
+            if ($cartera) {
+                $businessName = DB::table('businesses')->where('id', $cartera)->value('name');
+            }
+
             $paymentValue = floatval($request->input('payment_value', $request->input('value', 0)));
-            $paymentMethod = $request->input('payment_method', $request->input('metodo'));
+            $paymentMethod = strtoupper($request->input('payment_method', $request->input('metodo', 'EFECTIVO')));
             $financialInstitution = $request->input('financial_institution', $request->input('idBanco'));
             $paymentReference = $request->input('payment_reference', $request->input('referencia'));
 
@@ -624,12 +654,12 @@ class CollectionPaymentController extends Controller
                 'metodo' => $paymentMethod,
                 'idBanco' => $financialInstitution,
                 'referencia' => $paymentReference,
-                'ci' => $request->input('ci', null),
-                'name' => $request->input('name', null),
-                'telefono' => $request->input('telefono', null),
-                'email' => $request->input('email', null),
-                'formaPago' => $request->input('formaPago', $paymentMethod),
-                'cartera' => $cartera,
+                'ci' => $client->ci,
+                'name' => $client->name,
+                'telefono' => $phone ?? '0000000000',
+                'email' => $client->ci . '@sinmail.com',
+                'formaPago' => $request->input('formaPago', 'SIN_UTILIZACION_DEL_SISTEMA_FINANCIERO'),
+                'cartera' => $businessName,
             ];
 
             // LOG: Data que se enviará a Sofia
@@ -652,34 +682,36 @@ class CollectionPaymentController extends Controller
             ];
 
             if (isset($sofiaResult['state']) && $sofiaResult['state'] === 200 && isset($sofiaResult['response']->claveAcceso)) {
+                // Calcular IVA (15%)
+                $ivaPercent = 15;
+                $totalConIva = round($paymentValue, 2);
+                $subtotalSinIva = round($totalConIva / (1 + ($ivaPercent / 100)), 2);
+                $valorIva = round($totalConIva - $subtotalSinIva, 2);
+
                 // Crear el invoice solo si Sofia respondió correctamente
                 $invoice = Invoice::create([
-                    "fecha" => date('Y/m/d H:i:s', time() - 18000),
-                    "byUser" => $request->user()->name ?? 'system',
-                    "credito" => $creditId,
-                    "prevDates" => "N/D",
+                    "invoice_value" => $totalConIva,
+                    "tax_value" => $ivaPercent,
+                    "invoice_institution" => $financialInstitution ?? '',
+                    "invoice_method" => $paymentMethod,
+                    "invoice_access_key" => $sofiaResult['response']->claveAcceso,
+                    "invoice_number" => $paymentReference ?? '',
+                    "invoice_date" => date('Y-m-d'),
+                    "credit_id" => $creditId,
+                    "client_id" => $client->id,
                     "status" => "finalizado",
-                    "clave_acceso" => $sofiaResult['response']->claveAcceso,
-                    "postDates" => json_encode([
-                        "monto" => 0,
-                        "days" => 0,
-                        "value" => round($paymentValue, 2)
-                    ]),
-                    "cartera" => $cartera ?? null,
-                    "pay_way" => $paymentMethod,
-                    "code_reference" => $paymentReference,
-                    "financial_institution" => $financialInstitution
+                    "created_by" => $request->user()->id ?? 1
                 ]);
 
                 Log::info('processInvoice: Invoice creado', [
                     'invoice_id' => $invoice->id,
                     'credit_id' => $creditId,
+                    'client_id' => $client->id,
                     'clave_acceso' => $sofiaResult['response']->claveAcceso
                 ]);
 
                 // Si el crédito tiene convenio de pago, marcar la primera cuota (gasto de cobranza) como PAGADA
-                $credit = Credit::find($creditId);
-                if ($credit && $credit->collection_state === 'CONVENIO DE PAGO') {
+                if ($credit->collection_state === 'CONVENIO DE PAGO') {
                     $agreement = Agreement::where('credit_id', $creditId)
                         ->where('status', 'AUTORIZADO')
                         ->first();
@@ -703,18 +735,13 @@ class CollectionPaymentController extends Controller
                     }
                 }
 
-                // Calcular desglose de IVA (15%)
-                $ivaPercent = 15;
-                $totalConIva = round($paymentValue, 2);
-                $subtotalSinIva = round($totalConIva / (1 + ($ivaPercent / 100)), 2);
-                $valorIva = round($totalConIva - $subtotalSinIva, 2);
-
                 return ResponseBase::success([
                     "fecha" => date('Y/m/d H:i:s', time() - 18000),
                     "clave_acceso" => $sofiaResult['response']->claveAcceso,
                     "subtotal_sin_iva" => $subtotalSinIva,
                     "valor_iva" => $valorIva,
                     "total_con_iva" => $totalConIva,
+                    "invoice_id" => $invoice->id,
                     "sofia_response" => $sofiaResult['response']
                 ], 'Factura procesada correctamente', 200);
             }

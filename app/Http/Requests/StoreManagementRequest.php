@@ -86,6 +86,18 @@ class StoreManagementRequest extends FormRequest
                     );
                 }
             }
+
+            if ($this->substate === 'NOTIFICADO') {
+                if (empty($this->nro_notification)) {
+                    throw new HttpResponseException(
+                        ResponseBase::error(
+                            'Debe ingresar un Nro. de notificación para este subestado de gestión.',
+                            [],
+                            400
+                        )
+                    );
+                }
+            }
             
             $lastManagement = \App\Models\Management::where('credit_id', $this->credit_id)
                 ->orderBy('created_at', 'desc')
