@@ -667,19 +667,18 @@ class CollectionPaymentController extends Controller
                 'credit_id' => $creditId,
                 'payload' => $syntheticPayload
             ]);
-
-            // TODO: Descomentar cuando se quiera enviar a Sofia
-            // $syntheticRequest = \Illuminate\Http\Request::create('/', 'POST', $syntheticPayload);
-            // $sofiaResult = $this->sofiaService->facturar($syntheticRequest, $paymentValue);
-            // Log::info('SofiaService.facturar result', ['result' => $sofiaResult]);
+            
+            $syntheticRequest = \Illuminate\Http\Request::create('/', 'POST', $syntheticPayload);
+            $sofiaResult = $this->sofiaService->facturar($syntheticRequest, $paymentValue);
+            Log::info('SofiaService.facturar result', ['result' => $sofiaResult]);
 
             // TEMPORAL: Simular respuesta exitosa de Sofia para pruebas
-            $sofiaResult = [
-                'state' => 200,
-                'response' => (object)[
-                    'claveAcceso' => 'TEST_' . date('YmdHis') . '_' . $creditId
-                ]
-            ];
+            // $sofiaResult = [
+            //     'state' => 200,
+            //     'response' => (object)[
+            //         'claveAcceso' => 'TEST_' . date('YmdHis') . '_' . $creditId
+            //     ]
+            // ];
 
             if (isset($sofiaResult['state']) && $sofiaResult['state'] === 200 && isset($sofiaResult['response']->claveAcceso)) {
                 // Calcular IVA (15%)
