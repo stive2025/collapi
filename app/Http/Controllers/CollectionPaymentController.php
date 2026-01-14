@@ -676,6 +676,32 @@ class CollectionPaymentController extends Controller
                     "financial_institution" => $financialInstitution
                 ]);
 
+                // Si el crédito tiene convenio de pago, marcar la primera cuota (gasto de cobranza) como PAGADA
+                $credit = Credit::find($creditId);
+                if ($credit && $credit->collection_state === 'CONVENIO DE PAGO') {
+                    $agreement = Agreement::where('credit_id', $creditId)
+                        ->where('status', 'AUTORIZADO')
+                        ->first();
+
+                    if ($agreement) {
+                        $feeDetail = json_decode($agreement->fee_detail, true);
+
+                        if (is_array($feeDetail) && count($feeDetail) > 0) {
+                            // La primera cuota (índice 0) es el gasto de cobranza
+                            $feeDetail[0]['payment_status'] = 'PAGADA';
+
+                            $agreement->update([
+                                'fee_detail' => json_encode($feeDetail),
+                            ]);
+
+                            Log::info('processInvoice: Primera cuota del convenio marcada como PAGADA', [
+                                'credit_id' => $creditId,
+                                'agreement_id' => $agreement->id
+                            ]);
+                        }
+                    }
+                }
+
                 return ResponseBase::success([
                     "fecha" => date('Y/m/d H:i:s', time() - 18000),
                     "clave_acceso" => $sofiaResult['response']->claveAcceso,
