@@ -202,11 +202,7 @@ class StatisticController extends Controller
 
             if ($request->filled('management_type')) {
                 $type = $request->query('management_type');
-                if ($type === 'with') {
-                    $query->where('with_management', 'SI');
-                } elseif ($type === 'without') {
-                    $query->where('with_management', 'NO');
-                }
+                $query->where('with_management', $type);
             }
 
             if ($request->filled('agent_id')) {
