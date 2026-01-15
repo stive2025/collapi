@@ -807,4 +807,125 @@ class ManagementController extends Controller
             );
         }
     }
+
+    /**
+     * Carga masiva de gestiones desde un array de datos
+     */
+    public function bulkStore(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'data' => 'required|array|min:1',
+                'data.*.ci' => 'required|string',
+                'data.*.sync_id' => 'required|string',
+                'data.*.phone' => 'required|string',
+                'campain_id' => 'required|integer|exists:campains,id',
+                'state' => 'required|string',
+                'substate' => 'required|string',
+                'promise_date' => 'nullable|date',
+            ]);
+
+            $user = $request->user();
+            if (!$user) {
+                return ResponseBase::unauthorized('Token inválido o expirado');
+            }
+
+            $results = [
+                'created' => 0,
+                'errors' => []
+            ];
+
+            foreach ($validated['data'] as $index => $item) {
+                try {
+                    // Buscar cliente por CI
+                    $client = \App\Models\Client::where('ci', $item['ci'])->first();
+                    if (!$client) {
+                        $results['errors'][] = [
+                            'index' => $index,
+                            'ci' => $item['ci'],
+                            'error' => 'Cliente no encontrado'
+                        ];
+                        continue;
+                    }
+
+                    // Buscar crédito por sync_id (con lógica flexible para prefijos)
+                    $syncIdSearch = $item['sync_id'];
+                    $numericPart = $syncIdSearch;
+
+                    if (strpos($syncIdSearch, '-') !== false) {
+                        $parts = explode('-', $syncIdSearch);
+                        $numericPart = end($parts);
+                    }
+
+                    $credit = \App\Models\Credit::where('sync_id', $syncIdSearch)
+                        ->orWhere('sync_id', $numericPart)
+                        ->orWhere('sync_id', 'LIKE', '%-' . $numericPart)
+                        ->first();
+
+                    if (!$credit) {
+                        $results['errors'][] = [
+                            'index' => $index,
+                            'sync_id' => $item['sync_id'],
+                            'error' => 'Crédito no encontrado'
+                        ];
+                        continue;
+                    }
+
+                    // Crear la gestión
+                    $management = Management::create([
+                        'state' => $validated['state'],
+                        'substate' => $validated['substate'],
+                        'observation' => 'SMS a ' . $item['phone'],
+                        'promise_date' => $validated['promise_date'] ?? null,
+                        'created_by' => $user->id,
+                        'client_id' => $client->id,
+                        'credit_id' => $credit->id,
+                        'campain_id' => $validated['campain_id'],
+                        'days_past_due' => $credit->days_past_due ?? 0,
+                        'paid_fees' => $credit->paid_fees ?? 0,
+                        'pending_fees' => $credit->pending_fees ?? 0,
+                        'managed_amount' => $credit->total_amount ?? 0,
+                    ]);
+
+                    // Actualizar estado del crédito
+                    $credit->management_status = $validated['substate'];
+                    $credit->management_tray = "GESTIONADO";
+                    if (!empty($validated['promise_date'])) {
+                        $credit->management_promise = $validated['promise_date'];
+                    }
+                    $credit->save();
+
+                    $results['created']++;
+
+                } catch (\Exception $e) {
+                    $results['errors'][] = [
+                        'index' => $index,
+                        'ci' => $item['ci'] ?? null,
+                        'sync_id' => $item['sync_id'] ?? null,
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            return ResponseBase::success(
+                $results,
+                "Carga masiva completada: {$results['created']} gestiones creadas",
+                201
+            );
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Error en carga masiva de gestiones', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al crear gestiones masivas',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
 }
