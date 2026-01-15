@@ -56,7 +56,7 @@ class StatisticController extends Controller
                 ->selectRaw('
                     SUM(payment_value) as total_general,
                     SUM(CASE WHEN with_management = "SI" THEN payment_value ELSE 0 END) as total_with_management,
-                    COUNT(DISTINCT credit_id) as total_credits,
+                    COUNT(DISTINCT CASE WHEN with_management = "SI" THEN credit_id ELSE NULL END) as total_credits,
                     MAX(updated_at) as last_update
                 ')
                 ->first();
@@ -265,7 +265,7 @@ class StatisticController extends Controller
                 // Obtener el agente de la gestión
                 $agent = null;
                 if ($payment->management_auto) {
-                    $management = \App\Models\Management::find($payment->management_auto);
+                    $management = \App\Models\Management::with('creator')->find($payment->management_auto);
                     if ($management && $management->creator) {
                         $agent = $management->creator->name;
                     }
