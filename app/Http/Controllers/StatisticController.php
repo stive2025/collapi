@@ -88,10 +88,11 @@ class StatisticController extends Controller
                 ->select('id', 'name')
                 ->get()
                 ->map(function($user) use ($campainId) {
-                    // Obtener pagos con gestión donde el usuario creó la gestión asociada y la gestión es de la campaña activa
+                    // Obtener pagos con gestión donde el usuario creó la gestión asociada, la gestión es de la campaña activa y days_past_due_auto > 60
                     $paymentsData = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                         ->where('collection_payments.with_management', 'SI')
                         ->whereNotNull('collection_payments.management_auto')
+                        ->where('collection_payments.days_past_due_auto', '>', 60)
                         ->join('management', 'collection_payments.management_auto', '=', 'management.id')
                         ->where('management.created_by', $user->id)
                         ->where('management.campain_id', $campainId)
