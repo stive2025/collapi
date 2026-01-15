@@ -16,8 +16,8 @@ class CollectionCallResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'phone_number' => $this->contact->phone_number ?? null,
-            'client_name' => $this->contact->client->name ?? null,
+            'phone_number' => $this->phone_number ?? null,
+            'client_name' => $this->contact->client->name ?? 'N/D',
             'call_state' => $this->state,
             'call_duration' => $this->duration,
             'created_by_name' => $this->creator->name ?? null,
