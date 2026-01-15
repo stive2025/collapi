@@ -43,11 +43,11 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A10:N10')->getFont()->setBold(true);
-        $sheet->getStyle('A10:N10')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
-        $sheet->getStyle('A10:N10')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A10:N10')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
-        $sheet->getStyle('A10:N10')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A10:O10')->getFont()->setBold(true);
+        $sheet->getStyle('A10:O10')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        $sheet->getStyle('A10:O10')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A10:O10')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
+        $sheet->getStyle('A10:O10')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
         $sheet->getStyle('A10:A500')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('B10:B500')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
@@ -63,6 +63,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
         $sheet->getStyle('L10:L500')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('M10:M500')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         $sheet->getStyle('N10:N500')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('O10:O500')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
         return [
             'A13'  => [
@@ -184,7 +185,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
                 (
                     SELECT m.credit_id, MAX(m.created_at) as fecha
                     FROM management m
-                    WHERE m.substate IN ("OFERTA DE PAGO", "COMPROMISO DE PAGO", "CONVENIO DE PAGO")
+                    WHERE m.substate IN ("OFERTA DE PAGO", "COMPROMISO DE PAGO", "CONVENIO DE PAGO", "VISITA CAMPO")
                     GROUP BY m.credit_id
                 ) as mg
             '), 'mg.credit_id', '=', 'cr.id')
