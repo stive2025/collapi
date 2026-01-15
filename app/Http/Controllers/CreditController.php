@@ -89,14 +89,20 @@ class CreditController extends Controller
             })
             ->when(request()->filled('sync_id'), function($q) {
                 $syncIdSearch = request('sync_id');
+                $numericPart = $syncIdSearch;
 
+                // Extraer la parte numérica si tiene prefijo (ej: LEGAL-2022081318 -> 2022081318)
                 if (strpos($syncIdSearch, '-') !== false) {
                     $parts = explode('-', $syncIdSearch);
-                    $syncIdSearch = end($parts);
+                    $numericPart = end($parts);
                 }
 
-                $q->where('sync_id',$syncIdSearch);
-            
+                // Buscar coincidencia exacta o que termine con el número
+                $q->where(function($subQ) use ($syncIdSearch, $numericPart) {
+                    $subQ->where('sync_id', $syncIdSearch)
+                         ->orWhere('sync_id', $numericPart)
+                         ->orWhere('sync_id', 'LIKE', '%-' . $numericPart);
+                });
             })
             ->when(request()->filled('sync_ids'), fn($q) =>
                 $q->whereIn('sync_id', $this->toArray(request('sync_ids')))
