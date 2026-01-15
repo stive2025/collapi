@@ -134,6 +134,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
                 "Canton_microempresa",
                 "Parroquia_microempresa",
                 "Direccion_microempresa",
+                "Geolocalización",
                 "Fecha_Ult_Gestion"
             ]
         ];
@@ -176,6 +177,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
                 'cd_work.canton as canton_microempresa',
                 'cd_work.parish as parroquia_microempresa',
                 'cd_work.address as address_microempresa',
+                DB::raw('CONCAT_WS(",", cd_dom.latitude, cd_dom.longitude) as geolocation'),
                 DB::raw("DATE_FORMAT(mg.fecha, '%Y-%m-%d %H:%i:%s') as last_management_date")
             ])
             ->leftJoin(DB::raw('
@@ -212,7 +214,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
             ->where('cr.sync_status', 'ACTIVE')
             ->where(function ($query) {
                 $query->where('cr.management_status', 'VISITA CAMPO')
-                      ->orWhere('last_mg.last_substate', 'VISITA CAMPO');
+                    ->orWhere('last_mg.last_substate', 'VISITA CAMPO');
             })
             ->whereIn('cr.agency', $agencies_array)
             ->orderBy('cr.sync_id')
@@ -223,12 +225,10 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
 
         if ($shouldCalculateExpenses) {
             $data_direcciones->transform(function ($credit) {
-                $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
                 $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
                     $credit->total_pending ?? 0,
                     $credit->days_overdue ?? 0
                 );
-                $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
                 $credit->total_pending = floatval($credit->total_pending ?? 0) + $calculatedExpenses;
                 return $credit;
             });
