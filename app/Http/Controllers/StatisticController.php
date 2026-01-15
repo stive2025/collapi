@@ -49,73 +49,70 @@ class StatisticController extends Controller
             }
 
             $campainId = $activeCampain->id;
-            $firstDayOfMonth = now()->startOfMonth();
-            $agentIds = $activeCampain->agents ?? []; // Array de IDs de usuarios
+            $agentIds = $activeCampain->agents ?? [];
 
+            // Estadísticas generales de la campaña activa
             $generalStats = \App\Models\CollectionPayment::where('campain_id', $campainId)
                 ->selectRaw('
-                    SUM(CASE WHEN with_management = "SI" THEN payment_value ELSE 0 END) as total_with_management,
                     SUM(payment_value) as total_general,
+                    SUM(CASE WHEN with_management = "SI" THEN payment_value ELSE 0 END) as total_with_management,
                     COUNT(DISTINCT credit_id) as total_credits,
                     MAX(updated_at) as last_update
                 ')
                 ->first();
 
-            $detailedStats = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
+            // Pagos con gestión donde la gestión también es de la campaña activa
+            $totalInCampain = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
+                ->where('collection_payments.with_management', 'SI')
+                ->whereNotNull('collection_payments.management_auto')
+                ->join('management', 'collection_payments.management_auto', '=', 'management.id')
+                ->where('management.campain_id', $campainId)
+                ->sum('collection_payments.payment_value');
+
+            // Pagos con gestión de créditos castigados
+            $totalPunished = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                 ->where('collection_payments.with_management', 'SI')
                 ->join('credits', 'collection_payments.credit_id', '=', 'credits.id')
-                ->leftJoin('collection_credits', function($join) use ($campainId) {
-                    $join->on('credits.id', '=', 'collection_credits.credit_id')
-                        ->where('collection_credits.campain_id', '=', $campainId);
-                })
-                ->selectRaw('
-                    SUM(CASE 
-                        WHEN collection_credits.created_at IS NOT NULL AND collection_credits.created_at >= ? 
-                        THEN collection_payments.payment_value 
-                        ELSE 0 
-                    END) as total_in_campain,
-                    SUM(CASE 
-                        WHEN credits.collection_state = "CASTIGADO" 
-                        THEN collection_payments.payment_value 
-                        ELSE 0 
-                    END) as total_punished,
-                    SUM(CASE 
-                        WHEN credits.collection_state = "VENCIDO" 
-                        THEN collection_payments.payment_value 
-                        ELSE 0 
-                    END) as total_overdue
-                ', [$firstDayOfMonth])
-                ->first();
+                ->where('credits.collection_state', 'CASTIGADO')
+                ->sum('collection_payments.payment_value');
+
+            // Pagos con gestión de créditos vencidos
+            $totalOverdue = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
+                ->where('collection_payments.with_management', 'SI')
+                ->join('credits', 'collection_payments.credit_id', '=', 'credits.id')
+                ->where('credits.collection_state', 'VENCIDO')
+                ->sum('collection_payments.payment_value');
             
             // Usuarios registrados en el campo agents de la campaña
             $agents = \App\Models\User::whereIn('id', $agentIds)
                 ->select('id', 'name')
                 ->get()
-                ->map(function($user) use ($campainId, $firstDayOfMonth) {
-                    // Obtener pagos con gestión donde el usuario creó la gestión asociada
+                ->map(function($user) use ($campainId) {
+                    // Obtener pagos con gestión donde el usuario creó la gestión asociada y la gestión es de la campaña activa
                     $paymentsData = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                         ->where('collection_payments.with_management', 'SI')
                         ->whereNotNull('collection_payments.management_auto')
                         ->join('management', 'collection_payments.management_auto', '=', 'management.id')
                         ->where('management.created_by', $user->id)
+                        ->where('management.campain_id', $campainId)
                         ->selectRaw('SUM(collection_payments.payment_value) as total, COUNT(DISTINCT collection_payments.credit_id) as nro_credits')
                         ->first();
-                    
+
                     return [
                         'name' => $user->name,
                         'total_with_management_in_campain' => (float) ($paymentsData->total ?? 0),
                         'nro_credits' => (int) ($paymentsData->nro_credits ?? 0),
                     ];
                 })
-                ->values(); // Re-indexar el array
+                ->values();
 
             $statistics = [
-                'total_general_with_management' => (float) ($generalStats->total_with_management ?? 0),
                 'total_general' => (float) ($generalStats->total_general ?? 0),
-                'total_with_management_in_campain' => (float) ($detailedStats->total_in_campain ?? 0),
+                'total_general_with_management' => (float) ($generalStats->total_with_management ?? 0),
+                'total_with_management_in_campain' => (float) $totalInCampain,
                 'total_credits_with_payment' => (int) ($generalStats->total_credits ?? 0),
-                'total_general_punished' => (float) ($detailedStats->total_punished ?? 0),
-                'total_general_overdue' => (float) ($detailedStats->total_overdue ?? 0),
+                'total_general_punished' => (float) $totalPunished,
+                'total_general_overdue' => (float) $totalOverdue,
                 'last_update' => $generalStats->last_update ? \Carbon\Carbon::parse($generalStats->last_update)->format('Y-m-d H:i:s') : null,
                 'campain_id' => $campainId,
                 'campain_name' => $activeCampain->name,
