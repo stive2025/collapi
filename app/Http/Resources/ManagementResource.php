@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\DB;
 
 class ManagementResource extends JsonResource
 {
@@ -15,6 +16,18 @@ class ManagementResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // Verificar si alguna llamada de la gestión fue por WhatsApp
+        $isWweb = false;
+        if (!empty($this->call_collection)) {
+            $callIds = json_decode($this->call_collection, true);
+            if (is_array($callIds) && count($callIds) > 0) {
+                $isWweb = DB::table('collection_calls')
+                    ->whereIn('id', $callIds)
+                    ->where('channel', 'WA')
+                    ->exists();
+            }
+        }
+
         return [
             'id' => $this->id,
             'state' => $this->state,
@@ -43,6 +56,7 @@ class ManagementResource extends JsonResource
             'campain' => $this->whenLoaded('campain'),
             'created_at' => $this->created_at?->format('Y/m/d H:i:s'),
             'updated_at' => $this->updated_at?->format('Y/m/d H:i:s'),
+            'is_wweb' => $isWweb,
         ];
     }
 }
