@@ -169,7 +169,6 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
                 'cc.type as client_type',
                 'cr.days_past_due as days_overdue',
                 'cr.total_amount as total_pending',
-                'cr.management_collection_expenses',
                 'cd_dom.province as province',
                 'cd_dom.canton as canton',
                 'cd_dom.parish as parroquia',
