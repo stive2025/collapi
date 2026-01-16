@@ -51,6 +51,7 @@ class CollectionPayment extends Model
         'payment_value' => 'float',
         'payment_difference' => 'float',
         'payment_prints' => 'integer',
+        'payment_number' => 'integer',
         'fee' => 'float',
         'capital' => 'float',
         'interest' => 'float',
