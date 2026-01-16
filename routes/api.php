@@ -20,6 +20,7 @@ use App\Http\Controllers\StatisticController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\SmsController;
+use App\Http\Controllers\FieldTripController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [LoginController::class, 'login']);
@@ -129,6 +130,9 @@ Route::middleware(['check.token'])->group(function () {
     // Envío de SMS
     Route::post('sms/send', [SmsController::class, 'sendSms']);
     Route::get('sms/check', [SmsController::class, 'checkSms']);
+
+    // Visitas de campo
+    Route::get('field-trips', [FieldTripController::class, 'index']);
 });
 
 // --------------------------------------------------------------------------------------------------------------
