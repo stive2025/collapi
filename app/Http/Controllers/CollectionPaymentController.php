@@ -297,6 +297,61 @@ class CollectionPaymentController extends Controller
             'total_paid_fees_added' => $totalPaidFees,
             'remaining_amount' => $remainingAmount
         ]);
+
+        // Verificar si todas las cuotas del convenio están pagadas
+        $this->checkAndCancelCreditIfAgreementCompleted($creditId, $agreement);
+    }
+
+    /**
+     * Verifica si todas las cuotas del convenio están pagadas y actualiza el crédito a CANCELADO
+     * @param int $creditId
+     * @param Agreement $agreement
+     * @return void
+     */
+    private function checkAndCancelCreditIfAgreementCompleted(int $creditId, Agreement $agreement): void
+    {
+        $feeDetail = json_decode($agreement->fee_detail, true);
+
+        if (!is_array($feeDetail) || count($feeDetail) <= 1) {
+            return;
+        }
+
+        // Verificar si todas las cuotas (excepto la primera que es gasto de cobranza) están pagadas
+        $allFeesPaid = true;
+        foreach ($feeDetail as $index => $fee) {
+            // Saltar la primera cuota (índice 0) que es el gasto de cobranza
+            if ($index === 0) {
+                continue;
+            }
+
+            // Si alguna cuota no está pagada, no se completa el convenio
+            if (!isset($fee['payment_status']) || $fee['payment_status'] !== 'PAGADO') {
+                $allFeesPaid = false;
+                break;
+            }
+        }
+
+        if ($allFeesPaid) {
+            // Actualizar el convenio a COMPLETADO
+            $agreement->status = 'COMPLETADO';
+            $agreement->save();
+
+            // Actualizar el crédito a CANCELADO e INACTIVE
+            $credit = Credit::find($creditId);
+            if ($credit) {
+                $credit->collection_state = 'CANCELADO';
+                $credit->sync_status = 'INACTIVE';
+                $credit->save();
+            }
+
+            Log::channel('payments')->info('Convenio completado y crédito cancelado', [
+                'credit_id' => $creditId,
+                'agreement_id' => $agreement->id,
+                'agreement_status' => 'COMPLETADO',
+                'collection_state' => 'CANCELADO',
+                'sync_status' => 'INACTIVE'
+            ]);
+        }
     }
 
     /**
