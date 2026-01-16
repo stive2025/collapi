@@ -359,17 +359,27 @@ class ManagementController extends Controller
                         continue;
                     }
 
-                    $client = \App\Models\Client::where('ci', $managementData['client_ci'])->first();
-                    if (!$client) {
-                        Log::warning("Cliente con CI '{$managementData['client_ci']}' no encontrado en índice {$index}, se omite");
-                        continue;
-                    }
-
                     $credit = \App\Models\Credit::where('sync_id', $managementData['sync_id'])->first();
 
                     if (!$credit) {
                         Log::warning("Crédito con sync_id '{$managementData['sync_id']}' no encontrado en índice {$index}, se omite");
                         continue;
+                    }
+
+                    $client = \App\Models\Client::firstOrCreate(
+                        ['ci' => $managementData['client_ci']],
+                        [
+                            'name' => $managementData['client_name'] ?? $managementData['nombre_cliente'] ?? 'Cliente ' . $managementData['client_ci'],
+                            'gender' => $managementData['gender'] ?? $managementData['genero'] ?? null,
+                            'civil_status' => $managementData['civil_status'] ?? $managementData['estado_civil'] ?? null,
+                            'economic_activity' => $managementData['economic_activity'] ?? $managementData['actividad_economica'] ?? null,
+                        ]
+                    );
+
+                    // Si el cliente fue creado recientemente, crear la relación con el crédito
+                    if ($client->wasRecentlyCreated) {
+                        $clientType = $managementData['type'] ?? $managementData['tipo'] ?? null;
+                        $client->credits()->attach($credit->id, ['type' => $clientType]);
                     }
 
                     $newCallIds = [];

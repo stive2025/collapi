@@ -5,7 +5,6 @@ namespace App\Imports;
 use App\Models\CollectionContact;
 use App\Models\Client;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -111,36 +110,39 @@ class ContactsImport implements ToCollection, WithHeadingRow, WithValidation
                 }
             }
 
-            // Crear o actualizar contacto
-            $contact = CollectionContact::updateOrCreate(
-                [
-                    'client_id' => $client->id,
-                    'phone_number' => $phone,
-                ],
-                [
-                    'phone_type' => $this->getRowValue($rowArr, ['phone_type']) ?? 'MOVIL',
-                    'phone_status' => $this->getRowValue($rowArr, ['phone_status']) ?? 'ACTIVE',
-                    'created_by' => $this->getRowValue($rowArr, ['created_by']) ?? null,
-                    'updated_by' => $this->getRowValue($rowArr, ['updated_by']) ?? null,
-                    'deleted_by' => $this->getRowValue($rowArr, ['deleted_by']) ?? null,
-                ]
-            );
+            // Verificar si ya existe el contacto
+            $existingContact = CollectionContact::where('client_id', $client->id)
+                ->where('phone_number', $phone)
+                ->first();
 
-            if (!empty($contact->wasRecentlyCreated)) {
-                Log::info('ContactsImport: contacto creado', [
+            if ($existingContact) {
+                // Si ya existe, omitir sin actualizar
+                Log::info('ContactsImport: contacto ya existe, omitido', [
                     'client_id' => $client->id,
                     'client_ci' => $rawCi,
                     'phone' => $phone,
-                    'contact_id' => $contact->id
+                    'contact_id' => $existingContact->id
                 ]);
-            } else {
-                Log::info('ContactsImport: contacto actualizado', [
-                    'client_id' => $client->id,
-                    'client_ci' => $rawCi,
-                    'phone' => $phone,
-                    'contact_id' => $contact->id
-                ]);
+                continue;
             }
+
+            // Crear contacto nuevo
+            $contact = CollectionContact::create([
+                'client_id' => $client->id,
+                'phone_number' => $phone,
+                'phone_type' => $this->getRowValue($rowArr, ['phone_type']) ?? 'MOVIL',
+                'phone_status' => $this->getRowValue($rowArr, ['phone_status']) ?? 'ACTIVE',
+                'created_by' => $this->getRowValue($rowArr, ['created_by']) ?? null,
+                'updated_by' => $this->getRowValue($rowArr, ['updated_by']) ?? null,
+                'deleted_by' => $this->getRowValue($rowArr, ['deleted_by']) ?? null,
+            ]);
+            
+            Log::info('ContactsImport: contacto creado', [
+                'client_id' => $client->id,
+                'client_ci' => $rawCi,
+                'phone' => $phone,
+                'contact_id' => $contact->id
+            ]);
 
             // (Removed) no recuperar el contacto inmediatamente después de crearlo.
 
