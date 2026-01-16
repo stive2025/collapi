@@ -260,29 +260,27 @@ class CollectionPaymentController extends Controller
                 break;
             }
 
-            $feeAmount = (float)($fee['payment_amount'] ?? 0);
-            $currentPaid = (float)($fee['payment_value'] ?? 0);
-            $feeBalance = $feeAmount - $currentPaid;
+            // payment_value = saldo pendiente de la cuota (se resta con cada pago)
+            $pendingBalance = (float)($fee['payment_value'] ?? 0);
 
-            // Si la cuota ya está completamente pagada, marcarla y continuar
-            if ($feeBalance <= 0) {
+            // Si ya no tiene saldo pendiente, marcar como pagada y continuar
+            if ($pendingBalance <= 0) {
                 $fee['payment_status'] = 'PAGADO';
                 $fee['payment_date'] = now()->format('Y-m-d');
                 $totalPaidFees++;
                 continue;
             }
 
-            // Si el monto restante cubre toda la cuota pendiente
-            if ($remainingAmount >= $feeBalance) {
-                $fee['payment_value'] = $feeAmount;
+            // Si el monto del pago cubre todo el saldo pendiente de la cuota
+            if ($remainingAmount >= $pendingBalance) {
+                $fee['payment_value'] = 0;
                 $fee['payment_status'] = 'PAGADO';
                 $fee['payment_date'] = now()->format('Y-m-d');
-                $remainingAmount -= $feeBalance;
+                $remainingAmount -= $pendingBalance;
                 $totalPaidFees++;
             } else {
-                // Pago parcial: aplicar lo que queda y salir
-                $fee['payment_value'] = $currentPaid + $remainingAmount;
-                $fee['payment_status'] = 'PENDIENTE';
+                // Pago parcial: restar lo que se paga del saldo pendiente
+                $fee['payment_value'] = $pendingBalance - $remainingAmount;
                 $remainingAmount = 0;
                 break;
             }
