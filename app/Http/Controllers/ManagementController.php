@@ -400,21 +400,27 @@ class ManagementController extends Controller
                                 $contact = \App\Models\CollectionContact::where('phone', $call['phone_number'])->first();
                             }
 
-                            $newCall = new CollectionCall([
-                                'state' => $call['state_call'] ?? 'NO CONTACTADO',
-                                'duration' => $call['duration_call'] ?? 0,
-                                'media_path' => $call['id_record'] ?? null,
-                                'phone_number' => $call['phone'] ?? '',
-                                'channel' => $call['channel'] ?? null,
-                                'client_id' => $contact ? $contact->client_id : null,
-                                'credit_id' => $credit->id,
-                                'campain_id' => $parseCampainId,
-                                'created_by' => $callUser ? $callUser->id : $user->id,
-                            ]);
+                            $newCall = CollectionCall::firstOrCreate(
+                                [
+                                    'state' => $call['state_call'] ?? 'NO CONTACTADO',
+                                    'duration' => $call['duration_call'] ?? 0,
+                                    'media_path' => $call['id_record'] ?? null,
+                                    'phone_number' => $call['phone'] ?? '',
+                                    'client_id' => $contact ? $contact->client_id : null,
+                                    'credit_id' => $credit->id,
+                                ],
+                                [
+                                    'channel' => $call['channel'] ?? null,
+                                    'campain_id' => $parseCampainId,
+                                    'created_by' => $callUser ? $callUser->id : $user->id,
+                                ]
+                            );
 
-                            $newCall->created_at = $parseDateAndAdd5Hours($call['fecha'] ?? null);
-                            $newCall->updated_at = $parseDateAndAdd5Hours($call['updated_at'] ?? null);
-                            $newCall->save();
+                            if ($newCall->wasRecentlyCreated) {
+                                $newCall->created_at = $parseDateAndAdd5Hours($call['fecha'] ?? null);
+                                $newCall->updated_at = $parseDateAndAdd5Hours($call['updated_at'] ?? null);
+                                $newCall->save();
+                            }
 
                             $newCallIds[] = $newCall->id;
                         }
