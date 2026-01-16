@@ -51,10 +51,8 @@ class FieldTripController extends Controller
                 ->get();
 
             $result = $credits->map(function ($credit) {
-                // Obtener el cliente principal (TITULAR)
                 $client = $credit->clients->firstWhere('pivot.type', 'TITULAR') ?? $credit->clients->first();
-
-                // Obtener dirección del cliente (DOMICILIO primero, si no cualquiera)
+                
                 $direction = null;
                 if ($client) {
                     $direction = CollectionDirection::where('client_id', $client->id)

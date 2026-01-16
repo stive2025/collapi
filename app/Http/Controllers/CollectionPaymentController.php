@@ -167,11 +167,11 @@ class CollectionPaymentController extends Controller
 
             $credit->save();
 
-            if ((string)$credit->collection_state === 'CONVENIO DE PAGO') {
+            if ((string)$credit->collection_state === 'CONVENIO DE PAGO' || (string)$credit->collection_state === 'Convenio de pago') {
                 $paymentValue = isset($data['payment_value']) ? (float)$data['payment_value'] : 0.0;
                 $this->updateAgreementFees($credit->id, $paymentValue);
             }
-
+            
             if (!empty($data['payment_deposit_date'])) {
                 $data['payment_deposit_date'] = Carbon::parse($data['payment_deposit_date']);
                 $data['payment_date'] = date('Y-m-d H:i:s', time() - 18000);
@@ -246,14 +246,17 @@ class CollectionPaymentController extends Controller
         $totalPaidFees = 0;
 
         foreach ($feeDetail as $index => &$fee) {
-            if ($index === 0 || (isset($fee['payment_status']) && $fee['payment_status'] === 'PAGADO')) {
+            // Saltar la primera cuota (índice 0) que es el gasto de cobranza
+            if ($index === 0) {
                 continue;
             }
 
-            if (!isset($fee['payment_status']) || $fee['payment_status'] !== 'PENDIENTE') {
+            // Saltar cuotas ya pagadas
+            if (isset($fee['payment_status']) && $fee['payment_status'] === 'PAGADO') {
                 continue;
             }
 
+            // Si no queda monto por aplicar, salir del loop
             if ($remainingAmount <= 0) {
                 break;
             }
@@ -262,12 +265,15 @@ class CollectionPaymentController extends Controller
             $currentPaid = (float)($fee['payment_value'] ?? 0);
             $feeBalance = $feeAmount - $currentPaid;
 
+            // Si la cuota ya está completamente pagada, marcarla y continuar
             if ($feeBalance <= 0) {
                 $fee['payment_status'] = 'PAGADO';
+                $fee['payment_date'] = now()->format('Y-m-d');
                 $totalPaidFees++;
                 continue;
             }
 
+            // Si el monto restante cubre toda la cuota pendiente
             if ($remainingAmount >= $feeBalance) {
                 $fee['payment_value'] = $feeAmount;
                 $fee['payment_status'] = 'PAGADO';
@@ -275,9 +281,11 @@ class CollectionPaymentController extends Controller
                 $remainingAmount -= $feeBalance;
                 $totalPaidFees++;
             } else {
+                // Pago parcial: aplicar lo que queda y salir
                 $fee['payment_value'] = $currentPaid + $remainingAmount;
                 $fee['payment_status'] = 'PENDIENTE';
                 $remainingAmount = 0;
+                break;
             }
         }
 
@@ -288,7 +296,9 @@ class CollectionPaymentController extends Controller
         $agreement->save();
         Log::channel('payments')->info('Cuotas del convenio actualizadas', [
             'agreement_id' => $agreement->id,
-            'paid_fees' => $agreement->paid_fees
+            'paid_fees' => $agreement->paid_fees,
+            'total_paid_fees_added' => $totalPaidFees,
+            'remaining_amount' => $remainingAmount
         ]);
     }
 
