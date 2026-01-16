@@ -179,18 +179,14 @@ class CollectionPaymentController extends Controller
 
             $data['created_by'] = $user->id;
 
-            // Asignar payment_number secuencial por credit_id
-            if (!empty($data['credit_id'])) {
-                // Obtener el máximo payment_number para este crédito
-                $lastNumber = DB::table('collection_payments')
-                    ->where('credit_id', $data['credit_id'])
-                    ->whereNotNull('payment_number')
-                    ->lockForUpdate()
-                    ->max('payment_number');
+            // Asignar payment_number secuencial global (sin importar credit_id o business_id)
+            $lastNumber = DB::table('collection_payments')
+                ->whereNotNull('payment_number')
+                ->lockForUpdate()
+                ->max('payment_number');
 
-                // Si existe un último número, incrementar; si no, empezar en 1
-                $data['payment_number'] = $lastNumber ? (int)$lastNumber + 1 : 1;
-            }
+            // Si existe un último número, incrementar; si no, empezar en 1
+            $data['payment_number'] = $lastNumber ? (int)$lastNumber + 1 : 1;
 
             $payment = CollectionPayment::create($data);
 
