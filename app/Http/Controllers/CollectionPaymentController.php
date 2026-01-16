@@ -778,7 +778,7 @@ class CollectionPaymentController extends Controller
                 ]);
 
                 // Si el crédito tiene convenio de pago, marcar la primera cuota (gasto de cobranza) como PAGADA
-                if ($credit->collection_state === 'CONVENIO DE PAGO') {
+                if ($credit->collection_state === 'CONVENIO DE PAGO' || $credit->collection_state === 'Convenio de pago') {
                     $agreement = Agreement::where('credit_id', $creditId)
                         ->where('status', 'AUTORIZADO')
                         ->first();
@@ -788,7 +788,7 @@ class CollectionPaymentController extends Controller
 
                         if (is_array($feeDetail) && count($feeDetail) > 0) {
                             // La primera cuota (índice 0) es el gasto de cobranza
-                            $feeDetail[0]['payment_status'] = 'PAGADA';
+                            $feeDetail[0]['payment_status'] = 'PAGADO';
 
                             $agreement->update([
                                 'fee_detail' => json_encode($feeDetail),
