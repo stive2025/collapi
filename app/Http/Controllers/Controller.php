@@ -24,6 +24,8 @@ namespace App\Http\Controllers;
  *     bearerFormat="JWT",
  *     description="Ingrese el token de autenticación Bearer"
  * )
+ * 
+ * @OA\PathItem(path="/api")
  */
 abstract class Controller
 {

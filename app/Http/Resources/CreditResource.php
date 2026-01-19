@@ -87,7 +87,62 @@ class CreditResource extends JsonResource
                 return $this->collectionCalls->sortByDesc('created_at')->values();
             }),
             'collection_payments' => $this->whenLoaded('collectionPayments', function() {
-                return CollectionPaymentResource::collection($this->collectionPayments->sortByDesc('payment_date')->values());
+                // Crear colección combinada de pagos e invoices
+                $combined = collect();
+
+                // Agregar pagos reales
+                foreach ($this->collectionPayments as $payment) {
+                    $combined->push($payment);
+                }
+
+                // Agregar invoices como pseudo-pagos si están cargadas
+                if ($this->relationLoaded('invoices') && $this->invoices) {
+                    foreach ($this->invoices as $invoice) {
+                        $invoiceAsPayment = new \stdClass();
+                        $invoiceAsPayment->id = $invoice->id;
+                        $invoiceAsPayment->created_by = $invoice->created_by;
+                        $invoiceAsPayment->payment_date = $invoice->invoice_date;
+                        $invoiceAsPayment->payment_deposit_date = null;
+                        $invoiceAsPayment->payment_value = floatval($invoice->invoice_value);
+                        $invoiceAsPayment->payment_difference = 0;
+                        $invoiceAsPayment->payment_type = $invoice->invoice_method;
+                        $invoiceAsPayment->payment_method = null;
+                        $invoiceAsPayment->financial_institution = $invoice->invoice_institution;
+                        $invoiceAsPayment->payment_number = $invoice->invoice_access_key;
+                        $invoiceAsPayment->payment_reference = null;
+                        $invoiceAsPayment->payment_status = $invoice->status;
+                        $invoiceAsPayment->payment_prints = 0;
+                        $invoiceAsPayment->fee = null;
+                        $invoiceAsPayment->capital = 0;
+                        $invoiceAsPayment->interest = 0;
+                        $invoiceAsPayment->mora = 0;
+                        $invoiceAsPayment->safe = 0;
+                        $invoiceAsPayment->management_collection_expenses = floatval($invoice->invoice_value);
+                        $invoiceAsPayment->collection_expenses = 0;
+                        $invoiceAsPayment->legal_expenses = 0;
+                        $invoiceAsPayment->other_values = 0;
+                        $invoiceAsPayment->prev_dates = null;
+                        $invoiceAsPayment->with_management = null;
+                        $invoiceAsPayment->management_auto = null;
+                        $invoiceAsPayment->days_past_due_auto = null;
+                        $invoiceAsPayment->management_prev = null;
+                        $invoiceAsPayment->days_past_due_prev = null;
+                        $invoiceAsPayment->post_management = null;
+                        $invoiceAsPayment->credit_id = $this->id;
+                        $invoiceAsPayment->business_id = $this->business_id;
+                        $invoiceAsPayment->campain_id = null;
+                        $invoiceAsPayment->campain = null;
+                        $invoiceAsPayment->credit = $this;
+                        $invoiceAsPayment->created_at = $invoice->created_at;
+                        $invoiceAsPayment->updated_at = $invoice->updated_at;
+                        $invoiceAsPayment->is_invoice = true;
+
+                        $combined->push($invoiceAsPayment);
+                    }
+                }
+
+                // Ordenar por payment_date descendente
+                return CollectionPaymentResource::collection($combined->sortByDesc('payment_date')->values());
             }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

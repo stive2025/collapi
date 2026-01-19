@@ -7,7 +7,6 @@ use App\Http\Resources\CreditResource;
 use App\Http\Responses\ResponseBase;
 use App\Services\UtilService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class CreditController extends Controller
 {
@@ -289,6 +288,7 @@ class CreditController extends Controller
             'collectionManagements',
             'collectionCalls',
             'collectionPayments',
+            'invoices',
             'user',
             'business'
         ]);

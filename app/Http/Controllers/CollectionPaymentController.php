@@ -188,7 +188,7 @@ class CollectionPaymentController extends Controller
             $payment = CollectionPayment::create($data);
 
             // Cargar relaciones para el Resource
-            $payment->load(['credit.clients', 'campain']);
+            $payment->load(['credit.clients', 'credit.invoices', 'campain']);
 
             DB::commit();
             Log::channel('payments')->info('Pago creado correctamente', ['payment' => $payment]);
@@ -343,7 +343,7 @@ class CollectionPaymentController extends Controller
     public function show(CollectionPayment $payment)
     {
         try {
-            $payment->load(['credit.clients', 'campain']);
+            $payment->load(['credit.clients', 'credit.invoices', 'campain']);
 
             if ($payment->payment_status === 'ERROR_SUM') {
                 $credit = $payment->credit;
