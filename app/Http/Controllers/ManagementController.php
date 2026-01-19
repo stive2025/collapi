@@ -978,6 +978,20 @@ class ManagementController extends Controller
                 });
             }
 
+            // Excluir créditos cuya última gestión fue "VISITA CAMPO" (indistintamente del campain_id)
+            $query->whereNotExists(function ($subQuery) {
+                $subQuery->select(DB::raw(1))
+                    ->from('management as m1')
+                    ->whereColumn('m1.credit_id', 'credits.id')
+                    ->where('m1.substate', 'VISITA CAMPO')
+                    ->whereNotExists(function ($innerQuery) {
+                        $innerQuery->select(DB::raw(1))
+                            ->from('management as m2')
+                            ->whereColumn('m2.credit_id', 'm1.credit_id')
+                            ->whereColumn('m2.id', '>', 'm1.id');
+                    });
+            });
+
             // Aplicar límite
             if (!empty($validated['limit'])) {
                 $query->limit($validated['limit']);
@@ -1004,6 +1018,18 @@ class ManagementController extends Controller
                     ->get();
 
                 foreach ($contacts as $contact) {
+                    // Verificar si ya existe un SMS enviado en esta campaña para este crédito y este cliente
+                    $hasSmsInCampaign = DB::table('management')
+                        ->where('credit_id', $credit->id)
+                        ->where('campain_id', $campainId)
+                        ->where('client_id', $contact->client_id)
+                        ->where('substate', 'MENSAJE DE TEXTO')
+                        ->exists();
+
+                    if ($hasSmsInCampaign) {
+                        continue; // Saltar este contacto
+                    }
+
                     // Verificar si el teléfono es efectivo (tiene llamadas contactadas)
                     $phoneState = 'No efectivo';
                     $hasContactedCalls = DB::table('collection_calls')
@@ -1035,7 +1061,6 @@ class ManagementController extends Controller
                     $formattedName = trim('Sr(a) ' . ($clientType ? $clientType . ' ' : '') . $clientName);
 
                     $data[] = [
-                        'id' => $credit->id,
                         'telefono' => $contact->phone_number,
                         'name' => $formattedName,
                         'dias_vencidos' => $credit->days_past_due,
@@ -1051,7 +1076,8 @@ class ManagementController extends Controller
                         'agente_actual' => $credit->user_id,
                         'fecha_pago' => $credit->payment_date,
                         'fecha_contacto' => $contact->created_at,
-                        'estado_contacto' => $phoneState
+                        'estado_contacto' => $phoneState,
+                        'id' => $credit->id,
                     ];
                 }
             }
