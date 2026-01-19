@@ -21,6 +21,7 @@ use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\SmsController;
 use App\Http\Controllers\FieldTripController;
+use App\Http\Controllers\PasswordController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('login', [LoginController::class, 'login']);
@@ -95,6 +96,7 @@ Route::middleware(['check.token'])->group(function () {
     // --------------------------------------------------------------------------------------------------------------
     // Desconectar usuario
     Route::post('logout', [LoginController::class, 'logout']);
+    Route::post('/password/send-code', [PasswordController::class, 'sendResetCode']);
     // --------------------------------------------------------------------------------------------------------------
     // Monitor de usuarios
     Route::get('monitor', [UserController::class, 'monitor']);
