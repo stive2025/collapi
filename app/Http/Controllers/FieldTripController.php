@@ -15,6 +15,73 @@ class FieldTripController extends Controller
     /**
      * Display a listing of the resource.
      * Devuelve créditos con management_status VISITA CAMPO o cuya última gestión sea VISITA CAMPO
+     * 
+     * @OA\Get(
+     *     path="/api/field-trips",
+     *     summary="Listar visitas de campo",
+     *     description="Obtiene créditos con estado de VISITA CAMPO o cuya última gestión sea VISITA CAMPO",
+     *     operationId="getFieldTripsList",
+     *     tags={"Visitas de Campo"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="business_id",
+     *         in="query",
+     *         description="ID de la empresa",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="user_id",
+     *         in="query",
+     *         description="ID del usuario",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de visitas de campo obtenida correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Visitas de campo obtenidas correctamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="credit_id", type="integer"),
+     *                     @OA\Property(property="sync_id", type="string"),
+     *                     @OA\Property(property="client_name", type="string"),
+     *                     @OA\Property(property="client_ci", type="string"),
+     *                     @OA\Property(
+     *                         property="direction",
+     *                         type="object",
+     *                         @OA\Property(property="address", type="string"),
+     *                         @OA\Property(property="reference", type="string"),
+     *                         @OA\Property(property="type", type="string")
+     *                     ),
+     *                     @OA\Property(
+     *                         property="managements",
+     *                         type="array",
+     *                         @OA\Items(
+     *                             @OA\Property(property="id", type="integer"),
+     *                             @OA\Property(property="state", type="string"),
+     *                             @OA\Property(property="substate", type="string"),
+     *                             @OA\Property(property="observation", type="string"),
+     *                             @OA\Property(property="type", type="string", example="field_visit")
+     *                         )
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autenticado"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación - Faltan parámetros requeridos"
+     *     )
+     * )
      */
     public function index(Request $request)
     {

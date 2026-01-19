@@ -88,7 +88,7 @@ class StatisticController extends Controller
                 ->map(function($user) use ($campainId) {
                     $paymentsData = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                         ->where('collection_payments.with_management', 'SI')
-                        ->where('collection_payments.days_past_due_auto', '>', 0)
+                        ->where('collection_payments.days_past_due_auto', '>', 25)
                         ->whereExists(function($query) use ($campainId, $user) {
                             $query->select(DB::raw(1))
                                 ->from('management')

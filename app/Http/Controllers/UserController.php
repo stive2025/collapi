@@ -17,6 +17,67 @@ class UserController extends Controller
 {
     /**
      * Display a listing of the resource.
+     * 
+     * @OA\Get(
+     *     path="/api/users",
+     *     summary="Listar usuarios",
+     *     description="Obtiene una lista paginada de usuarios con filtros opcionales",
+     *     operationId="getUsersList",
+     *     tags={"Usuarios"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Número de usuarios por página",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=15)
+     *     ),
+     *     @OA\Parameter(
+     *         name="agents",
+     *         in="query",
+     *         description="Filtrar solo agentes (excluye superadmin y query)",
+     *         required=false,
+     *         @OA\Schema(type="boolean")
+     *     ),
+     *     @OA\Parameter(
+     *         name="is_active",
+     *         in="query",
+     *         description="Filtrar por estado activo/inactivo",
+     *         required=false,
+     *         @OA\Schema(type="boolean")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de usuarios obtenida correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Usuarios obtenidos correctamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="current_page", type="integer"),
+     *                 @OA\Property(
+     *                     property="data",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="id", type="integer"),
+     *                         @OA\Property(property="name", type="string"),
+     *                         @OA\Property(property="username", type="string"),
+     *                         @OA\Property(property="extension", type="string"),
+     *                         @OA\Property(property="phone", type="string"),
+     *                         @OA\Property(property="role", type="string"),
+     *                         @OA\Property(property="status", type="string"),
+     *                         @OA\Property(property="is_active", type="boolean")
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autenticado"
+     *     )
+     * )
      */
     public function index(Request $request)
     {
@@ -42,6 +103,56 @@ class UserController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * 
+     * @OA\Post(
+     *     path="/api/users",
+     *     summary="Crear un nuevo usuario",
+     *     description="Crea un nuevo usuario en el sistema",
+     *     operationId="createUser",
+     *     tags={"Usuarios"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"name", "username", "password", "role"},
+     *             @OA\Property(property="name", type="string", example="Juan Pérez"),
+     *             @OA\Property(property="username", type="string", example="jperez"),
+     *             @OA\Property(property="extension", type="string", example="101"),
+     *             @OA\Property(property="permission", type="string", example="{}"),
+     *             @OA\Property(property="phone", type="string", example="0999999999"),
+     *             @OA\Property(property="password", type="string", example="password123"),
+     *             @OA\Property(property="role", type="string", example="agent"),
+     *             @OA\Property(property="created_by", type="integer", example=1)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Usuario creado exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Usuario creado exitosamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer"),
+     *                 @OA\Property(property="name", type="string"),
+     *                 @OA\Property(property="username", type="string"),
+     *                 @OA\Property(property="extension", type="string"),
+     *                 @OA\Property(property="phone", type="string"),
+     *                 @OA\Property(property="role", type="string"),
+     *                 @OA\Property(property="is_active", type="boolean")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error al crear el usuario"
+     *     )
+     * )
      */
     public function store(Request $request)
     {
@@ -83,6 +194,45 @@ class UserController extends Controller
 
     /**
      * Display the specified resource.
+     * 
+     * @OA\Get(
+     *     path="/api/users/{id}",
+     *     summary="Obtener un usuario específico",
+     *     description="Retorna los datos de un usuario por su ID",
+     *     operationId="getUserById",
+     *     tags={"Usuarios"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID del usuario",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Usuario obtenido correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Usuario obtenido correctamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer"),
+     *                 @OA\Property(property="name", type="string"),
+     *                 @OA\Property(property="username", type="string"),
+     *                 @OA\Property(property="extension", type="string"),
+     *                 @OA\Property(property="phone", type="string"),
+     *                 @OA\Property(property="role", type="string"),
+     *                 @OA\Property(property="is_active", type="boolean")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Usuario no encontrado"
+     *     )
+     * )
      */
     public function show(User $user)
     {
@@ -97,6 +247,59 @@ class UserController extends Controller
 
     /**
      * Update the specified resource in storage.
+     * 
+     * @OA\Put(
+     *     path="/api/users/{id}",
+     *     summary="Actualizar un usuario",
+     *     description="Actualiza los datos de un usuario existente",
+     *     operationId="updateUser",
+     *     tags={"Usuarios"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID del usuario",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="Juan Pérez"),
+     *             @OA\Property(property="username", type="string", example="jperez"),
+     *             @OA\Property(property="extension", type="string", example="101"),
+     *             @OA\Property(property="permission", type="string", example="{}"),
+     *             @OA\Property(property="phone", type="string", example="0999999999"),
+     *             @OA\Property(property="password", type="string", example="newpassword123"),
+     *             @OA\Property(property="role", type="string", example="agent"),
+     *             @OA\Property(property="status", type="string", example="CONECTADO"),
+     *             @OA\Property(property="is_active", type="boolean", example=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Usuario actualizado exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Usuario actualizado exitosamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer"),
+     *                 @OA\Property(property="name", type="string"),
+     *                 @OA\Property(property="username", type="string")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Usuario no encontrado"
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación"
+     *     )
+     * )
      */
     public function update(Request $request, User $user)
     {
@@ -165,6 +368,38 @@ class UserController extends Controller
 
     /**
      * Remove the specified resource from storage (desactivar usuario).
+     * 
+     * @OA\Delete(
+     *     path="/api/users/{id}",
+     *     summary="Desactivar un usuario",
+     *     description="Desactiva un usuario limpiando sus permisos y extensión",
+     *     operationId="deleteUser",
+     *     tags={"Usuarios"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID del usuario",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Usuario desactivado exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Usuario desactivado exitosamente")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Usuario no encontrado"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error al desactivar el usuario"
+     *     )
+     * )
      */
     public function destroy(User $user)
     {

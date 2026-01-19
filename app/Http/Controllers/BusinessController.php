@@ -11,6 +11,51 @@ class BusinessController extends Controller
 {
     /**
      * Display a listing of the resource.
+     * 
+     * @OA\Get(
+     *     path="/api/businesses",
+     *     summary="Listar empresas",
+     *     description="Obtiene una lista paginada de todas las empresas",
+     *     operationId="getBusinessesList",
+     *     tags={"Empresas"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Número de empresas por página",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=15)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de empresas obtenida correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Empresas obtenidas correctamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="current_page", type="integer"),
+     *                 @OA\Property(
+     *                     property="data",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="id", type="integer", example=1),
+     *                         @OA\Property(property="name", type="string", example="Empresa ABC"),
+     *                         @OA\Property(property="state", type="string", example="ACTIVO"),
+     *                         @OA\Property(property="prelation_order", type="integer", example=1)
+     *                     )
+     *                 ),
+     *                 @OA\Property(property="per_page", type="integer"),
+     *                 @OA\Property(property="total", type="integer")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autenticado"
+     *     )
+     * )
      */
     public function index()
     {

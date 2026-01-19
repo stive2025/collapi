@@ -11,6 +11,64 @@ use Illuminate\Support\Facades\Log;
 
 class LoginController extends Controller
 {
+    /**
+     * @OA\Post(
+     *     path="/api/login",
+     *     summary="Iniciar sesión",
+     *     description="Autentica un usuario y retorna un token de acceso",
+     *     operationId="loginUser",
+     *     tags={"Autenticación"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"username", "password"},
+     *             @OA\Property(property="username", type="string", example="admin"),
+     *             @OA\Property(property="password", type="string", example="password123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Inicio de sesión exitoso",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Inicio de sesión exitoso"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="token", type="string", example="1|abcd1234efgh5678..."),
+     *                 @OA\Property(
+     *                     property="user",
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="username", type="string", example="admin"),
+     *                     @OA\Property(property="name", type="string", example="Administrador"),
+     *                     @OA\Property(property="email", type="string", example="admin@example.com"),
+     *                     @OA\Property(property="extension", type="string", example="100"),
+     *                     @OA\Property(property="role", type="string", example="admin"),
+     *                     @OA\Property(property="phone", type="string", example="0999999999"),
+     *                     @OA\Property(property="permission", type="object")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Credenciales incorrectas",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Credenciales incorrectas")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error al iniciar sesión"
+     *     )
+     * )
+     */
     public function login(Request $request)
     {
         try {
@@ -88,6 +146,32 @@ class LoginController extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/logout",
+     *     summary="Cerrar sesión",
+     *     description="Cierra la sesión del usuario actual y elimina su token de acceso",
+     *     operationId="logoutUser",
+     *     tags={"Autenticación"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Sesión cerrada exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Sesión cerrada exitosamente")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Usuario no autenticado"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error al cerrar sesión"
+     *     )
+     * )
+     */
     public function logout(Request $request)
     {
         try {

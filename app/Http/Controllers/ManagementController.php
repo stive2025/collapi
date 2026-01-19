@@ -17,6 +17,148 @@ class ManagementController extends Controller
 {
     /**
      * Display a listing of the resource.
+     * 
+     * @OA\Get(
+     *     path="/api/managements",
+     *     summary="Listar gestiones",
+     *     description="Obtiene una lista paginada de gestiones con filtros opcionales",
+     *     operationId="getManagementsList",
+     *     tags={"Gestiones"},
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Número de gestiones por página",
+     *         required=false,
+     *         @OA\Schema(type="integer", default=15)
+     *     ),
+     *     @OA\Parameter(
+     *         name="state",
+     *         in="query",
+     *         description="Filtrar por estado de la gestión",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="substate",
+     *         in="query",
+     *         description="Filtrar por subestado de la gestión",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="observation",
+     *         in="query",
+     *         description="Buscar en las observaciones",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="promise_date",
+     *         in="query",
+     *         description="Filtrar por fecha de promesa de pago (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="start_date",
+     *         in="query",
+     *         description="Fecha inicial del rango (YYYY-MM-DD o YYYY/MM/DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="end_date",
+     *         in="query",
+     *         description="Fecha final del rango (YYYY-MM-DD o YYYY/MM/DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date")
+     *     ),
+     *     @OA\Parameter(
+     *         name="created_by",
+     *         in="query",
+     *         description="Filtrar por ID del usuario que creó la gestión",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="client_id",
+     *         in="query",
+     *         description="Filtrar por ID del cliente",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="client_name",
+     *         in="query",
+     *         description="Buscar por nombre del cliente",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="client_ci",
+     *         in="query",
+     *         description="Buscar por cédula del cliente",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="credit_id",
+     *         in="query",
+     *         description="Buscar por sync_id del crédito",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Parameter(
+     *         name="campain_id",
+     *         in="query",
+     *         description="Filtrar por ID de campaña",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="order_by",
+     *         in="query",
+     *         description="Campo para ordenar",
+     *         required=false,
+     *         @OA\Schema(type="string", default="created_at")
+     *     ),
+     *     @OA\Parameter(
+     *         name="order_dir",
+     *         in="query",
+     *         description="Dirección del ordenamiento",
+     *         required=false,
+     *         @OA\Schema(type="string", enum={"asc", "desc"}, default="desc")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de gestiones obtenida correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Gestiones obtenidas correctamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="current_page", type="integer"),
+     *                 @OA\Property(
+     *                     property="data",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         @OA\Property(property="id", type="integer"),
+     *                         @OA\Property(property="state", type="string"),
+     *                         @OA\Property(property="substate", type="string"),
+     *                         @OA\Property(property="observation", type="string"),
+     *                         @OA\Property(property="promise_date", type="string", format="date-time"),
+     *                         @OA\Property(property="promise_amount", type="number"),
+     *                         @OA\Property(property="created_by", type="integer"),
+     *                         @OA\Property(property="client_id", type="integer"),
+     *                         @OA\Property(property="credit_id", type="integer"),
+     *                         @OA\Property(property="campain_id", type="integer")
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     )
+     * )
      */
     public function index(Request $request)
     {
@@ -164,6 +306,61 @@ class ManagementController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * 
+     * @OA\Post(
+     *     path="/api/managements",
+     *     summary="Crear una nueva gestión",
+     *     description="Crea una nueva gestión y actualiza el estado del crédito asociado",
+     *     operationId="createManagement",
+     *     tags={"Gestiones"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"state", "substate", "created_by", "credit_id"},
+     *             @OA\Property(property="state", type="string", example="CONTACTADO"),
+     *             @OA\Property(property="substate", type="string", example="COMPROMISO_PAGO"),
+     *             @OA\Property(property="observation", type="string", example="Cliente acepta realizar pago"),
+     *             @OA\Property(property="promise_date", type="string", format="date-time", example="2026-01-25T10:00:00Z"),
+     *             @OA\Property(property="promise_amount", type="number", example=150.50),
+     *             @OA\Property(property="created_by", type="integer", example=1),
+     *             @OA\Property(property="call_id", type="integer", example=100),
+     *             @OA\Property(property="call_collection", type="string", example="[1,2,3]"),
+     *             @OA\Property(property="days_past_due", type="integer", example=30),
+     *             @OA\Property(property="paid_fees", type="integer", example=5),
+     *             @OA\Property(property="pending_fees", type="integer", example=7),
+     *             @OA\Property(property="managed_amount", type="number", example=500.00),
+     *             @OA\Property(property="nro_notification", type="string", example="NOT-001"),
+     *             @OA\Property(property="client_id", type="integer", example=10),
+     *             @OA\Property(property="credit_id", type="integer", example=50),
+     *             @OA\Property(property="campain_id", type="integer", example=3)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Gestión creada correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Gestión creada correctamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer"),
+     *                 @OA\Property(property="state", type="string"),
+     *                 @OA\Property(property="substate", type="string"),
+     *                 @OA\Property(property="observation", type="string")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error al crear la gestión"
+     *     )
+     * )
      */
     public function store(StoreManagementRequest $request)
     {
@@ -209,6 +406,69 @@ class ManagementController extends Controller
 
     /**
      * Display the specified resource.
+     * 
+     * @OA\Get(
+     *     path="/api/managements/{id}",
+     *     summary="Obtener una gestión específica",
+     *     description="Retorna los datos de una gestión por su ID con relaciones cargadas",
+     *     operationId="getManagementById",
+     *     tags={"Gestiones"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         description="ID de la gestión",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Gestión obtenida correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Gestión obtenida correctamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer"),
+     *                 @OA\Property(property="state", type="string"),
+     *                 @OA\Property(property="substate", type="string"),
+     *                 @OA\Property(property="observation", type="string"),
+     *                 @OA\Property(property="promise_date", type="string", format="date-time"),
+     *                 @OA\Property(property="promise_amount", type="number"),
+     *                 @OA\Property(
+     *                     property="client",
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer"),
+     *                     @OA\Property(property="name", type="string"),
+     *                     @OA\Property(property="ci", type="string")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="credit",
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer"),
+     *                     @OA\Property(property="sync_id", type="string")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="campain",
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer"),
+     *                     @OA\Property(property="name", type="string")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="creator",
+     *                     type="object",
+     *                     @OA\Property(property="id", type="integer"),
+     *                     @OA\Property(property="name", type="string")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Gestión no encontrada"
+     *     )
+     * )
      */
     public function show(Management $management)
     {
