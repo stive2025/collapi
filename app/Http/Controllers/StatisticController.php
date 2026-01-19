@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Responses\ResponseBase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class StatisticController extends Controller
 {   
@@ -85,16 +86,16 @@ class StatisticController extends Controller
                 ->select('id', 'name')
                 ->get()
                 ->map(function($user) use ($campainId) {
-                    // Obtener pagos con gestión donde el usuario creó la gestión asociada, la gestión es de la campaña activa y days_past_due_auto > 0
                     $paymentsData = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                         ->where('collection_payments.with_management', 'SI')
                         ->where('collection_payments.days_past_due_auto', '>', 0)
-                        // Join con management para buscar gestiones con substate "OFERTA DE PAGO"
-                        ->join('management', function($join) use ($campainId, $user) {
-                            $join->on('management.credit_id', '=', 'collection_payments.credit_id')
-                                ->where('management.campain_id', '=', $campainId)
-                                ->where('management.created_by', '=', $user->id)
-                                ->where('management.substate', '=', 'OFERTA DE PAGO');
+                        ->whereExists(function($query) use ($campainId, $user) {
+                            $query->select(DB::raw(1))
+                                ->from('management')
+                                ->whereColumn('management.credit_id', 'collection_payments.credit_id')
+                                ->where('management.campain_id', $campainId)
+                                ->where('management.created_by', $user->id)
+                                ->where('management.substate', 'OFERTA DE PAGO');
                         })
                         ->selectRaw('SUM(collection_payments.payment_value) as total, COUNT(DISTINCT collection_payments.credit_id) as nro_credits')
                         ->first();
