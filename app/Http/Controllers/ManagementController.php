@@ -187,7 +187,7 @@ class ManagementController extends Controller
                     $management->campain_id
                 );
             } catch (\Exception $wsError) {
-                Log::error('WebSocket notification failed after management creation', [
+                Log::error('Error enviando notificación WebSocket después de la creación de la gestión', [
                     'error' => $wsError->getMessage(),
                     'management_id' => $management->id
                 ]);
@@ -350,7 +350,6 @@ class ManagementController extends Controller
 
             Log::info("Llamadas cargadas en cache: " . count($callsCache));
 
-            // Procesar gestiones sin transacción para evitar bloqueos del sistema
             foreach ($managements as $index => $managementData) {
                 try {
                     $user = \App\Models\User::where('name', $managementData['byUser'])->first();
@@ -694,8 +693,6 @@ class ManagementController extends Controller
                 $query->where('credits.sync_status', $validated['status']);
             }
 
-            // Filtro especial: not_effective_managements
-            // Excluir créditos que tengan gestiones efectivas en la campaña
             if (!empty($validated['not_effective_managements']) && $validated['not_effective_managements'] === true) {
                 $query->whereNotExists(function ($subQuery) use ($campainId) {
                     $subQuery->select(DB::raw(1))
@@ -811,11 +808,6 @@ class ManagementController extends Controller
                 422
             );
         } catch (\Exception $e) {
-            Log::error('Error al obtener créditos para mensajes', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener créditos para mensajes',
                 ['error' => $e->getMessage()],
@@ -932,11 +924,6 @@ class ManagementController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error en carga masiva de gestiones', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al crear gestiones masivas',
                 ['error' => $e->getMessage()],

@@ -82,10 +82,6 @@ class CollectionPaymentController extends Controller
                 'Pagos obtenidos correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error fetching collection payments', [
-                'message' => $e->getMessage()
-            ]);
-
             return ResponseBase::error('Error al obtener pagos', ['error' => $e->getMessage()], 500);
         }
     }
@@ -241,25 +237,20 @@ class CollectionPaymentController extends Controller
         $totalPaidFees = 0;
 
         foreach ($feeDetail as $index => &$fee) {
-            // Saltar la primera cuota (índice 0) que es el gasto de cobranza
             if ($index === 0) {
                 continue;
             }
 
-            // Saltar cuotas ya pagadas
             if (isset($fee['payment_status']) && $fee['payment_status'] === 'PAGADO') {
                 continue;
             }
 
-            // Si no queda monto por aplicar, salir del loop
             if ($remainingAmount <= 0) {
                 break;
             }
 
-            // payment_value = saldo pendiente de la cuota (se resta con cada pago)
             $pendingBalance = (float)($fee['payment_value'] ?? 0);
 
-            // Si ya no tiene saldo pendiente, marcar como pagada y continuar
             if ($pendingBalance <= 0) {
                 $fee['payment_status'] = 'PAGADO';
                 $fee['payment_date'] = now()->format('Y-m-d');
@@ -267,7 +258,6 @@ class CollectionPaymentController extends Controller
                 continue;
             }
 
-            // Si el monto del pago cubre todo el saldo pendiente de la cuota
             if ($remainingAmount >= $pendingBalance) {
                 $fee['payment_value'] = 0;
                 $fee['payment_status'] = 'PAGADO';
@@ -275,7 +265,6 @@ class CollectionPaymentController extends Controller
                 $remainingAmount -= $pendingBalance;
                 $totalPaidFees++;
             } else {
-                // Pago parcial: restar lo que se paga del saldo pendiente
                 $fee['payment_value'] = $pendingBalance - $remainingAmount;
                 $remainingAmount = 0;
                 break;
@@ -294,7 +283,6 @@ class CollectionPaymentController extends Controller
             'remaining_amount' => $remainingAmount
         ]);
 
-        // Verificar si todas las cuotas del convenio están pagadas
         $this->checkAndCancelCreditIfAgreementCompleted($creditId, $agreement);
     }
 
@@ -312,15 +300,12 @@ class CollectionPaymentController extends Controller
             return;
         }
 
-        // Verificar si todas las cuotas (excepto la primera que es gasto de cobranza) están pagadas
         $allFeesPaid = true;
         foreach ($feeDetail as $index => $fee) {
-            // Saltar la primera cuota (índice 0) que es el gasto de cobranza
             if ($index === 0) {
                 continue;
             }
 
-            // Si alguna cuota no está pagada, no se completa el convenio
             if (!isset($fee['payment_status']) || $fee['payment_status'] !== 'PAGADO') {
                 $allFeesPaid = false;
                 break;
@@ -328,11 +313,9 @@ class CollectionPaymentController extends Controller
         }
 
         if ($allFeesPaid) {
-            // Actualizar el convenio a COMPLETADO
             $agreement->status = 'COMPLETADO';
             $agreement->save();
 
-            // Actualizar el crédito a CANCELADO e INACTIVE
             $credit = Credit::find($creditId);
             if ($credit) {
                 $credit->collection_state = 'CANCELADO';
@@ -359,10 +342,8 @@ class CollectionPaymentController extends Controller
     public function show(CollectionPayment $payment)
     {
         try {
-            // Cargar relación con crédito y sus clientes
             $payment->load(['credit.clients', 'campain']);
 
-            // Si el pago tiene error de suma, incluir información adicional
             if ($payment->payment_status === 'ERROR_SUM') {
                 $credit = $payment->credit;
 
@@ -382,7 +363,6 @@ class CollectionPaymentController extends Controller
                     ];
                 }
 
-                // Determinar qué rubros propone restar el pago (campos de pago > 0)
                 $rubros = [
                     'capital',
                     'interest',
@@ -730,32 +710,21 @@ class CollectionPaymentController extends Controller
                 'cartera' => $businessName,
             ];
 
-            // LOG: Data que se enviará a Sofia
-            Log::info('processInvoice: Data a enviar a Sofia', [
+            Log::channel('payments')->info('processInvoice: Data a enviar a Sofia', [
                 'credit_id' => $creditId,
                 'payload' => $syntheticPayload
             ]);
 
             $syntheticRequest = \Illuminate\Http\Request::create('/', 'POST', $syntheticPayload);
             $sofiaResult = $this->sofiaService->facturar($syntheticRequest, $paymentValue);
-            Log::info('SofiaService.facturar result', ['result' => $sofiaResult]);
-
-            // TEMPORAL: Simular respuesta exitosa de Sofia para pruebas
-            // $sofiaResult = [
-            //     'state' => 200,
-            //     'response' => (object)[
-            //         'claveAcceso' => 'TEST_' . date('YmdHis') . '_' . $creditId
-            //     ]
-            // ];
+            Log::channel('payments')->info('SofiaService.facturar result', ['result' => $sofiaResult]);
 
             if (isset($sofiaResult['state']) && $sofiaResult['state'] === 200 && isset($sofiaResult['response']->claveAcceso)) {
-                // Calcular IVA (15%)
                 $ivaPercent = 15;
                 $totalConIva = round($paymentValue, 2);
                 $subtotalSinIva = round($totalConIva / (1 + ($ivaPercent / 100)), 2);
                 $valorIva = round($totalConIva - $subtotalSinIva, 2);
 
-                // Crear el invoice solo si Sofia respondió correctamente
                 $invoice = Invoice::create([
                     "invoice_value" => $totalConIva,
                     "tax_value" => $ivaPercent,
@@ -770,7 +739,7 @@ class CollectionPaymentController extends Controller
                     "created_by" => $request->user()->id ?? 1
                 ]);
 
-                Log::info('processInvoice: Invoice creado', [
+                Log::channel('payments')->info('processInvoice: Invoice creado', [
                     'invoice_id' => $invoice->id,
                     'credit_id' => $creditId,
                     'client_id' => $client->id,
@@ -794,7 +763,7 @@ class CollectionPaymentController extends Controller
                                 'fee_detail' => json_encode($feeDetail),
                             ]);
 
-                            Log::info('processInvoice: Primera cuota del convenio marcada como PAGADA', [
+                            Log::channel('payments')->info('processInvoice: Primera cuota del convenio marcada como PAGADA', [
                                 'credit_id' => $creditId,
                                 'agreement_id' => $agreement->id
                             ]);
@@ -821,7 +790,7 @@ class CollectionPaymentController extends Controller
 
             return ResponseBase::error('Error al facturar', ['sofia' => $sofiaResult], 400);
         } catch (\Exception $e) {
-            Log::error('Error processing invoice', [
+            Log::channel('payments')->error('Error processing invoice', [
                 'message' => $e->getMessage(),
                 'payload' => $payload
             ]);
@@ -840,7 +809,7 @@ class CollectionPaymentController extends Controller
             $config = $this->sofiaService->getConfig();
 
             if ($config === null) {
-                Log::warning('getSofiaConfig: No se pudo obtener configuración de Sofia, usando valores por defecto');
+                Log::channel('payments')->info('getSofiaConfig: No se pudo obtener configuración de Sofia, usando valores por defecto');
 
                 // Devolver estructura vacía pero válida para que el frontend no falle
                 return response()->json([
@@ -861,11 +830,6 @@ class CollectionPaymentController extends Controller
 
             return response()->json($config);
         } catch (\Exception $e) {
-            Log::error('Error getting Sofia config', [
-                'message' => $e->getMessage()
-            ]);
-
-            // Devolver estructura vacía pero válida para que el frontend no falle
             return response()->json([
                 'contribuyentes' => [
                     'contrib' => [
@@ -968,11 +932,6 @@ class CollectionPaymentController extends Controller
 
             return ResponseBase::success($paymentResume, 'Resumen de pagos obtenido correctamente');
         } catch (\Exception $e) {
-            Log::error('Error al obtener resumen de pagos', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener el resumen de pagos',
                 ['error' => $e->getMessage()],
@@ -1178,7 +1137,7 @@ class CollectionPaymentController extends Controller
             );
 
         } catch (\Exception $e) {
-            Log::error('Error en sincronización masiva de pagos', [
+            Log::channel('payments')->info('Error en sincronización masiva de pagos', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
@@ -1279,7 +1238,7 @@ class CollectionPaymentController extends Controller
             ], 'Pago aplicado correctamente al crédito');
 
         } catch (\Exception $e) {
-            Log::error('Error al aplicar pago', [
+            Log::channel('payments')->info('Error al aplicar pago', [
                 'payment_id' => $paymentId,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()

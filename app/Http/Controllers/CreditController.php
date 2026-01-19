@@ -100,8 +100,8 @@ class CreditController extends Controller
                 // Buscar coincidencia exacta o que termine con el número
                 $q->where(function($subQ) use ($syncIdSearch, $numericPart) {
                     $subQ->where('sync_id', $syncIdSearch)
-                         ->orWhere('sync_id', $numericPart)
-                         ->orWhere('sync_id', 'LIKE', '%-' . $numericPart);
+                        ->orWhere('sync_id', $numericPart)
+                        ->orWhere('sync_id', 'LIKE', '%-' . $numericPart);
                 });
             })
             ->when(request()->filled('sync_ids'), fn($q) =>
@@ -269,11 +269,6 @@ class CreditController extends Controller
                 'Conteo de bandejas obtenido correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error counting trays in credits', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener el conteo de bandejas',
                 ['error' => $e->getMessage()],
@@ -366,11 +361,6 @@ class CreditController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error updating credit', [
-                'message' => $e->getMessage(),
-                'credit_id' => $credit->id
-            ]);
-
             return ResponseBase::error(
                 'Error al actualizar el crédito',
                 ['error' => $e->getMessage()],

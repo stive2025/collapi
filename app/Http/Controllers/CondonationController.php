@@ -39,10 +39,6 @@ class CondonationController extends Controller
                 'Condonaciones obtenidas correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error fetching condonations', [
-                'message' => $e->getMessage()
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener condonaciones',
                 ['error' => $e->getMessage()],
@@ -183,11 +179,6 @@ class CondonationController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Error creating condonation', [
-                'message' => $e->getMessage(),
-                'payload' => $request->all()
-            ]);
-
             return ResponseBase::error(
                 'Error al crear la condonación',
                 ['error' => $e->getMessage()],
@@ -213,11 +204,6 @@ class CondonationController extends Controller
                 'Condonación obtenida correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error fetching condonation', [
-                'message' => $e->getMessage(),
-                'id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener la condonación',
                 ['error' => $e->getMessage()],
@@ -340,11 +326,6 @@ class CondonationController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Error updating condonation', [
-                'message' => $e->getMessage(),
-                'id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al actualizar la condonación',
                 ['error' => $e->getMessage()],
@@ -419,11 +400,6 @@ class CondonationController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Error autorizando condonación', [
-                'message' => $e->getMessage(),
-                'condonation_id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al autorizar la condonación',
                 ['error' => $e->getMessage()],
@@ -471,11 +447,6 @@ class CondonationController extends Controller
                 'statuses' => $statuses
             ], 'Comprobación de condonación realizada correctamente');
         } catch (\Exception $e) {
-            Log::error('Error checking credit condonation', [
-                'message' => $e->getMessage(),
-                'credit_id' => $creditId
-            ]);
-
             return ResponseBase::error('Error al comprobar condonaciones del crédito', ['error' => $e->getMessage()], 500);
         }
     }
@@ -595,11 +566,6 @@ class CondonationController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Error reverting condonation', [
-                'message' => $e->getMessage(),
-                'condonation_id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al revertir la condonación',
                 ['error' => $e->getMessage()],
@@ -640,11 +606,6 @@ class CondonationController extends Controller
                 'Condonación denegada correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error denegando condonación', [
-                'message' => $e->getMessage(),
-                'credit_id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al denegar la condonación',
                 ['error' => $e->getMessage()],

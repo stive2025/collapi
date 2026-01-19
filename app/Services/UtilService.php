@@ -325,11 +325,11 @@ class UtilService
             $campaign = \App\Models\Campain::where('business_id', $businessId)
                 ->where(function($query) use ($startDate, $endDate) {
                     $query->whereBetween('begin_time', [$startDate, $endDate])
-                          ->orWhereBetween('end_time', [$startDate, $endDate])
-                          ->orWhere(function($q) use ($startDate, $endDate) {
-                              $q->where('begin_time', '<=', $startDate)
+                        ->orWhereBetween('end_time', [$startDate, $endDate])
+                        ->orWhere(function($q) use ($startDate, $endDate) {
+                            $q->where('begin_time', '<=', $startDate)
                                 ->where('end_time', '>=', $endDate);
-                          });
+                        });
                 })
                 ->first();
 

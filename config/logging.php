@@ -145,6 +145,16 @@ return [
             'driver' => 'single',
             'path' => storage_path('logs/managements.log'),
             'level' => 'info'
+        ],
+        'campains' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/campains.log'),
+            'level' => 'info'
+        ],
+        'websocket' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/websocket.log'),
+            'level' => 'info'
         ]
     ]
 ];

@@ -44,7 +44,7 @@ class CallController extends Controller
 
             return ResponseBase::success($calls, 'Llamadas obtenidas correctamente');
         } catch (\Exception $e) {
-            Log::error('Error fetching collection calls', [
+            Log::channel('calls')->info('Error obteniendo listado de llamadas', [
                 'message' => $e->getMessage()
             ]);
 
@@ -92,7 +92,7 @@ class CallController extends Controller
                     $ws->sendCallUpdate($user->id, $campainId);
                 }
             } catch (\Exception $wsError) {
-                Log::error('WebSocket notification failed after call creation', [
+                Log::channel('calls')->info('Error enviando cierre de llamada', [
                     'error' => $wsError->getMessage(),
                     'call_id' => $call->id
                 ]);
@@ -104,7 +104,7 @@ class CallController extends Controller
                 201
             );
         } catch (\Exception $e) {
-            Log::error('Error creating collection call', [
+            Log::channel('calls')->info('Error creando llamada de cobranza', [
                 'message' => $e->getMessage(),
                 'payload' => $request->all()
             ]);
@@ -191,7 +191,7 @@ class CallController extends Controller
                     $ws->sendDialUpdate($user->id, $campainId);
                 }
             } catch (\Exception $wsError) {
-                Log::error('WebSocket notification failed on dial', [
+                Log::channel('calls')->info('Error enviando notificación WebSocket al marcar llamada', [
                     'error' => $wsError->getMessage(),
                     'user_id' => $user->id ?? null
                 ]);
@@ -199,7 +199,7 @@ class CallController extends Controller
 
             return ResponseBase::success($originate_call, 'Llamada iniciada correctamente');
         } catch (\Exception $e) {
-            Log::error('Error dialing call', [
+            Log::channel('calls')->info('Error iniciando llamada', [
                 'error' => $e->getMessage(),
                 'request' => $request->all()
             ]);

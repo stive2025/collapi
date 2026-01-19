@@ -123,7 +123,6 @@ class WebSocketService
     {
         try {
             if (!$this->isConnected()) {
-                Log::warning('Cannot send message: WebSocket not connected');
                 $this->connect();
             }
 
@@ -132,13 +131,8 @@ class WebSocketService
             }
 
             $this->client->send($message, $opcode);
-            Log::debug('WebSocket message sent', ['message' => $message]);
             return true;
         } catch (Exception $e) {
-            Log::error('Error sending WebSocket message', [
-                'error' => $e->getMessage(),
-                'message' => $message
-            ]);
             return false;
         }
     }
@@ -157,12 +151,8 @@ class WebSocketService
             }
 
             $message = $this->client->receive();
-            Log::debug('WebSocket message received', ['message' => $message]);
             return $message;
         } catch (Exception $e) {
-            Log::error('Error receiving WebSocket message', [
-                'error' => $e->getMessage()
-            ]);
             return null;
         }
     }
@@ -184,10 +174,6 @@ class WebSocketService
             $decoded = json_decode($message, true);
             return $decoded;
         } catch (Exception $e) {
-            Log::error('Error decoding JSON message', [
-                'error' => $e->getMessage(),
-                'message' => $message
-            ]);
             return null;
         }
     }
@@ -206,10 +192,8 @@ class WebSocketService
             }
 
             $this->client->send($payload, 'ping');
-            Log::debug('WebSocket ping sent');
             return true;
         } catch (Exception $e) {
-            Log::error('Error sending ping', ['error' => $e->getMessage()]);
             return false;
         }
     }
@@ -225,10 +209,8 @@ class WebSocketService
             if ($this->client) {
                 $this->client->close();
                 $this->client = null;
-                Log::info('WebSocket disconnected');
             }
         } catch (Exception $e) {
-            Log::error('Error disconnecting WebSocket', ['error' => $e->getMessage()]);
             $this->client = null;
         }
     }
@@ -278,26 +260,18 @@ class WebSocketService
 
                 // Check timeout
                 if ($timeout > 0 && (time() - $startTime) >= $timeout) {
-                    Log::info('WebSocket listen timeout reached');
                     break;
                 }
 
                 // Small delay to prevent CPU spinning
                 usleep(10000); // 10ms
             } catch (Exception $e) {
-                Log::error('Error in WebSocket listen loop', [
-                    'error' => $e->getMessage()
-                ]);
-
                 // Try to reconnect
                 try {
                     $this->disconnect();
                     sleep(1);
                     $this->connect();
                 } catch (Exception $reconnectError) {
-                    Log::error('Failed to reconnect', [
-                        'error' => $reconnectError->getMessage()
-                    ]);
                     break;
                 }
             }
@@ -329,7 +303,6 @@ class WebSocketService
             usleep(50000); // 50ms
         }
 
-        Log::warning('WebSocket request timeout', ['timeout' => $timeout]);
         return null;
     }
 
@@ -357,7 +330,6 @@ class WebSocketService
             $user = User::find($userId);
 
             if (!$user) {
-                Log::warning('User not found for WebSocket update', ['user_id' => $userId]);
                 return false;
             }
 
@@ -408,7 +380,7 @@ class WebSocketService
             $sent = $this->send($message);
 
             if ($sent) {
-                Log::info('WebSocket user update sent', [
+                Log::channel('websocket')->info('WebSocket user update sent', [
                     'user_id' => $userId,
                     'user_state' => $userState,
                     'campain_id' => $campainIdValue
@@ -417,10 +389,6 @@ class WebSocketService
 
             return $sent;
         } catch (Exception $e) {
-            Log::error('Error sending WebSocket user update', [
-                'user_id' => $userId,
-                'error' => $e->getMessage()
-            ]);
             return false;
         }
     }

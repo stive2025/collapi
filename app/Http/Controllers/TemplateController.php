@@ -58,11 +58,6 @@ class TemplateController extends Controller
             );
 
         } catch (\Exception $e) {
-            Log::error('Error fetching templates', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener templates',
                 ['error' => $e->getMessage()],
@@ -117,11 +112,6 @@ class TemplateController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error creating template', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al crear template',
                 ['error' => $e->getMessage()],
@@ -206,11 +196,6 @@ class TemplateController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error updating template', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al actualizar template',
                 ['error' => $e->getMessage()],
@@ -237,11 +222,6 @@ class TemplateController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return ResponseBase::error('Template no encontrado', [], 404);
         } catch (\Exception $e) {
-            Log::error('Error deleting template', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al desactivar template',
                 ['error' => $e->getMessage()],

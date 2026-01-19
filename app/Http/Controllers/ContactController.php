@@ -62,10 +62,6 @@ class ContactController extends Controller
                 'Contactos obtenidos correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error fetching contacts', [
-                'message' => $e->getMessage()
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener contactos',
                 ['error' => $e->getMessage()],
@@ -87,11 +83,6 @@ class ContactController extends Controller
                 201
             );
         } catch (\Exception $e) {
-            Log::error('Error creating contact', [
-                'message' => $e->getMessage(),
-                'data' => $request->all()
-            ]);
-
             return ResponseBase::error(
                 'Error al crear el contacto',
                 ['error' => $e->getMessage()],
@@ -110,11 +101,6 @@ class ContactController extends Controller
                 'Contacto obtenido correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error fetching contact', [
-                'message' => $e->getMessage(),
-                'contact_id' => $contact->id
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener el contacto',
                 ['error' => $e->getMessage()],
@@ -133,12 +119,6 @@ class ContactController extends Controller
                 'Contacto actualizado correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error updating contact', [
-                'message' => $e->getMessage(),
-                'contact_id' => $contact->id,
-                'data' => $request->all()
-            ]);
-
             return ResponseBase::error(
                 'Error al actualizar el contacto',
                 ['error' => $e->getMessage()],
@@ -157,11 +137,6 @@ class ContactController extends Controller
                 'Contacto inactivado correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error deactivating contact', [
-                'message' => $e->getMessage(),
-                'contact_id' => $contact->id
-            ]);
-
             return ResponseBase::error(
                 'Error al inactivar el contacto',
                 ['error' => $e->getMessage()],

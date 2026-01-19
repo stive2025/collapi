@@ -90,11 +90,6 @@ class CollectionCreditController extends Controller
             );
 
         } catch (\Exception $e) {
-            Log::error('Error fetching collection credits', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener collection credits',
                 ['error' => $e->getMessage()],
@@ -200,11 +195,6 @@ class CollectionCreditController extends Controller
             );
 
         } catch (\Exception $e) {
-            Log::error('Error saving currently campain credits', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al guardar la imagen de créditos',
                 ['error' => $e->getMessage()],

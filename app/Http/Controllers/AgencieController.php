@@ -61,11 +61,6 @@ class AgencieController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error creating agencie', [
-                'message' => $e->getMessage(),
-                'payload' => $request->all()
-            ]);
-
             return ResponseBase::error(
                 'Error al crear la agencia',
                 ['error' => $e->getMessage()],
@@ -91,11 +86,6 @@ class AgencieController extends Controller
                 'Agencia obtenida correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error fetching agencie', [
-                'message' => $e->getMessage(),
-                'id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener la agencia',
                 ['error' => $e->getMessage()],
@@ -129,11 +119,6 @@ class AgencieController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error updating agencie', [
-                'message' => $e->getMessage(),
-                'id' => $id,
-                'payload' => $request->all()
-            ]);
 
             return ResponseBase::error(
                 'Error al actualizar la agencia',
@@ -162,11 +147,6 @@ class AgencieController extends Controller
                 'Agencia eliminada exitosamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error deleting agencie', [
-                'message' => $e->getMessage(),
-                'id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al eliminar la agencia',
                 ['error' => $e->getMessage()],

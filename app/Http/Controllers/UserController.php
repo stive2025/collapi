@@ -73,11 +73,6 @@ class UserController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error creating user', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al crear el usuario',
                 ['error' => $e->getMessage()],
@@ -144,10 +139,9 @@ class UserController extends Controller
                         $ws->sendUserUpdate($user->id, $status, $campainId);
                     }
                 } catch (\Exception $wsError) {
-                    Log::error('WebSocket notification failed on user update', [
-                        'error' => $wsError->getMessage(),
-                        'user_id' => $user->id,
-                        'status' => $validated['status'] ?? null
+                    Log::error('WebSocket error during user status update', [
+                        'message' => $wsError->getMessage(),
+                        'user_id' => $user->id
                     ]);
                 }
             }
@@ -161,11 +155,6 @@ class UserController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error updating user', [
-                'message' => $e->getMessage(),
-                'user_id' => $user->id
-            ]);
-
             return ResponseBase::error(
                 'Error al actualizar el usuario',
                 ['error' => $e->getMessage()],
@@ -192,11 +181,6 @@ class UserController extends Controller
                 'Usuario desactivado exitosamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error deactivating user', [
-                'message' => $e->getMessage(),
-                'user_id' => $user->id
-            ]);
-
             return ResponseBase::error(
                 'Error al desactivar el usuario',
                 ['error' => $e->getMessage()],
@@ -331,11 +315,6 @@ class UserController extends Controller
             );
 
         } catch (\Exception $e) {
-            Log::error('Error in monitor endpoint', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener el monitor de agentes',
                 ['error' => $e->getMessage()],

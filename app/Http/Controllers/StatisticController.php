@@ -6,10 +6,7 @@ use App\Http\Responses\ResponseBase;
 use Illuminate\Http\Request;
 
 class StatisticController extends Controller
-{
-    // Obtener métricas estadísticas (Reporte pagos con gestión)
-    // GET /api/statistics/metrics
-    // Este reporte devuelve los valores:  total,nro_credits,total_general,total_campain,total_castigado,total_vencido,nro_credits_total
+{   
     public function getMetrics(Request $request)
     {
         try {
@@ -73,14 +70,14 @@ class StatisticController extends Controller
             $totalPunished = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                 ->where('collection_payments.with_management', 'SI')
                 ->join('credits', 'collection_payments.credit_id', '=', 'credits.id')
-                ->where('credits.collection_state', 'CASTIGADO')
+                ->where('credits.collection_state', 'Castigado')
                 ->sum('collection_payments.payment_value');
 
             // Pagos con gestión de créditos vencidos
             $totalOverdue = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                 ->where('collection_payments.with_management', 'SI')
                 ->join('credits', 'collection_payments.credit_id', '=', 'credits.id')
-                ->where('credits.collection_state', 'VENCIDO')
+                ->where('credits.collection_state', 'Vencido')
                 ->sum('collection_payments.payment_value');
             
             // Usuarios registrados en el campo agents de la campaña
@@ -88,14 +85,17 @@ class StatisticController extends Controller
                 ->select('id', 'name')
                 ->get()
                 ->map(function($user) use ($campainId) {
-                    // Obtener pagos con gestión donde el usuario creó la gestión asociada, la gestión es de la campaña activa y days_past_due_auto > 60
+                    // Obtener pagos con gestión donde el usuario creó la gestión asociada, la gestión es de la campaña activa y days_past_due_auto > 0
                     $paymentsData = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
                         ->where('collection_payments.with_management', 'SI')
-                        ->whereNotNull('collection_payments.management_auto')
-                        ->where('collection_payments.days_past_due_auto', '>', 60)
-                        ->join('management', 'collection_payments.management_auto', '=', 'management.id')
-                        ->where('management.created_by', $user->id)
-                        ->where('management.campain_id', $campainId)
+                        ->where('collection_payments.days_past_due_auto', '>', 0)
+                        // Join con management para buscar gestiones con substate "OFERTA DE PAGO"
+                        ->join('management', function($join) use ($campainId, $user) {
+                            $join->on('management.credit_id', '=', 'collection_payments.credit_id')
+                                ->where('management.campain_id', '=', $campainId)
+                                ->where('management.created_by', '=', $user->id)
+                                ->where('management.substate', '=', 'OFERTA DE PAGO');
+                        })
                         ->selectRaw('SUM(collection_payments.payment_value) as total, COUNT(DISTINCT collection_payments.credit_id) as nro_credits')
                         ->first();
 

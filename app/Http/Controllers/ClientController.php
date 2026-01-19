@@ -47,11 +47,6 @@ class ClientController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error creating client', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al crear el cliente',
                 ['error' => $e->getMessage()],
@@ -95,11 +90,6 @@ class ClientController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error updating client', [
-                'message' => $e->getMessage(),
-                'client_id' => $client->id
-            ]);
-
             return ResponseBase::error(
                 'Error al actualizar el cliente',
                 ['error' => $e->getMessage()],

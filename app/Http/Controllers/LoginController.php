@@ -50,7 +50,7 @@ class LoginController extends Controller
                 $ws = new WebSocketService();
                 $ws->sendLoginUpdate($user->id);
             } catch (\Exception $wsError) {
-                Log::error('WebSocket notification failed on login', [
+                Log::error('Error enviando notificación WebSocket en login', [
                     'error' => $wsError->getMessage(),
                     'user_id' => $user->id
                 ]);
@@ -75,7 +75,7 @@ class LoginController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error during login', [
+            Log::error('Error durante el inicio de sesión', [
                 'message' => $e->getMessage(),
                 'username' => $request->input('username')
             ]);
@@ -104,7 +104,7 @@ class LoginController extends Controller
                 $ws = new WebSocketService();
                 $ws->sendLogoutUpdate($user->id);
             } catch (\Exception $wsError) {
-                Log::error('WebSocket notification failed on logout', [
+                Log::error('Error enviando notificación WebSocket en logout', [
                     'error' => $wsError->getMessage(),
                     'user_id' => $user->id
                 ]);
@@ -120,7 +120,7 @@ class LoginController extends Controller
                 'Sesión cerrada exitosamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error during logout', [
+            Log::error('Error durante el cierre de sesión', [
                 'message' => $e->getMessage(),
                 'user_id' => $request->user()->id ?? null
             ]);

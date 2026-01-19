@@ -44,11 +44,6 @@ class BusinessController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error creating business', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al crear la empresa',
                 ['error' => $e->getMessage()],
@@ -89,11 +84,6 @@ class BusinessController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error updating business', [
-                'message' => $e->getMessage(),
-                'business_id' => $business->id
-            ]);
-
             return ResponseBase::error(
                 'Error al actualizar la empresa',
                 ['error' => $e->getMessage()],
@@ -125,11 +115,6 @@ class BusinessController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error updating business prelation order', [
-                'message' => $e->getMessage(),
-                'business_id' => $business->id
-            ]);
-
             return ResponseBase::error(
                 'Error al actualizar el orden de prelación',
                 ['error' => $e->getMessage()],
@@ -151,11 +136,6 @@ class BusinessController extends Controller
                 'Empresa eliminada exitosamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error deleting business', [
-                'message' => $e->getMessage(),
-                'business_id' => $business->id
-            ]);
-
             return ResponseBase::error(
                 'Error al eliminar la empresa',
                 ['error' => $e->getMessage()],

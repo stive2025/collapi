@@ -62,11 +62,6 @@ class SmsController extends Controller
             );
 
         } catch (\Exception $e) {
-            Log::error('Error verificando SMS', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-
             return ResponseBase::error(
                 'Error al verificar el envío de SMS',
                 ['error' => $e->getMessage()],

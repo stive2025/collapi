@@ -7,6 +7,7 @@ use App\Models\Campain;
 use App\Models\Credit;
 use App\Services\UtilService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -222,6 +223,15 @@ class CampainController extends Controller
             $creditIds = $query->pluck('id')->toArray();
 
             if (empty($creditIds)) {
+
+                Log::channel('campains')->info('No credits found for transfer', [
+                    'transfered_at'=>date('Y-m-d H:i:s',time() - 18000),
+                    'transfered_by'=> Auth::user()->id,
+                    'campain_id' => $campain->id,
+                    'business_id' => $campain->business_id,
+                    'filters_applied' => $validated
+                ]);
+
                 return ResponseBase::success([
                     'transferred' => 0,
                     'message' => 'No se encontraron créditos que cumplan los filtros',
@@ -270,12 +280,6 @@ class CampainController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error in campain transfer', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'campain_id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al transferir créditos',
                 ['error' => $e->getMessage()],
@@ -359,12 +363,6 @@ class CampainController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
-            Log::error('Error associating managements to payments', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'date' => $request->input('date')
-            ]);
-
             return ResponseBase::error(
                 'Error al asociar gestiones a pagos',
                 ['error' => $e->getMessage()],

@@ -17,8 +17,8 @@ class SofiaService
     public function getConfig()
     {
         $header = "Content-type: application/json\r\n" .
-                  "Accept: application/json\r\n" .
-                  "Authorization: Basic " . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA'));
+                "Accept: application/json\r\n" .
+                "Authorization: Basic " . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA'));
 
         $datos_facturacion = [];
 
@@ -40,21 +40,12 @@ class SofiaService
 
         if ($result === false) {
             $error = error_get_last();
-            Log::error('SofiaService::getConfig - file_get_contents failed', [
-                'url' => $url,
-                'error' => $error,
-            ]);
             return null;
         }
 
         $decoded = json_decode($result);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            Log::error('SofiaService::getConfig - invalid JSON response', [
-                'url' => $url,
-                'response' => $result,
-                'json_error' => json_last_error_msg(),
-            ]);
             return null;
         }
 
@@ -66,8 +57,8 @@ class SofiaService
         $fechaEmision = date('Y-m-d', time() - 18000);
 
         $header = "Content-type: application/json\r\n" .
-                  "Accept: application/json\r\n" .
-                  "Authorization: Basic " . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA'));
+                "Accept: application/json\r\n" .
+                "Authorization: Basic " . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA'));
 
         $rawValue = $value ?? $request->input('value');
         $rawValue = floatval($rawValue);
@@ -109,7 +100,6 @@ class SofiaService
             ];
         }
 
-        // Si $request->cartera existe como propiedad, usarla, si no usar input('cartera')
         $cartera = $request->cartera ?? $request->input('cartera');
         $itemCodigo = ($cartera === "SEFIL_1") ? "G001" : "G002";
 
@@ -177,19 +167,12 @@ class SofiaService
             ],
         ];
 
-        Log::info('SofiaService::facturar - payload', ['payload' => $datos_facturacion]);
-
         try {
             $context = stream_context_create($options);
             $resultado = @file_get_contents($url_ws_create_factura, false, $context);
 
             if ($resultado === false) {
                 $error = error_get_last();
-                Log::error('SofiaService::facturar - request failed', [
-                    'url' => $url_ws_create_factura,
-                    'error' => $error,
-                    'payload' => $datos_facturacion
-                ]);
 
                 return [
                     "state" => 400,
@@ -201,13 +184,6 @@ class SofiaService
 
             $decoded = json_decode($resultado);
             if (json_last_error() !== JSON_ERROR_NONE) {
-                Log::error('SofiaService::facturar - invalid JSON response', [
-                    'url' => $url_ws_create_factura,
-                    'response' => $resultado,
-                    'json_error' => json_last_error_msg(),
-                    'payload' => $datos_facturacion
-                ]);
-
                 return [
                     "state" => 500,
                     "response" => null,
@@ -222,11 +198,6 @@ class SofiaService
                 "data" => $datos_facturacion
             ];
         } catch (\Throwable $th) {
-            Log::error('SofiaService::facturar - exception', [
-                'message' => $th->getMessage(),
-                'payload' => $datos_facturacion
-            ]);
-
             return [
                 "state" => 500,
                 "response" => null,

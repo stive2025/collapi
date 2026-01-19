@@ -54,8 +54,8 @@ class SmsService
 
             // Preparar headers
             $header = "Content-type: application/json\r\n" .
-                     "Accept: application/json\r\n" .
-                     "Authorization: Basic " . base64_encode("{$this->apiUser}:{$this->apiPassword}");
+                    "Accept: application/json\r\n" .
+                    "Authorization: Basic " . base64_encode("{$this->apiUser}:{$this->apiPassword}");
 
             // Preparar opciones de contexto
             $options = [

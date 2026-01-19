@@ -39,10 +39,6 @@ class AgreementController extends Controller
                 'Convenios obtenidos correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error fetching agreements', [
-                'message' => $e->getMessage()
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener convenios',
                 ['error' => $e->getMessage()],
@@ -112,8 +108,6 @@ class AgreementController extends Controller
                 );
             }
 
-            $this->generateCollectionExpense($credit, $validated);
-
             $feeDetailArray = $validated['fee_detail'];
             $totalFees = count($feeDetailArray) - 1;
 
@@ -171,11 +165,6 @@ class AgreementController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Error creating agreement', [
-                'message' => $e->getMessage(),
-                'payload' => $request->all()
-            ]);
-
             return ResponseBase::error(
                 'Error al crear el convenio',
                 ['error' => $e->getMessage()],
@@ -201,11 +190,6 @@ class AgreementController extends Controller
                 'Convenio obtenido correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error fetching agreement', [
-                'message' => $e->getMessage(),
-                'id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al obtener el convenio',
                 ['error' => $e->getMessage()],
@@ -334,11 +318,6 @@ class AgreementController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Error updating agreement', [
-                'message' => $e->getMessage(),
-                'id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al actualizar el convenio',
                 ['error' => $e->getMessage()],
@@ -412,11 +391,6 @@ class AgreementController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Error authorizing agreement', [
-                'message' => $e->getMessage(),
-                'agreement_id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al autorizar el convenio',
                 ['error' => $e->getMessage()],
@@ -446,11 +420,6 @@ class AgreementController extends Controller
                 'statuses' => $statuses
             ], 'Comprobación realizada correctamente');
         } catch (\Exception $e) {
-            Log::error('Error checking credit agreement', [
-                'message' => $e->getMessage(),
-                'credit_id' => $creditId
-            ]);
-
             return ResponseBase::error('Error al comprobar convenios del crédito', ['error' => $e->getMessage()], 500);
         }
     }
@@ -524,12 +493,6 @@ class AgreementController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
-
-            Log::error('Error reverting agreement', [
-                'message' => $e->getMessage(),
-                'agreement_id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al revertir el convenio',
                 ['error' => $e->getMessage()],
@@ -569,11 +532,6 @@ class AgreementController extends Controller
                 'Convenio denegado correctamente'
             );
         } catch (\Exception $e) {
-            Log::error('Error denegando convenio', [
-                'message' => $e->getMessage(),
-                'agreement_id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al denegar el convenio',
                 ['error' => $e->getMessage()],
@@ -614,27 +572,11 @@ class AgreementController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Error deleting agreement', [
-                'message' => $e->getMessage(),
-                'agreement_id' => $id
-            ]);
-
             return ResponseBase::error(
                 'Error al eliminar el convenio',
                 ['error' => $e->getMessage()],
                 500
             );
         }
-    }
-
-    /**
-     * Genera el gasto de cobranza y lo agrega al fee_detail
-     * 
-     * @param Credit $credit
-     * @param array $validated
-     * @return void
-     */
-    private function generateCollectionExpense(Credit $credit, array &$validated): void
-    {
     }
 }
