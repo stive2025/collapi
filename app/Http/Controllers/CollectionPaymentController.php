@@ -183,7 +183,8 @@ class CollectionPaymentController extends Controller
 
             // Si existe un último número, incrementar; si no, empezar en 1
             $data['payment_number'] = $lastNumber ? (int)$lastNumber + 1 : 1;
-
+            $data['payment_status'] = 'guardado';
+            
             $payment = CollectionPayment::create($data);
 
             // Cargar relaciones para el Resource

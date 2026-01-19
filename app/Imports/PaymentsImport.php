@@ -145,7 +145,7 @@ class PaymentsImport implements
             }
 
             // Validar que ningún rubro quede negativo al restar el pago
-            $paymentStatus = 'GUARDADO'; // Estado por defecto si todo está bien
+            $paymentStatus = 'guardado'; // Estado por defecto si todo está bien
             $hasNegativeBalance = false;
 
             // Verificar cada rubro del crédito
