@@ -40,13 +40,7 @@ class PaymentsConsolidatedExport implements FromCollection, WithHeadings, WithCu
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A6:AV6')->getFont()->setBold(true);
-        $sheet->getStyle('A6:AV6')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
-        $sheet->getStyle('A6:AV6')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A6:AV6')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('4472C4');
-        $sheet->getStyle('A6:AV6')->getFont()->getColor()->setARGB('FFFFFF');
-        $sheet->getStyle('A6:AV6')->getAlignment()->setWrapText(true);
-
+        // Los estilos se aplican en registerEvents para tener control sobre la fila exacta
         return [];
     }
 
@@ -134,14 +128,25 @@ class PaymentsConsolidatedExport implements FromCollection, WithHeadings, WithCu
                 $position_last = count($this->headings()[2]);
                 $column = Coordinate::stringFromColumnIndex($position_last);
 
+                // Título principal (fila 3)
                 $cells = "A3:{$column}3";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(14);
 
+                // Subtítulo campaña (fila 4)
                 $cells = "A4:{$column}4";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
+
+                // Encabezados de columnas (fila 5) - aplicar estilo azul
+                $headerRow = "A5:{$column}5";
+                $event->sheet->getDelegate()->getStyle($headerRow)->getFont()->setBold(true);
+                $event->sheet->getDelegate()->getStyle($headerRow)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+                $event->sheet->getDelegate()->getStyle($headerRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $event->sheet->getDelegate()->getStyle($headerRow)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('4472C4');
+                $event->sheet->getDelegate()->getStyle($headerRow)->getFont()->getColor()->setARGB('FFFFFFFF');
+                $event->sheet->getDelegate()->getStyle($headerRow)->getAlignment()->setWrapText(true);
             }
         ];
     }
@@ -272,9 +277,9 @@ class PaymentsConsolidatedExport implements FromCollection, WithHeadings, WithCu
 
             // Calcular distancia entre GA y pago
             if ($managementAuto->created_at && $payment->payment_date) {
-                $fechaGA = \Carbon\Carbon::parse($managementAuto->created_at);
-                $fechaPago = \Carbon\Carbon::parse($payment->payment_date);
-                $gaDistancia = $fechaGA->diffInDays($fechaPago);
+                $fechaGA = \Carbon\Carbon::parse($managementAuto->created_at)->startOfDay();
+                $fechaPago = \Carbon\Carbon::parse($payment->payment_date)->startOfDay();
+                $gaDistancia = (int) $fechaGA->diffInDays($fechaPago);
             }
 
             $gaAgente = $managementAuto->creator ? $managementAuto->creator->name : '';
@@ -308,9 +313,9 @@ class PaymentsConsolidatedExport implements FromCollection, WithHeadings, WithCu
 
             // Calcular distancia entre GP y pago
             if ($managementPrev->created_at && $payment->payment_date) {
-                $fechaGP = \Carbon\Carbon::parse($managementPrev->created_at);
-                $fechaPago = \Carbon\Carbon::parse($payment->payment_date);
-                $gpDistancia = $fechaGP->diffInDays($fechaPago);
+                $fechaGP = \Carbon\Carbon::parse($managementPrev->created_at)->startOfDay();
+                $fechaPago = \Carbon\Carbon::parse($payment->payment_date)->startOfDay();
+                $gpDistancia = (int) $fechaGP->diffInDays($fechaPago);
             }
 
             $gpAgente = $managementPrev->creator ? $managementPrev->creator->name : '';

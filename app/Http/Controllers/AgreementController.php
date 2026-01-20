@@ -80,18 +80,21 @@ class AgreementController extends Controller
                 return ResponseBase::error('Crédito no encontrado', null, 404);
             }
 
-            // Validar que no exista un convenio previo activo
-            $existingAgreement = Agreement::where('credit_id', $validated['credit_id'])
-                ->whereIn('status', ['pendiente', 'autorizado'])
-                ->first();
-            
-            if ($existingAgreement) {
-                DB::rollBack();
-                return ResponseBase::error(
-                    'Ya existe un convenio activo para este crédito',
-                    null,
-                    400
-                );
+            // Validar que no exista un convenio previo activo (solo si el usuario no es admin)
+            $user = $request->user();
+            if (!$user || $user->role !== 'admin') {
+                $existingAgreement = Agreement::where('credit_id', $validated['credit_id'])
+                    ->whereIn('status', ['PENDIENTE', 'AUTORIZADO'])
+                    ->first();
+
+                if ($existingAgreement) {
+                    DB::rollBack();
+                    return ResponseBase::error(
+                        'Ya existe un convenio activo para este crédito',
+                        null,
+                        400
+                    );
+                }
             }
 
             // Validar que el crédito no tenga una condonación activa
