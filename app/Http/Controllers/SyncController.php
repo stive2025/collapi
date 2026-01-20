@@ -519,4 +519,109 @@ class SyncController extends Controller
             );
         }
     }
+
+    public function updateAgreements(Request $request)
+    {
+        try {
+            // Obtener convenios desde la API externa
+            $apiUrl = "https://core.sefil.com.ec/api/public/api/convenios";
+            $response = file_get_contents($apiUrl);
+            $agreementsData = json_decode($response, true);
+
+            if (!is_array($agreementsData)) {
+                return ResponseBase::error(
+                    'No se obtuvieron convenios de la API',
+                    [],
+                    400
+                );
+            }
+
+            $errors = [];
+            $updated = 0;
+            $skipped = 0;
+
+            foreach ($agreementsData as $agreementData) {
+                try {
+                    // Validar que tenga sync_id
+                    if (empty($agreementData['sync_id'])) {
+                        $errors[] = [
+                            'sync_id' => $agreementData['sync_id'] ?? 'unknown',
+                            'error' => 'sync_id es requerido'
+                        ];
+                        continue;
+                    }
+
+                    // Buscar el crédito por sync_id
+                    $credit = \App\Models\Credit::where('sync_id', $agreementData['sync_id'])->first();
+
+                    if (!$credit) {
+                        $errors[] = [
+                            'sync_id' => $agreementData['sync_id'],
+                            'error' => 'Crédito no encontrado'
+                        ];
+                        continue;
+                    }
+
+                    // Buscar el agreement por credit_id
+                    $agreement = \App\Models\Agreement::where('credit_id', $credit->id)->first();
+
+                    if (!$agreement) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    // Desactivar timestamps automáticos para poder establecer valores personalizados
+                    $agreement->timestamps = false;
+
+                    // Parsear y actualizar created_at desde el campo 'created_at' del API
+                    if (!empty($agreementData['created_at'])) {
+                        $createdAt = \Carbon\Carbon::parse($agreementData['created_at']);
+                        $agreement->created_at = $createdAt;
+                    }
+
+                    // Actualizar updated_at si viene en los datos
+                    if (!empty($agreementData['updated_at'])) {
+                        $updatedAt = \Carbon\Carbon::parse($agreementData['updated_at']);
+                        $agreement->updated_at = $updatedAt;
+                    }
+
+                    $agreement->save();
+
+                    // Reactivar timestamps para futuras operaciones
+                    $agreement->timestamps = true;
+
+                    $updated++;
+
+                } catch (\Exception $e) {
+                    $errors[] = [
+                        'sync_id' => $agreementData['sync_id'] ?? 'unknown',
+                        'error' => $e->getMessage()
+                    ];
+                }
+            }
+
+            return ResponseBase::success(
+                [
+                    'total' => count($agreementsData),
+                    'updated' => $updated,
+                    'skipped' => $skipped,
+                    'errors_count' => count($errors),
+                    'errors' => $errors
+                ],
+                "Actualización de convenios completada: {$updated} actualizados, {$skipped} omitidos, " . count($errors) . " errores"
+            );
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error en updateAgreements: ' . $e->getMessage(), [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al actualizar convenios',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
 }
