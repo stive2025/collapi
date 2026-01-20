@@ -139,6 +139,13 @@ class StatisticController extends Controller
         try {
             $perPage = (int) $request->query('per_page', 15);
 
+            // Obtener campaña activa de tipo 'api'
+            $activeCampain = \App\Models\Campain::where('state', 'ACTIVE')
+                ->where('type', 'api')
+                ->select('id')
+                ->first();
+            $activeCampainId = $activeCampain ? $activeCampain->id : null;
+
             $query = \App\Models\CollectionPayment::query()
                 ->select(
                     'collection_payments.payment_reference',
@@ -153,6 +160,7 @@ class StatisticController extends Controller
                 )
                 ->join('management', 'collection_payments.management_auto', '=', 'management.id')
                 ->where('management.substate', 'OFERTA DE PAGO')
+                ->where('collection_payments.campain_id', $activeCampainId)
                 ->groupBy('collection_payments.payment_reference');
 
             // Filtros
