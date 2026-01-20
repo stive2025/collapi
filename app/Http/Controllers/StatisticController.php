@@ -219,6 +219,13 @@ class StatisticController extends Controller
                 ->first();
             $activeCampainId = $activeCampain ? $activeCampain->id : null;
 
+            // Filtrar solo pagos de la campaña activa
+            $payments->setCollection(
+                $payments->getCollection()->filter(function($payment) use ($activeCampainId) {
+                    return $payment->campain_id == $activeCampainId;
+                })
+            );
+
             // Transformar los datos
             $payments->getCollection()->transform(function($payment) use ($activeCampainId) {
                 // Cargar el crédito con sus clientes
