@@ -161,37 +161,87 @@ class UtilService
 
         return $lastSync;
     }
-
-    public function getEffectiveManagements(int $credit_id, string $payment_date){
+    public function getEffectiveManagements(int $credit_id, string $payment_date, ?int $days_past_due = null, ?int $campain_id = null){
         $adjustedPaymentDate = \Carbon\Carbon::parse($payment_date)->addHours(5)->format('Y-m-d H:i:s');
+        $paymentDateCarbon = \Carbon\Carbon::parse($payment_date)->startOfDay();
+
+        // Substates efectivos base
+        $effectiveSubstates = [
+            'CLIENTE SE NIEGA A PAGAR',
+            'CLIENTE INDICA QUE NO ES SU DEUDA',
+            'COMPROMISO DE PAGO',
+            'CONVENIO DE PAGO',
+            'MENSAJE A TERCEROS',
+            'MENSAJE DE TEXTO',
+            'MENSAJE EN BUZON DE VOZ',
+            'MENSAJE EN BUZÓN DEL CLIENTE',
+            'NOTIFICADO',
+            'ENTREGADO AVISO DE COBRANZA',
+            'PASAR A TRÁMITE LEGAL',
+            'REGESTIÓN',
+            'YA PAGO',
+            'OFERTA DE PAGO',
+            'YA PAGÓ',
+            'SOLICITA REFINANCIAMIENTO',
+            'ABONO A DEUDA'
+        ];
+
+        // Si días de mora > 90, excluir MENSAJE DE TEXTO
+        if ($days_past_due !== null && $days_past_due > 90) {
+            $effectiveSubstates = array_filter($effectiveSubstates, function($substate) {
+                return $substate !== 'MENSAJE DE TEXTO';
+            });
+        }
 
         $managements = \App\Models\Management::where('credit_id', $credit_id)
             ->where('created_at', '<=', $adjustedPaymentDate)
-            ->whereIn('substate', [
-                'CLIENTE SE NIEGA A PAGAR',
-                'CLIENTE INDICA QUE NO ES SU DEUDA',
-                'COMPROMISO DE PAGO',
-                'CONVENIO DE PAGO',
-                'MENSAJE A TERCEROS',
-                'MENSAJE DE TEXTO',
-                'MENSAJE EN BUZON DE VOZ',
-                'MENSAJE EN BUZÓN DEL CLIENTE',
-                'NOTIFICADO',
-                'ENTREGADO AVISO DE COBRANZA',
-                'PASAR A TRÁMITE LEGAL',
-                'REGESTIÓN',
-                'YA PAGO',
-                'OFERTA DE PAGO',
-                'YA PAGÓ',
-                'SOLICITA REFINANCIAMIENTO',
-                'ABONO A DEUDA'
-            ])
+            ->whereIn('substate', $effectiveSubstates)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        return $managements ? $managements : null;
-    }
+        // Aplicar reglas según días de mora
+        if ($days_past_due !== null && $days_past_due <= 61) {
+            // Si días de mora ≤ 61: la gestión debe ser del mismo mes O de la misma campaña
+            $paymentMonth = $paymentDateCarbon->month;
+            $paymentYear = $paymentDateCarbon->year;
 
+            $filteredManagements = $managements->filter(function($management) use ($paymentMonth, $paymentYear, $campain_id) {
+                $managementDate = \Carbon\Carbon::parse($management->created_at);
+                $sameMonth = ($managementDate->month === $paymentMonth && $managementDate->year === $paymentYear);
+                $sameCampain = ($campain_id !== null && $management->campain_id === $campain_id);
+                return $sameMonth || $sameCampain;
+            });
+        } elseif ($days_past_due !== null && $days_past_due > 61) {
+            // Si días de mora > 61: la gestión no debe sobrepasar 30 días
+            $filteredManagements = $managements->filter(function($management) use ($paymentDateCarbon) {
+                $managementDate = \Carbon\Carbon::parse($management->created_at)->startOfDay();
+                $daysDifference = $managementDate->diffInDays($paymentDateCarbon);
+                return $daysDifference <= 30;
+            });
+        } else {
+            // Si no hay días de mora (null): buscar gestiones dentro de 30 días
+            // y calcular días de mora desde la gestión hasta el pago
+            // Solo cuenta si el cálculo da > 61 días de mora
+            $filteredManagements = $managements->filter(function($management) use ($paymentDateCarbon) {
+                $managementDate = \Carbon\Carbon::parse($management->created_at)->startOfDay();
+                $daysDifference = (int) $managementDate->diffInDays($paymentDateCarbon);
+
+                // Debe estar dentro de 30 días
+                if ($daysDifference > 30) {
+                    return false;
+                }
+
+                // Calcular días de mora al momento del pago
+                $managementDaysPastDue = $management->days_past_due ?? 0;
+                $calculatedDaysPastDue = $managementDaysPastDue + $daysDifference;
+
+                // Solo cuenta si los días de mora calculados son > 61
+                return $calculatedDaysPastDue > 61;
+            });
+        }
+
+        return $filteredManagements->count() > 0 ? $filteredManagements->values() : null;
+    }
     public function associateManagementsToPayment(string $date){
         // Obtener todos los pagos de la fecha especificada
         $payments = \App\Models\CollectionPayment::whereDate('payment_date', $date)->get();
@@ -200,12 +250,21 @@ class UtilService
             $credit_id = $payment->credit_id;
             $payment_date = $payment->payment_date;
             $payment_date_only = \Carbon\Carbon::parse($payment_date)->format('Y-m-d');
+            $campain_id = $payment->campain_id;
 
             // Obtener información de sincronización del crédito
             $syncInfo = $this->getLastSyncDay($credit_id, $payment_date_only);
 
-            // Obtener gestiones efectivas antes del pago
-            $managements = $this->getEffectiveManagements($credit_id, $payment_date);
+            // Obtener días de mora desde syncInfo
+            $days_past_due = null;
+            if ($syncInfo && is_array($syncInfo) && isset($syncInfo['days_past_due'])) {
+                $days_past_due = $syncInfo['days_past_due'];
+            } elseif ($syncInfo && !is_array($syncInfo) && isset($syncInfo->days_past_due)) {
+                $days_past_due = $syncInfo->days_past_due;
+            }
+
+            // Obtener gestiones efectivas antes del pago con las reglas de días de mora
+            $managements = $this->getEffectiveManagements($credit_id, $payment_date, $days_past_due, $campain_id);
 
             $management_auto = null;
             $management_prev = null;
@@ -283,7 +342,6 @@ class UtilService
             ]);
         }
     }
-
     public function getMonthNumber($monthName)
     {
         $months = [
@@ -343,7 +401,6 @@ class UtilService
 
         return $campaigns;
     }
-
     public function getMonthName($monthNumber)
     {
         $months = [
