@@ -288,7 +288,7 @@ class StatisticController extends Controller
                     'client_ci' => $client ? $client->ci : 'N/A',
                     'agency' => $credit ? $credit->agency : 'N/A',
                     'collection_state' => $credit ? $credit->collection_state : 'N/A',
-                    'days_past_due' => $credit ? $credit->days_past_due : 0,
+                    'days_past_due' => $payment ? $payment->days_past_due_auto : 0,
                     'management_type' => $payment->with_management,
                     'effective_managements_count' => $effectiveCount,
                     'non_effective_managements_count' => $nonEffectiveCount,
