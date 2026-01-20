@@ -165,8 +165,11 @@ class UtilService
         $adjustedPaymentDate = \Carbon\Carbon::parse($payment_date)->addHours(5)->format('Y-m-d H:i:s');
         $paymentDateCarbon = \Carbon\Carbon::parse($payment_date)->startOfDay();
 
-        // Substates efectivos base
-        $effectiveSubstates = [
+        // Substate prioritario
+        $prioritySubstate = 'OFERTA DE PAGO';
+
+        // Substates efectivos secundarios (sin incluir el prioritario)
+        $secondarySubstates = [
             'CLIENTE SE NIEGA A PAGAR',
             'CLIENTE INDICA QUE NO ES SU DEUDA',
             'COMPROMISO DE PAGO',
@@ -180,24 +183,33 @@ class UtilService
             'PASAR A TRÁMITE LEGAL',
             'REGESTIÓN',
             'YA PAGO',
-            'OFERTA DE PAGO',
             'YA PAGÓ',
             'SOLICITA REFINANCIAMIENTO',
             'ABONO A DEUDA'
         ];
 
-        // Si días de mora > 90, excluir MENSAJE DE TEXTO
+        // Si días de mora > 90, excluir MENSAJE DE TEXTO de secundarios
         if ($days_past_due !== null && $days_past_due > 90) {
-            $effectiveSubstates = array_filter($effectiveSubstates, function($substate) {
+            $secondarySubstates = array_filter($secondarySubstates, function($substate) {
                 return $substate !== 'MENSAJE DE TEXTO';
             });
         }
 
+        // Primero buscar gestiones con OFERTA DE PAGO (prioritario)
         $managements = \App\Models\Management::where('credit_id', $credit_id)
             ->where('created_at', '<=', $adjustedPaymentDate)
-            ->whereIn('substate', $effectiveSubstates)
+            ->where('substate', $prioritySubstate)
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Si no hay gestiones con OFERTA DE PAGO, buscar con los otros substates
+        if ($managements->count() === 0) {
+            $managements = \App\Models\Management::where('credit_id', $credit_id)
+                ->where('created_at', '<=', $adjustedPaymentDate)
+                ->whereIn('substate', $secondarySubstates)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
         // Aplicar reglas según días de mora
         if ($days_past_due !== null && $days_past_due <= 61) {
@@ -236,7 +248,16 @@ class UtilService
                 $calculatedDaysPastDue = $managementDaysPastDue + $daysDifference;
 
                 // Solo cuenta si los días de mora calculados son > 61
-                return $calculatedDaysPastDue > 61;
+                if ($calculatedDaysPastDue <= 61) {
+                    return false;
+                }
+
+                // Si días de mora calculados > 90, excluir MENSAJE DE TEXTO
+                if ($calculatedDaysPastDue > 90 && $management->substate === 'MENSAJE DE TEXTO') {
+                    return false;
+                }
+
+                return true;
             });
         }
 
