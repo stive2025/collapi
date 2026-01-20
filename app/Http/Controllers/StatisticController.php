@@ -239,12 +239,12 @@ class StatisticController extends Controller
                     ])
                     ->count();
 
-                // Sumar pagos con y sin gestión del mismo crédito
-                $totalWithManagement = \App\Models\CollectionPayment::where('credit_id', $payment->credit_id)
+                // Sumar pagos con y sin gestión del mismo payment_reference (evitar duplicados)
+                $totalWithManagement = \App\Models\CollectionPayment::where('payment_reference', $payment->payment_reference)
                     ->where('with_management', 'SI')
                     ->sum('payment_value');
 
-                $totalWithoutManagement = \App\Models\CollectionPayment::where('credit_id', $payment->credit_id)
+                $totalWithoutManagement = \App\Models\CollectionPayment::where('payment_reference', $payment->payment_reference)
                     ->where('with_management', 'NO')
                     ->sum('payment_value');
 
