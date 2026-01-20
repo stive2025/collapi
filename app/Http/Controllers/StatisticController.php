@@ -153,7 +153,6 @@ class StatisticController extends Controller
                 )
                 ->join('management', 'collection_payments.management_auto', '=', 'management.id')
                 ->where('management.substate', 'OFERTA DE PAGO')
-                
                 ->groupBy('collection_payments.payment_reference');
 
             // Filtros
@@ -182,15 +181,11 @@ class StatisticController extends Controller
             }
 
             if ($request->filled('days_past_due_min')) {
-                $query->whereHas('credit', function($q) use ($request) {
-                    $q->where('days_past_due', '>=', $request->query('days_past_due_min'));
-                });
+                $query->where('collection_payments.days_past_due_auto', '>=', $request->query('days_past_due_min'));
             }
 
             if ($request->filled('days_past_due_max')) {
-                $query->whereHas('credit', function($q) use ($request) {
-                    $q->where('days_past_due', '<=', $request->query('days_past_due_max'));
-                });
+                $query->where('collection_payments.days_past_due_auto', '<=', $request->query('days_past_due_max'));
             }
 
             if ($request->filled('management_type')) {
@@ -203,7 +198,7 @@ class StatisticController extends Controller
             }
 
             if ($request->filled('campain_id')) {
-                $query->where('campain_id', $request->query('campain_id'));
+                $query->where('collection_payments.campain_id', $request->query('campain_id'));
             }
 
             $orderBy = $request->query('order_by', 'payment_date');
