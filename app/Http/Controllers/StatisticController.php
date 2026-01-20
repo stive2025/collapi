@@ -283,6 +283,7 @@ class StatisticController extends Controller
                     'agent' => $agent ?? 'N/A',
                     'payment_value' => (float) $payment->payment_value,
                     'payment_date' => $payment->payment_date,
+                    'payment_id' => $payment->id,
                 ];
             });
 
