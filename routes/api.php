@@ -144,3 +144,4 @@ Route::get('exports/campain', [ExportController::class, 'exportCampain']);
 Route::get('exports/accounting', [ExportController::class, 'exportAccounting']);
 Route::get('exports/campain-assignments', [ExportController::class, 'exportCampainAssign']);
 Route::get('exports/direcciones', [ExportController::class, 'exportDirecciones']);
+Route::get('exports/payments-consolidated', [ExportController::class, 'exportPaymentsConsolidated']);

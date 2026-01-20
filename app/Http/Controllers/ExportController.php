@@ -6,6 +6,7 @@ use App\Exports\AccountingExport;
 use App\Exports\CampainExport;
 use App\Exports\CampainAssignExport;
 use App\Exports\DireccionesExport;
+use App\Exports\PaymentsConsolidatedExport;
 use App\Http\Responses\ResponseBase;
 use App\Models\Business;
 use App\Models\Campain;
@@ -186,6 +187,49 @@ class ExportController extends Controller
         } catch (\Exception $e) {
             return ResponseBase::error(
                 'Error al exportar direcciones',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    public function exportPaymentsConsolidated(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'campain_id' => ['required', 'integer', 'exists:campains,id']
+            ]);
+
+            $campainId = $validated['campain_id'];
+
+            $campain = Campain::findOrFail($campainId);
+            $campainName = strtoupper($campain->name);
+
+            $user = $request->user();
+            $userName = $user ? $user->name : 'Sistema';
+
+            $monthsInSpanish = [
+                1 => 'ENERO', 2 => 'FEBRERO', 3 => 'MARZO', 4 => 'ABRIL',
+                5 => 'MAYO', 6 => 'JUNIO', 7 => 'JULIO', 8 => 'AGOSTO',
+                9 => 'SEPTIEMBRE', 10 => 'OCTUBRE', 11 => 'NOVIEMBRE', 12 => 'DICIEMBRE'
+            ];
+
+            $day = date('d');
+            $monthNumber = (int) date('m');
+            $monthName = $monthsInSpanish[$monthNumber];
+
+            $fileName = 'PagosConsolidado-dia_' . $day . '-' . $monthName . '-' . $campainName . '.xlsx';
+
+            return Excel::download(
+                new PaymentsConsolidatedExport($campainId, $userName),
+                $fileName
+            );
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            return ResponseBase::error(
+                'Error al exportar pagos consolidados',
                 ['error' => $e->getMessage()],
                 500
             );
