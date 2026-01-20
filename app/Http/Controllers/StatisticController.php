@@ -212,8 +212,15 @@ class StatisticController extends Controller
 
             $payments = $query->paginate($perPage);
 
+            // Obtener campaña activa de tipo 'api'
+            $activeCampain = \App\Models\Campain::where('state', 'ACTIVE')
+                ->where('type', 'api')
+                ->select('id')
+                ->first();
+            $activeCampainId = $activeCampain ? $activeCampain->id : null;
+
             // Transformar los datos
-            $payments->getCollection()->transform(function($payment) {
+            $payments->getCollection()->transform(function($payment) use ($activeCampainId) {
                 // Cargar el crédito con sus clientes
                 $credit = \App\Models\Credit::with(['clients' => function($q) {
                     $q->select('clients.id', 'clients.name', 'clients.ci');
@@ -242,10 +249,12 @@ class StatisticController extends Controller
                 // Sumar pagos con y sin gestión del mismo payment_reference (evitar duplicados)
                 $totalWithManagement = \App\Models\CollectionPayment::where('payment_reference', $payment->payment_reference)
                     ->where('with_management', 'SI')
+                    ->where('campain_id', $activeCampainId)
                     ->sum('payment_value');
 
                 $totalWithoutManagement = \App\Models\CollectionPayment::where('payment_reference', $payment->payment_reference)
                     ->where('with_management', 'NO')
+                    ->where('campain_id', $activeCampainId)
                     ->sum('payment_value');
 
                 // Obtener el agente de la gestión
