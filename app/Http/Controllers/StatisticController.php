@@ -143,26 +143,20 @@ class StatisticController extends Controller
     {
         try {
             $perPage = (int) $request->query('per_page', 15);
-            
+
             $query = \App\Models\CollectionPayment::query()
                 ->select(
-                    'collection_payments.id',
-                    'collection_payments.payment_value',
-                    'collection_payments.payment_date',
-                    'collection_payments.with_management',
-                    'collection_payments.management_auto',
-                    'collection_payments.days_past_due_auto',
-                    'collection_payments.credit_id',
-                    'collection_payments.campain_id'
+                    'collection_payments.payment_reference',
+                    DB::raw('SUM(collection_payments.payment_value) as payment_value'),
+                    DB::raw('MIN(collection_payments.id) as id'),
+                    DB::raw('MIN(collection_payments.payment_date) as payment_date'),
+                    DB::raw('MIN(collection_payments.with_management) as with_management'),
+                    DB::raw('MIN(collection_payments.management_auto) as management_auto'),
+                    DB::raw('MIN(collection_payments.days_past_due_auto) as days_past_due_auto'),
+                    DB::raw('MIN(collection_payments.credit_id) as credit_id'),
+                    DB::raw('MIN(collection_payments.campain_id) as campain_id')
                 )
-                ->with([
-                    'credit' => function($q) {
-                        $q->select('id', 'sync_id', 'collection_state', 'days_past_due', 'agency')
-                            ->with(['clients' => function($clientQuery) {
-                                $clientQuery->select('clients.id', 'clients.name', 'clients.ci');
-                            }]);
-                    }
-                ]);
+                ->groupBy('collection_payments.payment_reference');
 
             // Filtros
             if ($request->filled('credit_name')) {
@@ -218,13 +212,23 @@ class StatisticController extends Controller
 
             $orderBy = $request->query('order_by', 'payment_date');
             $orderDir = $request->query('order_dir', 'desc');
-            $query->orderBy($orderBy, $orderDir);
+
+            if ($orderBy === 'payment_date') {
+                $query->orderBy(DB::raw('MIN(collection_payments.payment_date)'), $orderDir);
+            } else {
+                $query->orderBy($orderBy, $orderDir);
+            }
 
             $payments = $query->paginate($perPage);
 
             // Transformar los datos
             $payments->getCollection()->transform(function($payment) {
-                $credit = $payment->credit;
+                // Cargar el crédito con sus clientes
+                $credit = \App\Models\Credit::with(['clients' => function($q) {
+                    $q->select('clients.id', 'clients.name', 'clients.ci');
+                }])->select('id', 'sync_id', 'collection_state', 'days_past_due', 'agency')
+                  ->find($payment->credit_id);
+
                 $client = $credit && $credit->clients ? $credit->clients->first() : null;
 
                 // Contar gestiones efectivas y no efectivas del crédito
@@ -269,7 +273,7 @@ class StatisticController extends Controller
                 }
 
                 return [
-                    'payment_id' => $payment->id,
+                    'payment_reference' => $payment->payment_reference,
                     'credit_name' => $client ? $client->name : 'N/A',
                     'credit_sync_id' => $credit ? $credit->sync_id : 'N/A',
                     'client_ci' => $client ? $client->ci : 'N/A',
