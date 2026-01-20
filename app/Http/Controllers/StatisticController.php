@@ -153,6 +153,7 @@ class StatisticController extends Controller
                 )
                 ->join('management', 'collection_payments.management_auto', '=', 'management.id')
                 ->where('management.substate', 'OFERTA DE PAGO')
+                
                 ->groupBy('collection_payments.payment_reference');
 
             // Filtros
@@ -198,9 +199,7 @@ class StatisticController extends Controller
             }
 
             if ($request->filled('agent_id')) {
-                $query->whereHas('managementAuto', function($q) use ($request) {
-                    $q->where('created_by', $request->query('agent_id'));
-                });
+                $query->where('management.created_by', $request->query('agent_id'));
             }
 
             if ($request->filled('campain_id')) {
