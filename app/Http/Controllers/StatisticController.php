@@ -151,6 +151,8 @@ class StatisticController extends Controller
                     DB::raw('MIN(collection_payments.credit_id) as credit_id'),
                     DB::raw('MIN(collection_payments.campain_id) as campain_id')
                 )
+                ->join('management', 'collection_payments.management_auto', '=', 'management.id')
+                ->where('management.substate', 'OFERTA DE PAGO')
                 ->groupBy('collection_payments.payment_reference');
 
             // Filtros
@@ -222,7 +224,7 @@ class StatisticController extends Controller
                 $credit = \App\Models\Credit::with(['clients' => function($q) {
                     $q->select('clients.id', 'clients.name', 'clients.ci');
                 }])->select('id', 'sync_id', 'collection_state', 'days_past_due', 'agency')
-                  ->find($payment->credit_id);
+                ->find($payment->credit_id);
 
                 $client = $credit && $credit->clients ? $credit->clients->first() : null;
 
@@ -231,9 +233,6 @@ class StatisticController extends Controller
                     ->whereIn('substate', [
                         'COMPROMISO DE PAGO',
                         'CONVENIO DE PAGO',
-                        'YA PAGO',
-                        'YA PAGÓ',
-                        'ABONO A DEUDA',
                         'OFERTA DE PAGO'
                     ])
                     ->count();
@@ -242,9 +241,6 @@ class StatisticController extends Controller
                     ->whereNotIn('substate', [
                         'COMPROMISO DE PAGO',
                         'CONVENIO DE PAGO',
-                        'YA PAGO',
-                        'YA PAGÓ',
-                        'ABONO A DEUDA',
                         'OFERTA DE PAGO'
                     ])
                     ->count();
