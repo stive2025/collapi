@@ -224,14 +224,6 @@ class CampainController extends Controller
 
             if (empty($creditIds)) {
 
-                Log::channel('campains')->info('No credits found for transfer', [
-                    'transfered_at'=>date('Y-m-d H:i:s',time() - 18000),
-                    'transfered_by'=> Auth::user()->id,
-                    'campain_id' => $campain->id,
-                    'business_id' => $campain->business_id,
-                    'filters_applied' => $validated
-                ]);
-
                 return ResponseBase::success([
                     'transferred' => 0,
                     'message' => 'No se encontraron créditos que cumplan los filtros',
@@ -267,6 +259,14 @@ class CampainController extends Controller
                     }
                 }
             });
+
+            Log::channel('campains')->info('Créditos transferidos', [
+                'transfered_at'=>date('Y-m-d H:i:s',time() - 18000),
+                'transfered_by'=> Auth::user()->id,
+                'campain_id' => $campain->id,
+                'business_id' => $campain->business_id,
+                'filters_applied' => $validated
+            ]);
 
             return ResponseBase::success([
                 'campain_id' => $campain->id,
