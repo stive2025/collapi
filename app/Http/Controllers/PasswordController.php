@@ -72,22 +72,16 @@ class PasswordController extends Controller
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'id' => 'required|exists:users,id',
             'code' => 'required|numeric',
             'password' => 'required|min:8|confirmed'
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $user = User::where('id', $request->id)->first();
 
         if (!$user || $user->code != $request->code) {
             return response()->json([
                 'message' => 'Código inválido'
-            ], 400);
-        }
-
-        if (Carbon::now()->greaterThan($user->code_expires_at)) {
-            return response()->json([
-                'message' => 'El código ha expirado'
             ], 400);
         }
 
