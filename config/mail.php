@@ -79,6 +79,10 @@ return [
             'transport' => 'array',
         ],
 
+        'graph' => [
+            'transport' => 'graph',
+        ],
+
         'failover' => [
             'transport' => 'failover',
             'mailers' => [

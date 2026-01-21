@@ -97,6 +97,8 @@ Route::middleware(['check.token'])->group(function () {
     // Desconectar usuario
     Route::post('logout', [LoginController::class, 'logout']);
     Route::post('/password/send-code', [PasswordController::class, 'sendResetCode']);
+    Route::post('/password/verify-code', [PasswordController::class, 'verifyCode']);
+    Route::post('/password/reset', [PasswordController::class, 'resetPassword']);
     // --------------------------------------------------------------------------------------------------------------
     // Monitor de usuarios
     Route::get('monitor', [UserController::class, 'monitor']);

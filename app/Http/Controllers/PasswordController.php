@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Responses\ResponseBase;
 use App\Mail\PasswordResetMail;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class PasswordController extends Controller
@@ -19,20 +21,22 @@ class PasswordController extends Controller
 
         $user = User::find($request->id);
         $code = rand(100000, 999999);
-        
+
         $user->code = $code;
         $user->save();
-        
+
         // Determinar el correo de destino según el usuario
-        $emailDestination = ($user->username === 'maria_bravo') 
-            ? 'mbravo@sefil.com.ec'  // EMAIL_ADMIN
-            : 'scesen@sefil.com.ec'; // EMAIL_SYSTEM
-        
-        Mail::to($emailDestination)->send(new PasswordResetMail($user->name, $code));
-        
-        return response()->json([
-            'message' => 'Código de verificación enviado al correo'
-        ], 200);
+        $emailDestination = ($user->username === 'maria_bravo')
+            ? env('EMAIL_ADMIN', 'mbravo@sefil.com.ec')
+            : env('EMAIL_SYSTEM', 'scesen@sefil.com.ec');
+
+        try {
+            Mail::to($emailDestination)->send(new PasswordResetMail($user->name, $code));
+            return ResponseBase::success('Código de verificación enviado al correo');
+        } catch (\Exception $e) {
+            Log::error('Error enviando email: ' . $e->getMessage());
+            return ResponseBase::error('Error al enviar el código de verificación', [], 500);
+        }
     }
 
     public function verifyCode(Request $request)
