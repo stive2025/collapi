@@ -104,12 +104,12 @@ class StoreManagementRequest extends FormRequest
                 ->first();
 
             if ($lastManagement && $lastManagement->substate === 'VISITA CAMPO') {
-                $allowedSubstates = ['NOTIFICADO', 'ENTREGADO AVISO DE COBRANZA', 'NO NOTIFICADO'];
+                $allowedSubstates = ['NOTIFICADO', 'ENTREGADO AVISO DE COBRANZA', 'NO NOTIFICADO','DIRECCIÓN INCORRECTA','NO LOCALIZABLE','CAMBIO DE DOMICILIO'];
 
                 if (!in_array($this->substate, $allowedSubstates)) {
                     throw new HttpResponseException(
                         ResponseBase::error(
-                            'Cuando la última gestión fue VISITA CAMPO, el subestado solo puede ser: NOTIFICADO, ENTREGADO AVISO DE COBRANZA o NO NOTIFICADO',
+                            'Cuando la última gestión fue VISITA CAMPO, el subestado solo puede ser: NOTIFICADO, ENTREGADO AVISO DE COBRANZA, NO NOTIFICADO, DIRECCIÓN INCORRECTA, NO LOCALIZABLE o CAMBIO DE DOMICILIO',
                             [],
                             400
                         )
