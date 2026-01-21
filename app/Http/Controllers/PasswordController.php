@@ -87,7 +87,6 @@ class PasswordController extends Controller
 
         $user->password = Hash::make($request->password);
         $user->code = null;
-        $user->code_expires_at = null;
         $user->save();
 
         return response()->json([
