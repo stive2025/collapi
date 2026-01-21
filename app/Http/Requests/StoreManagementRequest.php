@@ -100,7 +100,7 @@ class StoreManagementRequest extends FormRequest
             }
             
             $lastManagement = \App\Models\Management::where('credit_id', $this->credit_id)
-                ->orderBy('created_at', 'desc')
+                ->orderBy('id', 'desc')
                 ->first();
 
             if ($lastManagement && $lastManagement->substate === 'VISITA CAMPO') {
