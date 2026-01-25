@@ -27,7 +27,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('login', [LoginController::class, 'login']);
 
 Route::apiResource('managements', ManagementController::class);
-Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
+Route::get('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
 Route::get('campains/associate-managements', [CampainController::class, 'associateManagements']);
 
 Route::middleware(['check.token'])->group(function () {

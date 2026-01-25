@@ -106,10 +106,7 @@ class CollectionCreditController extends Controller
         try {
             $now = now();
 
-            $activeCampains = Campain::where('state', 'ACTIVE')
-                ->where('begin_time', '<=', $now)
-                ->where('end_time', '>=', $now)
-                ->get();
+            $activeCampains = Campain::where('state', 'ACTIVE')->get();
 
             if ($activeCampains->isEmpty()) {
                 return ResponseBase::error(
