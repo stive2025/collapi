@@ -54,7 +54,6 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('campains', CampainController::class);
     // Transferencia de créditos
     Route::patch('campains/transfer/{id}', [CampainController::class, 'transfer']);
-    Route::get('campains/associate-managements', [CampainController::class, 'associateManagements']);
     // --------------------------------------------------------------------------------------------------------------    
     Route::apiResource('condonations', CondonationController::class);
     // Revertir condonación
@@ -141,6 +140,8 @@ Route::middleware(['check.token'])->group(function () {
 
 // --------------------------------------------------------------------------------------------------------------
 Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
+Route::get('campains/associate-managements', [CampainController::class, 'associateManagements']);
+
 // Exportaciones
 Route::get('exports/campain', [ExportController::class, 'exportCampain']);
 Route::get('exports/accounting', [ExportController::class, 'exportAccounting']);
