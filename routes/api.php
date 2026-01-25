@@ -130,7 +130,6 @@ Route::middleware(['check.token'])->group(function () {
     
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);
-    Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
 
     // Envío de SMS
     Route::post('sms/send', [SmsController::class, 'sendSms']);
@@ -141,6 +140,7 @@ Route::middleware(['check.token'])->group(function () {
 });
 
 // --------------------------------------------------------------------------------------------------------------
+Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
 // Exportaciones
 Route::get('exports/campain', [ExportController::class, 'exportCampain']);
 Route::get('exports/accounting', [ExportController::class, 'exportAccounting']);
