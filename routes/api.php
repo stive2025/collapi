@@ -54,7 +54,7 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('campains', CampainController::class);
     // Transferencia de créditos
     Route::patch('campains/transfer/{id}', [CampainController::class, 'transfer']);
-    Route::post('campains/associate-managements', [CampainController::class, 'associateManagements']);
+    Route::get('campains/associate-managements', [CampainController::class, 'associateManagements']);
     // --------------------------------------------------------------------------------------------------------------    
     Route::apiResource('condonations', CondonationController::class);
     // Revertir condonación
