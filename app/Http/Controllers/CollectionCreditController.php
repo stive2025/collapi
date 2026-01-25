@@ -116,23 +116,13 @@ class CollectionCreditController extends Controller
                 );
             }
 
-            $activeCredits = Credit::where('sync_status', 'ACTIVE')->get();
-
-            if ($activeCredits->isEmpty()) {
-                return ResponseBase::error(
-                    'No hay créditos activos',
-                    [],
-                    404
-                );
-            }
-
             $totalSaved = 0;
             $skippedCampains = [];
             $processedCampains = 0;
             $now = now();
             $today = $now->format('Y-m-d');
 
-            DB::transaction(function () use ($activeCampains, $activeCredits, &$totalSaved, &$skippedCampains, &$processedCampains, $now, $today) {
+            DB::transaction(function () use ($activeCampains, &$totalSaved, &$skippedCampains, &$processedCampains, $now, $today) {
                 foreach ($activeCampains as $campain) {
                     $existsToday = CollectionCredit::where('campain_id', $campain->id)
                         ->whereDate('created_at', $today)
@@ -143,6 +133,19 @@ class CollectionCreditController extends Controller
                             'campain_id' => $campain->id,
                             'campain_name' => $campain->name,
                             'reason' => 'Ya existe una imagen para esta campaña en la fecha de hoy'
+                        ];
+                        continue;
+                    }
+
+                    $activeCredits = Credit::where('sync_status', 'ACTIVE')
+                        ->where('business_id', $campain->business_id)
+                        ->get();
+
+                    if ($activeCredits->isEmpty()) {
+                        $skippedCampains[] = [
+                            'campain_id' => $campain->id,
+                            'campain_name' => $campain->name,
+                            'reason' => 'No hay créditos activos para este business_id'
                         ];
                         continue;
                     }
@@ -169,6 +172,7 @@ class CollectionCreditController extends Controller
                             'updated_at' => $now,
                         ];
                     })->toArray();
+                    
                     $chunks = array_chunk($batchData, 500);
                     foreach ($chunks as $chunk) {
                         CollectionCredit::insert($chunk);
