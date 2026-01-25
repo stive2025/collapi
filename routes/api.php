@@ -27,6 +27,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('login', [LoginController::class, 'login']);
 
 Route::apiResource('managements', ManagementController::class);
+Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
+Route::get('campains/associate-managements', [CampainController::class, 'associateManagements']);
 
 Route::middleware(['check.token'])->group(function () {
     Route::apiResource('users', UserController::class);
@@ -139,9 +141,6 @@ Route::middleware(['check.token'])->group(function () {
 });
 
 // --------------------------------------------------------------------------------------------------------------
-Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
-Route::get('campains/associate-managements', [CampainController::class, 'associateManagements']);
-
 // Exportaciones
 Route::get('exports/campain', [ExportController::class, 'exportCampain']);
 Route::get('exports/accounting', [ExportController::class, 'exportAccounting']);
