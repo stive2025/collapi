@@ -285,6 +285,7 @@ class CampainController extends Controller
 
             Log::channel('campains')->info('Error en transferencia de créditos', [
                 'message' => $e->getMessage(),
+                'campain_id' => $id,
                 'trace' => $e->getTraceAsString()
             ]);
 
