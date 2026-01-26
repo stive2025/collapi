@@ -118,16 +118,26 @@ class FieldTripController extends Controller
                 ->get();
 
             $result = $credits->map(function ($credit) {
-                $client = $credit->clients->firstWhere('pivot.type', 'TITULAR') ?? $credit->clients->first();
-                
+                // Obtener todos los clientes asociados al crédito
+                $clients = $credit->clients->map(function ($client) {
+                    return [
+                        'name' => $client->name,
+                        'ci' => $client->ci,
+                        'type' => $client->pivot->type ?? null,
+                    ];
+                });
+
+                // Usar el primer cliente tipo TITULAR para la dirección, si existe
+                $mainClient = $credit->clients->firstWhere('pivot.type', 'TITULAR') ?? $credit->clients->first();
+
                 $direction = null;
-                if ($client) {
-                    $direction = CollectionDirection::where('client_id', $client->id)
+                if ($mainClient) {
+                    $direction = CollectionDirection::where('client_id', $mainClient->id)
                         ->where('type', 'DOMICILIO')
                         ->first();
 
                     if (!$direction) {
-                        $direction = CollectionDirection::where('client_id', $client->id)->first();
+                        $direction = CollectionDirection::where('client_id', $mainClient->id)->first();
                     }
                 }
 
@@ -177,7 +187,7 @@ class FieldTripController extends Controller
                 return [
                     'id' => $credit->id,
                     'field_trip_id' => $credit->id,
-                    'client_name' => $client ? $client->name : 'N/A',
+                    'clients' => $clients,
                     'amount' => (float) ($credit->total_amount ?? 0),
                     'address' => $direction ? $direction->direction : null,
                     'managements' => $managements,
