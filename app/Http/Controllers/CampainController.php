@@ -223,7 +223,6 @@ class CampainController extends Controller
             $creditIds = $query->pluck('id')->toArray();
 
             if (empty($creditIds)) {
-
                 return ResponseBase::success([
                     'transferred' => 0,
                     'message' => 'No se encontraron créditos que cumplan los filtros',
@@ -259,14 +258,6 @@ class CampainController extends Controller
                     }
                 }
             });
-
-            $data_transfered = [
-                'transfered_at'=>date('Y-m-d H:i:s',time() - 18000),
-                'transfered_by'=> Auth::user()->id,
-                'campain_id' => $campain->id,
-                'business_id' => $campain->business_id,
-                'filters_applied' => $validated
-            ];
 
             //Log::info('Créditos transferidos', $data_transfered);
             
