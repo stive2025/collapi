@@ -39,6 +39,7 @@ trait UserMetricsTrait
 
         // Créditos asignados
         $nroCredits = Credit::where('user_id', $userId)
+            ->where('sync_status', 'ACTIVE')
             ->where('business_id', $campain->business_id)
             ->count();
 
@@ -56,30 +57,33 @@ trait UserMetricsTrait
         // Gestiones efectivas en la campaña
         $nroGestionsEfec = Management::where('created_by', $userId)
             ->where('campain_id', $campain->id)
-            ->whereIn('state', ['EFECTIVA', 'PROMESA_PAGO', 'COMPROMISO_PAGO'])
+            ->whereIn('substate', ['OFERTA DE PAGO', 'CONVENIO DE PAGO', 'COMPROMISO DE PAGO'])
             ->count();
 
         // Gestiones efectivas del día
         $nroGestionsEfecDia = Management::where('created_by', $userId)
             ->where('campain_id', $campain->id)
-            ->whereIn('state', ['EFECTIVA', 'PROMESA_PAGO', 'COMPROMISO_PAGO'])
+            ->whereIn('substate', ['OFERTA DE PAGO', 'CONVENIO DE PAGO', 'COMPROMISO DE PAGO'])
             ->whereDate('created_at', $today)
             ->count();
 
         // Créditos pendientes
         $nroPendientes = Credit::where('user_id', $userId)
+            ->where('sync_status', 'ACTIVE')
             ->where('business_id', $campain->business_id)
             ->where('management_tray', 'PENDIENTE')
             ->count();
 
         // Créditos en proceso
         $nroProceso = Credit::where('user_id', $userId)
+            ->where('sync_status', 'ACTIVE')
             ->where('business_id', $campain->business_id)
             ->where('management_tray', 'EN PROCESO')
             ->count();
 
         // Créditos en proceso del día
         $nroProcesoDia = Credit::where('user_id', $userId)
+            ->where('sync_status', 'ACTIVE')
             ->where('business_id', $campain->business_id)
             ->where('management_tray', 'EN PROCESO')
             ->whereDate('last_sync_date', $today)
