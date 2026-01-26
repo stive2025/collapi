@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Responses\ResponseBase;
+use App\Models\Campain;
 use App\Models\Credit;
 use App\Models\CollectionDirection;
 use App\Models\Management;
@@ -94,6 +95,10 @@ class FieldTripController extends Controller
             $businessId = $request->query('business_id');
             $userId = $request->query('user_id');
 
+            $campain = Campain::where('business_id', $businessId)
+                ->where('status', 'ACTIVE')
+                ->first();
+
             // Obtener créditos con management_status VISITA CAMPO o última gestión VISITA CAMPO
             $credits = Credit::select('credits.*')
                 ->leftJoin(DB::raw('
@@ -117,10 +122,11 @@ class FieldTripController extends Controller
                 ->with(['clients'])
                 ->get();
 
-            $result = $credits->map(function ($credit) {
+            $result = $credits->map(function ($credit) use ($campain) {
                 // Obtener todos los clientes asociados al crédito
                 $clients = $credit->clients->map(function ($client) {
                     return [
+                        'id' => $client->id,
                         'name' => $client->name,
                         'ci' => $client->ci,
                         'type' => $client->pivot->type ?? null,
@@ -191,6 +197,7 @@ class FieldTripController extends Controller
                     'amount' => (float) ($credit->total_amount ?? 0),
                     'address' => $direction ? $direction->direction : null,
                     'managements' => $managements,
+                    'campain_id' => ($campain != null) ? $campain->id : null,
                 ];
             });
 
