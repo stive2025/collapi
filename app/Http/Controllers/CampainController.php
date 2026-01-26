@@ -259,7 +259,15 @@ class CampainController extends Controller
                 }
             });
 
-            //Log::info('Créditos transferidos', $data_transfered);
+            $data_transfered = [
+                'transfered_at' => date('Y-m-d H:i:s', time() - 18000),
+                'transfered_by' => Auth::id(),
+                'campain_id' => $campain->id,
+                'business_id' => $campain->business_id,
+                'filters_applied' => $validated
+            ];
+
+            Log::info('Créditos transferidos', $data_transfered);
             
             return ResponseBase::success([
                 'campain_id' => $campain->id,
