@@ -219,13 +219,18 @@ class CreditController extends Controller
             }
 
             if ($shouldCalculateExpenses) {
-                $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
-                $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
-                    $credit->total_amount ?? 0,
-                    $credit->days_past_due ?? 0
-                );
-                $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
-                $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
+                $pendingInvoice = \App\Models\Invoice::where('credit_id', $credit->id)
+                    ->where('status', 'pendiente')
+                    ->first();
+                
+                if ($pendingInvoice) {
+                    $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
+                    $credit->management_collection_expenses = $invoiceValue;
+                    $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
+                } else {
+                    $credit->management_collection_expenses = 0;
+                }
+
             } elseif (in_array($credit->collection_state, ['Convenio de pago', 'CONVENIO DE PAGO'])) {
                 // Para Convenio de pago, buscar facturas pendientes y sumar su valor
                 $pendingInvoice = \App\Models\Invoice::where('credit_id', $credit->id)
@@ -315,13 +320,26 @@ class CreditController extends Controller
         }
 
         if ($shouldCalculateExpenses) {
-            $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
-            $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
-                $credit->total_amount ?? 0,
-                $credit->days_past_due ?? 0
-            );
-            $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
-            $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
+            $pendingInvoice = \App\Models\Invoice::where('credit_id', $credit->id)
+                ->where('status', 'pendiente')
+                ->first();
+
+            // $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
+            // $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
+            //     $credit->total_amount ?? 0,
+            //     $credit->days_past_due ?? 0
+            // );
+            // $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
+            // $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
+
+            if ($pendingInvoice) {
+                $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
+                $credit->management_collection_expenses = $invoiceValue;
+                $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
+            } else {
+                $credit->management_collection_expenses = 0;
+            }
+
         } elseif (in_array($credit->collection_state, ['Convenio de pago', 'CONVENIO DE PAGO'])) {
             // Para Convenio de pago, buscar facturas pendientes y sumar su valor
             $pendingInvoice = \App\Models\Invoice::where('credit_id', $credit->id)
