@@ -266,8 +266,8 @@ class CampainController extends Controller
                 'business_id' => $campain->business_id,
                 'filters_applied' => $validated
             ];
-
-            Log::info('Créditos transferidos', $data_transfered);
+            
+            Log::channel('campains')->info('Créditos transferidos', $data_transfered);
             
             return ResponseBase::success([
                 'campain_id' => $campain->id,
