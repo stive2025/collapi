@@ -95,9 +95,7 @@ class FieldTripController extends Controller
             $businessId = $request->query('business_id');
             $userId = $request->query('user_id');
 
-            $campain = Campain::where('business_id', $businessId)
-                ->where('state', 'ACTIVE')
-                ->first();
+            $campain = Campain::where('state', 'ACTIVE')->where('business_id', $businessId)->first();
 
             // Obtener créditos con management_status VISITA CAMPO o última gestión VISITA CAMPO
             $credits = Credit::select('credits.*')
