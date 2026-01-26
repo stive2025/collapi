@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -47,6 +48,8 @@ class CheckSanctumToken
         $request->setUserResolver(function () use ($token) {
             return $token->tokenable;
         });
+
+        Auth::login($token->tokenable);
 
         return $next($request);
     }
