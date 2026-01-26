@@ -150,7 +150,7 @@ class CampainController extends Controller
     /**
      * Transfer credits associated with the campaign to different users based on filters.
      */
-    public function transfer(Request $request, string $id)
+    public function transfer(Request $request, int $id)
     {
         try {
             $validated = $request->validate([
