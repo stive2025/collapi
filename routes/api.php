@@ -27,6 +27,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('login', [LoginController::class, 'login']);
 
 Route::apiResource('managements', ManagementController::class);
+Route::get('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
+Route::get('campains/associate-managements', [CampainController::class, 'associateManagements']);
 
 Route::middleware(['check.token'])->group(function () {
     Route::apiResource('users', UserController::class);
@@ -54,7 +56,6 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('campains', CampainController::class);
     // Transferencia de créditos
     Route::patch('campains/transfer/{id}', [CampainController::class, 'transfer']);
-    Route::post('campains/associate-managements', [CampainController::class, 'associateManagements']);
     // --------------------------------------------------------------------------------------------------------------    
     Route::apiResource('condonations', CondonationController::class);
     // Revertir condonación
@@ -130,7 +131,6 @@ Route::middleware(['check.token'])->group(function () {
     
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);
-    Route::post('collection-credits/save-currently-campain', [CollectionCreditController::class, 'saveCurrentlyCampain']);
 
     // Envío de SMS
     Route::post('sms/send', [SmsController::class, 'sendSms']);

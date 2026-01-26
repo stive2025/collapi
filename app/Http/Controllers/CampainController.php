@@ -268,7 +268,7 @@ class CampainController extends Controller
                 'filters_applied' => $validated
             ];
 
-            Log::info('Créditos transferidos', $data_transfered);
+            //Log::info('Créditos transferidos', $data_transfered);
             
             return ResponseBase::success([
                 'campain_id' => $campain->id,
@@ -326,19 +326,21 @@ class CampainController extends Controller
     public function associateManagements(Request $request)
     {
         try {
-            $validated = $request->validate([
-                'date' => ['required', 'date_format:Y-m-d']
-            ]);
+            
+            $date = date('Y-m-d',time() - 18000);
 
-            $this->utilService->associateManagementsToPayment($validated['date']);
+            if($request->filled('date')){
+                $date = $request->input('date');
+            }
 
-            // Obtener los pagos procesados de esa fecha
-            $payments = \App\Models\CollectionPayment::whereDate('payment_date', $validated['date'])
+            $this->utilService->associateManagementsToPayment($date);
+            
+            $payments = \App\Models\CollectionPayment::whereDate('payment_date', $date)
                 ->with(['credit:id,sync_id'])
                 ->get();
 
             $summary = [
-                'date' => $validated['date'],
+                'date' => $date,
                 'total_payments' => $payments->count(),
                 'with_management' => $payments->where('with_management', 'SI')->count(),
                 'without_management' => $payments->where('with_management', 'NO')->count(),
