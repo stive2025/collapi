@@ -134,6 +134,33 @@ class StatisticController extends Controller
         }
     }
 
+    public function getStadisticsByUserID(Request $request){
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'campain_id' => 'required|integer|exists:campains,id',
+        ]);
+
+        $user = \App\Models\User::select('id', 'name')->find($request->user_id);
+        $campainId = $request->campain_id;
+
+        $paymentsData = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
+            ->where('collection_payments.with_management', 'SI')
+            ->where('collection_payments.days_past_due_auto', '>=', 25)
+            ->join('management', 'collection_payments.management_auto', '=', 'management.id')
+            ->where('management.substate', 'OFERTA DE PAGO')
+            ->where('management.created_by', $user->id)
+            ->selectRaw('SUM(collection_payments.payment_value) as total, COUNT(DISTINCT collection_payments.credit_id) as nro_credits')
+            ->first();
+
+        $result = [
+            'name' => $user->name,
+            'total_with_management_in_campain' => (float) ($paymentsData->total ?? 0),
+            'nro_credits' => (int) ($paymentsData->nro_credits ?? 0),
+        ];
+
+        return ResponseBase::success($result, 'Estadísticas obtenidas correctamente');
+    }
+
     public function getPaymentsWithManagementDetail(Request $request)
     {
         try {

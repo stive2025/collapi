@@ -108,6 +108,7 @@ Route::middleware(['check.token'])->group(function () {
     // Estadísticas
     Route::get('statistics/payments-with-management', [StatisticController::class, 'getPaymentsWithManagement']);
     Route::get('statistics/payments-with-management-details', [StatisticController::class, 'getPaymentsWithManagementDetail']);
+    Route::get('statistics/metrics-by-user', [StatisticController::class, 'getStadisticsByUserID']);
     Route::get('statistics/metrics', [StatisticController::class, 'getMetrics']);
 
     // Obtener llamadas por gestión
