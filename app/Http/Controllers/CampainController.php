@@ -282,6 +282,12 @@ class CampainController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return ResponseBase::validationError($e->errors());
         } catch (\Exception $e) {
+
+            Log::channel('campains')->info('Error en transferencia de créditos', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return ResponseBase::error(
                 'Error al transferir créditos',
                 ['error' => $e->getMessage()],
