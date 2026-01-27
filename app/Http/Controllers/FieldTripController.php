@@ -96,8 +96,7 @@ class FieldTripController extends Controller
             $userId = $request->query('user_id');
 
             $campain = Campain::where('state', 'ACTIVE')->where('business_id', $businessId)->first();
-
-            // Obtener créditos con management_status VISITA CAMPO o última gestión VISITA CAMPO
+            
             $credits = Credit::select('credits.*')
                 ->leftJoin(DB::raw('
                     (
@@ -121,7 +120,6 @@ class FieldTripController extends Controller
                 ->get();
 
             $result = $credits->map(function ($credit) use ($campain) {
-                // Obtener todos los clientes asociados al crédito
                 $clients = $credit->clients->map(function ($client) {
                     return [
                         'id' => $client->id,
@@ -131,7 +129,6 @@ class FieldTripController extends Controller
                     ];
                 });
 
-                // Usar el primer cliente tipo TITULAR para la dirección, si existe
                 $mainClient = $credit->clients->firstWhere('pivot.type', 'TITULAR') ?? $credit->clients->first();
 
                 $direction = null;
@@ -145,12 +142,10 @@ class FieldTripController extends Controller
                     }
                 }
 
-                // Obtener gestiones del crédito
                 $managements = Management::where('credit_id', $credit->id)
                     ->orderBy('created_at', 'desc')
                     ->get()
                     ->map(function ($management) {
-                        // Determinar el tipo de llamada (WA o PBX)
                         $type = 'field_visit';
                         if (!empty($management->call_collection)) {
                             $callIds = json_decode($management->call_collection, true);
@@ -166,7 +161,6 @@ class FieldTripController extends Controller
                             $type = ($call && $call->channel === 'WA') ? 'whatsapp' : 'phone_call';
                         }
 
-                        // Obtener nombre del cliente de la gestión
                         $clientName = null;
                         if ($management->client_id) {
                             $mgClient = \App\Models\Client::find($management->client_id);

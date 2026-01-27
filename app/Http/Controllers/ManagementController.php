@@ -375,8 +375,7 @@ class ManagementController extends Controller
                 $credit->management_promise = $management->promise_date;
                 $credit->save();
             }
-
-            // Enviar notificación WebSocket
+            
             try {
                 $ws = new WebSocketService();
                 $ws->sendManagementUpdate(
