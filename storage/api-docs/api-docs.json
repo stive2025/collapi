@@ -153,62 +153,100 @@
                                             "type": "array",
                                             "items": {
                                                 "properties": {
-                                                    "credit_id": {
+                                                    "id": {
                                                         "type": "integer"
                                                     },
-                                                    "sync_id": {
+                                                    "field_trip_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "amount": {
+                                                        "type": "number"
+                                                    },
+                                                    "address": {
                                                         "type": "string"
                                                     },
-                                                    "clients": {
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "integer"
-                                                            },
-                                                            "name": {
-                                                                "type": "string"
-                                                            },
-                                                            "ci": {
-                                                                "type": "string"
-                                                            },
-                                                            "type": {
-                                                                "type": "string"
-                                                            }
-                                                        },
-                                                        "type": "object"
+                                                    "campain_id": {
+                                                        "type": "integer"
                                                     },
-                                                    "direction": {
+                                                    "clients": {
                                                         "type": "array",
                                                         "items": {
                                                             "properties": {
                                                                 "id": {
                                                                     "type": "integer"
                                                                 },
-                                                                "client_id": {
-                                                                    "type": "integer"
+                                                                "name": {
+                                                                    "type": "string"
+                                                                },
+                                                                "ci": {
+                                                                    "type": "string"
                                                                 },
                                                                 "type": {
                                                                     "type": "string"
                                                                 },
-                                                                "address": {
-                                                                    "type": "string"
+                                                                "directions": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "properties": {
+                                                                            "id": {
+                                                                                "type": "integer"
+                                                                            },
+                                                                            "client_id": {
+                                                                                "type": "integer"
+                                                                            },
+                                                                            "type": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "address": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "province": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "canton": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "parish": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "neighborhood": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "latitude": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "longitude": {
+                                                                                "type": "string"
+                                                                            }
+                                                                        },
+                                                                        "type": "object"
+                                                                    }
                                                                 },
-                                                                "province": {
-                                                                    "type": "string"
-                                                                },
-                                                                "canton": {
-                                                                    "type": "string"
-                                                                },
-                                                                "parish": {
-                                                                    "type": "string"
-                                                                },
-                                                                "neighborhood": {
-                                                                    "type": "string"
-                                                                },
-                                                                "latitude": {
-                                                                    "type": "string"
-                                                                },
-                                                                "longitude": {
-                                                                    "type": "string"
+                                                                "contacts": {
+                                                                    "type": "array",
+                                                                    "items": {
+                                                                        "properties": {
+                                                                            "id": {
+                                                                                "type": "integer"
+                                                                            },
+                                                                            "client_id": {
+                                                                                "type": "integer"
+                                                                            },
+                                                                            "name": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "phone_number": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "type": {
+                                                                                "type": "string"
+                                                                            },
+                                                                            "relationship": {
+                                                                                "type": "string"
+                                                                            }
+                                                                        },
+                                                                        "type": "object"
+                                                                    }
                                                                 }
                                                             },
                                                             "type": "object"
@@ -221,18 +259,36 @@
                                                                 "id": {
                                                                     "type": "integer"
                                                                 },
+                                                                "credit_id": {
+                                                                    "type": "string"
+                                                                },
+                                                                "user_id": {
+                                                                    "type": "string"
+                                                                },
                                                                 "state": {
                                                                     "type": "string"
                                                                 },
                                                                 "substate": {
                                                                     "type": "string"
                                                                 },
+                                                                "promise_date": {
+                                                                    "type": "string"
+                                                                },
                                                                 "observation": {
+                                                                    "type": "string"
+                                                                },
+                                                                "client_name": {
                                                                     "type": "string"
                                                                 },
                                                                 "type": {
                                                                     "type": "string",
                                                                     "example": "field_visit"
+                                                                },
+                                                                "created_at": {
+                                                                    "type": "string"
+                                                                },
+                                                                "updated_at": {
+                                                                    "type": "string"
                                                                 }
                                                             },
                                                             "type": "object"

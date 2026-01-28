@@ -48,41 +48,64 @@ class FieldTripController extends Controller
      *                 property="data",
      *                 type="array",
      *                 @OA\Items(
-     *                     @OA\Property(property="credit_id", type="integer"),
-     *                     @OA\Property(property="sync_id", type="string"),
+     *                     @OA\Property(property="id", type="integer"),
+     *                     @OA\Property(property="field_trip_id", type="integer"),
+     *                     @OA\Property(property="amount", type="number"),
+     *                     @OA\Property(property="address", type="string"),
+     *                     @OA\Property(property="campain_id", type="integer"),
      *                     @OA\Property(
      *                         property="clients",
-     *                         type="object",
-     *                         @OA\Property(property="id", type="integer"),
-     *                         @OA\Property(property="name", type="string"),
-     *                         @OA\Property(property="ci", type="string"),
-     *                         @OA\Property(property="type", type="string"),
-     *                     ),
-     *                     @OA\Property(
-     *                         property="direction",
      *                         type="array",
      *                         @OA\Items(
-     *                              @OA\Property(property="id", type="integer"),
-     *                              @OA\Property(property="client_id", type="integer"),
-     *                              @OA\Property(property="type", type="string"),
-     *                              @OA\Property(property="address", type="string"),
-     *                              @OA\Property(property="province", type="string"),
-     *                              @OA\Property(property="canton", type="string"),
-     *                              @OA\Property(property="parish", type="string"),
-     *                              @OA\Property(property="neighborhood", type="string"),
-     *                              @OA\Property(property="latitude", type="string"),
-     *                              @OA\Property(property="longitude", type="string")
-     *                        )
+     *                             @OA\Property(property="id", type="integer"),
+     *                             @OA\Property(property="name", type="string"),
+     *                             @OA\Property(property="ci", type="string"),
+     *                             @OA\Property(property="type", type="string"),
+     *                             @OA\Property(
+     *                                 property="directions",
+     *                                 type="array",
+     *                                 @OA\Items(
+     *                                     @OA\Property(property="id", type="integer"),
+     *                                     @OA\Property(property="client_id", type="integer"),
+     *                                     @OA\Property(property="type", type="string"),
+     *                                     @OA\Property(property="address", type="string"),
+     *                                     @OA\Property(property="province", type="string"),
+     *                                     @OA\Property(property="canton", type="string"),
+     *                                     @OA\Property(property="parish", type="string"),
+     *                                     @OA\Property(property="neighborhood", type="string"),
+     *                                     @OA\Property(property="latitude", type="string"),
+     *                                     @OA\Property(property="longitude", type="string")
+     *                                 )
+     *                             ),
+     *                             @OA\Property(
+     *                                 property="contacts",
+     *                                 type="array",
+     *                                 @OA\Items(
+     *                                     @OA\Property(property="id", type="integer"),
+     *                                     @OA\Property(property="client_id", type="integer"),
+     *                                     @OA\Property(property="name", type="string"),
+     *                                     @OA\Property(property="phone_number", type="string"),
+     *                                     @OA\Property(property="type", type="string"),
+     *                                     @OA\Property(property="relationship", type="string")
+     *                                 )
+     *                             )
+     *                         )
      *                     ),
      *                     @OA\Property(
      *                         property="managements",
      *                         type="array",
      *                         @OA\Items(
      *                             @OA\Property(property="id", type="integer"),
+     *                             @OA\Property(property="credit_id", type="string"),
+     *                             @OA\Property(property="user_id", type="string"),
      *                             @OA\Property(property="state", type="string"),
      *                             @OA\Property(property="substate", type="string"),
+     *                             @OA\Property(property="promise_date", type="string"),
      *                             @OA\Property(property="observation", type="string"),
-     *                             @OA\Property(property="type", type="string", example="field_visit")
+     *                             @OA\Property(property="client_name", type="string"),
+     *                             @OA\Property(property="type", type="string", example="field_visit"),
+     *                             @OA\Property(property="created_at", type="string"),
+     *                             @OA\Property(property="updated_at", type="string")
      *                         )
      *                     )
      *                 )
@@ -116,7 +139,7 @@ class FieldTripController extends Controller
                 ->where('user_id', $userId)
                 ->where('sync_status', 'ACTIVE')
                 ->where('approve_field_trip', 1)
-                ->with(['clients'])
+                ->with(['clients.directions', 'clients.collectionContacts'])
                 ->get();
 
             $result = $credits->map(function ($credit) use ($campain) {
@@ -126,6 +149,30 @@ class FieldTripController extends Controller
                         'name' => $client->name,
                         'ci' => $client->ci,
                         'type' => $client->pivot->type ?? null,
+                        'directions' => $client->directions->map(function ($direction) {
+                            return [
+                                'id' => $direction->id,
+                                'client_id' => $direction->client_id,
+                                'type' => $direction->type,
+                                'address' => $direction->direction,
+                                'province' => $direction->province,
+                                'canton' => $direction->canton,
+                                'parish' => $direction->parish,
+                                'neighborhood' => $direction->neighborhood,
+                                'latitude' => $direction->latitude,
+                                'longitude' => $direction->longitude,
+                            ];
+                        }),
+                        'contacts' => $client->collectionContacts->map(function ($contact) {
+                            return [
+                                'id' => $contact->id,
+                                'client_id' => $contact->client_id,
+                                'name' => $contact->name,
+                                'phone_number' => $contact->phone_number,
+                                'type' => $contact->type,
+                                'relationship' => $contact->relationship,
+                            ];
+                        }),
                     ];
                 });
 
