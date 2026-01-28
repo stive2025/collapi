@@ -100,7 +100,7 @@ class FieldTripController extends Controller
             $credits = Credit::where('business_id', $businessId)
                 ->where('user_id', $userId)
                 ->where('sync_status', 'ACTIVE')
-                ->where('approve_field_trip', true)
+                ->where('approve_field_trip', 1)
                 ->with(['clients'])
                 ->get();
 
@@ -222,18 +222,17 @@ class FieldTripController extends Controller
             $approve = $request->input('approve');
             $credit->approve_field_trip = $approve;
 
-            if (!$approve) {
-                $credit->management_status = 'VISITA NO APROBADA';
+            $newStatus = $approve ? 'VISITA APROBADA' : 'VISITA NO APROBADA';
+            $credit->management_status = $newStatus;
 
-                $lastManagement = Management::where('credit_id', $creditId)
-                    ->where('substate', 'VISITA CAMPO')
-                    ->orderBy('created_at', 'desc')
-                    ->first();
+            $lastManagement = Management::where('credit_id', $creditId)
+                ->where('substate', 'VISITA CAMPO')
+                ->orderBy('created_at', 'desc')
+                ->first();
 
-                if ($lastManagement) {
-                    $lastManagement->substate = 'VISITA NO APROBADA';
-                    $lastManagement->save();
-                }
+            if ($lastManagement) {
+                $lastManagement->substate = $newStatus;
+                $lastManagement->save();
             }
 
             $credit->save();
