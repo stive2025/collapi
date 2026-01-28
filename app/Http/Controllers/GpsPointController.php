@@ -195,8 +195,7 @@ class GpsPointController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"user_id", "latitude", "longitude", "recorded_at"},
-     *             @OA\Property(property="user_id", type="integer", example=1, description="ID del usuario"),
+     *             required={"latitude", "longitude", "recorded_at"},
      *             @OA\Property(property="latitude", type="number", format="float", example=-17.7833, description="Latitud (-90 a 90)"),
      *             @OA\Property(property="longitude", type="number", format="float", example=-63.1821, description="Longitud (-180 a 180)"),
      *             @OA\Property(property="recorded_at", type="string", format="date-time", example="2026-01-27T10:30:00Z", description="Fecha y hora del registro"),
@@ -241,14 +240,15 @@ class GpsPointController extends Controller
     {
         try {
             $validated = $request->validate([
-                'user_id' => 'required|exists:users,id',
                 'latitude' => 'required|numeric|between:-90,90',
                 'longitude' => 'required|numeric|between:-180,180',
                 'recorded_at' => 'required|date',
                 'accuracy' => 'nullable|string',
                 'battery_percentage' => 'nullable|string',
-                'type_status' => 'nullable|string',
+                'type_status' => 'required|string',
             ]);
+
+            $validated['user_id'] = $request->user()->id;
 
             $gpsPoint = GpsPoint::create($validated);
 
