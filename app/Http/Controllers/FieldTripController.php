@@ -96,26 +96,11 @@ class FieldTripController extends Controller
             $userId = $request->query('user_id');
 
             $campain = Campain::where('state', 'ACTIVE')->where('business_id', $businessId)->first();
-            
-            $credits = Credit::select('credits.*')
-                ->leftJoin(DB::raw('
-                    (
-                        SELECT m1.credit_id, m1.substate as last_substate
-                        FROM management m1
-                        INNER JOIN (
-                            SELECT credit_id, MAX(created_at) as max_date
-                            FROM management
-                            GROUP BY credit_id
-                        ) m2 ON m1.credit_id = m2.credit_id AND m1.created_at = m2.max_date
-                    ) as last_mg
-                '), 'last_mg.credit_id', '=', 'credits.id')
-                ->where('credits.business_id', $businessId)
-                ->where('credits.user_id', $userId)
-                ->where('credits.sync_status', 'ACTIVE')
-                ->where(function ($query) {
-                    $query->where('credits.management_status', 'VISITA CAMPO')
-                        ->orWhere('last_mg.last_substate', 'VISITA CAMPO');
-                })
+
+            $credits = Credit::where('business_id', $businessId)
+                ->where('user_id', $userId)
+                ->where('sync_status', 'ACTIVE')
+                ->where('approve_field_trip', true)
                 ->with(['clients'])
                 ->get();
 
@@ -234,15 +219,32 @@ class FieldTripController extends Controller
                 return ResponseBase::error('Crédito no encontrado', null, 404);
             }
 
-            $credit->approve_field_trip = $request->input('approve');
+            $approve = $request->input('approve');
+            $credit->approve_field_trip = $approve;
+
+            if (!$approve) {
+                $credit->management_status = 'VISITA NO APROBADA';
+
+                $lastManagement = Management::where('credit_id', $creditId)
+                    ->where('substate', 'VISITA CAMPO')
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                if ($lastManagement) {
+                    $lastManagement->substate = 'VISITA NO APROBADA';
+                    $lastManagement->save();
+                }
+            }
+
             $credit->save();
 
             return ResponseBase::success(
                 [
                     'credit_id' => $credit->id,
                     'approve_field_trip' => $credit->approve_field_trip,
+                    'management_status' => $credit->management_status,
                 ],
-                $credit->approve_field_trip
+                $approve
                     ? 'Visita de campo aprobada correctamente'
                     : 'Visita de campo desaprobada correctamente'
             );
