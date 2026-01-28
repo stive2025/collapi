@@ -726,19 +726,24 @@ class CollectionPaymentController extends Controller
                 $subtotalSinIva = round($totalConIva / (1 + ($ivaPercent / 100)), 2);
                 $valorIva = round($totalConIva - $subtotalSinIva, 2);
 
-                $invoice = Invoice::create([
-                    "invoice_value" => $totalConIva,
-                    "tax_value" => $ivaPercent,
-                    "invoice_institution" => $financialInstitution ?? '',
-                    "invoice_method" => $paymentMethod,
-                    "invoice_access_key" => $sofiaResult['response']->claveAcceso,
-                    "invoice_number" => $paymentReference ?? '',
-                    "invoice_date" => date('Y-m-d'),
-                    "credit_id" => $creditId,
-                    "client_id" => $client->id,
-                    "status" => "finalizado",
-                    "created_by" => $request->user()->id ?? 1
-                ]);
+                $invoice = Invoice::updateOrCreate(
+                    [
+                        'credit_id' => $creditId,
+                        'status' => 'pendiente'
+                    ],
+                    [
+                        "invoice_value" => $totalConIva,
+                        "tax_value" => $ivaPercent,
+                        "invoice_institution" => $financialInstitution ?? '',
+                        "invoice_method" => $paymentMethod,
+                        "invoice_access_key" => $sofiaResult['response']->claveAcceso,
+                        "invoice_number" => $paymentReference ?? '',
+                        "invoice_date" => date('Y-m-d'),
+                        "client_id" => $client->id,
+                        "status" => "finalizado",
+                        "created_by" => $request->user()->id ?? 1
+                    ]
+                );
 
                 Log::channel('payments')->info('processInvoice: Invoice creado', [
                     'invoice_id' => $invoice->id,
