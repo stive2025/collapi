@@ -75,13 +75,14 @@ class GpsPointController extends Controller
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="Lista de puntos GPS obtenida correctamente",
+     *         description="Lista de puntos GPS obtenida correctamente. Si group_by_type_status=true, retorna datos agrupados con locations array.",
      *         @OA\JsonContent(
      *             @OA\Property(property="success", type="boolean", example=true),
      *             @OA\Property(property="message", type="string", example="Puntos GPS obtenidos correctamente"),
      *             @OA\Property(
      *                 property="data",
      *                 type="object",
+     *                 description="Respuesta paginada (sin group_by_type_status) o array agrupado (con group_by_type_status=true)",
      *                 @OA\Property(property="current_page", type="integer"),
      *                 @OA\Property(property="last_page", type="integer"),
      *                 @OA\Property(property="per_page", type="integer"),
@@ -98,32 +99,6 @@ class GpsPointController extends Controller
      *                         @OA\Property(property="accuracy", type="string"),
      *                         @OA\Property(property="battery_percentage", type="string"),
      *                         @OA\Property(property="type_status", type="string")
-     *                     )
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Puntos GPS agrupados por type_status (cuando group_by_type_status=true)",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Puntos GPS agrupados por type_status obtenidos correctamente"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="array",
-     *                 @OA\Items(
-     *                     @OA\Property(property="type_status", type="string"),
-     *                     @OA\Property(property="total", type="integer"),
-     *                     @OA\Property(
-     *                         property="locations",
-     *                         type="array",
-     *                         @OA\Items(
-     *                             @OA\Property(property="latitude", type="number", format="float"),
-     *                             @OA\Property(property="longitude", type="number", format="float"),
-     *                             @OA\Property(property="battery_percentage", type="string"),
-     *                             @OA\Property(property="hour", type="string", example="14:30:00")
-     *                         )
      *                     )
      *                 )
      *             )

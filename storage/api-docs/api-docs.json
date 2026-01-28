@@ -227,6 +227,315 @@
                 ]
             }
         },
+        "/api/gps-points": {
+            "get": {
+                "tags": [
+                    "Puntos GPS"
+                ],
+                "summary": "Listar puntos GPS",
+                "description": "Obtiene una lista paginada de puntos GPS con filtros opcionales. Puede agrupar por type_status.",
+                "operationId": "getGpsPointsList",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Número de puntos GPS por página",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "description": "Filtrar por ID del usuario",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "type_status",
+                        "in": "query",
+                        "description": "Filtrar por tipo de estado",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "description": "Fecha inicial del rango (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "description": "Fecha final del rango (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "group_by_type_status",
+                        "in": "query",
+                        "description": "Agrupar resultados por type_status",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "order_by",
+                        "in": "query",
+                        "description": "Campo para ordenar",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "recorded_at"
+                        }
+                    },
+                    {
+                        "name": "order_dir",
+                        "in": "query",
+                        "description": "Dirección del ordenamiento",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "desc",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de puntos GPS obtenida correctamente. Si group_by_type_status=true, retorna datos agrupados con locations array.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Puntos GPS obtenidos correctamente"
+                                        },
+                                        "data": {
+                                            "description": "Respuesta paginada (sin group_by_type_status) o array agrupado (con group_by_type_status=true)",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "user_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "latitude": {
+                                                                "type": "number",
+                                                                "format": "float"
+                                                            },
+                                                            "longitude": {
+                                                                "type": "number",
+                                                                "format": "float"
+                                                            },
+                                                            "recorded_at": {
+                                                                "type": "string",
+                                                                "format": "date-time"
+                                                            },
+                                                            "accuracy": {
+                                                                "type": "string"
+                                                            },
+                                                            "battery_percentage": {
+                                                                "type": "string"
+                                                            },
+                                                            "type_status": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Error al obtener puntos GPS"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Puntos GPS"
+                ],
+                "summary": "Crear un nuevo punto GPS",
+                "description": "Crea un nuevo registro de punto GPS con coordenadas y metadatos",
+                "operationId": "createGpsPoint",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "user_id",
+                                    "latitude",
+                                    "longitude",
+                                    "recorded_at"
+                                ],
+                                "properties": {
+                                    "user_id": {
+                                        "description": "ID del usuario",
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "latitude": {
+                                        "description": "Latitud (-90 a 90)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": -17.7833
+                                    },
+                                    "longitude": {
+                                        "description": "Longitud (-180 a 180)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": -63.1821
+                                    },
+                                    "recorded_at": {
+                                        "description": "Fecha y hora del registro",
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-01-27T10:30:00Z"
+                                    },
+                                    "accuracy": {
+                                        "description": "Precisión del GPS",
+                                        "type": "string",
+                                        "example": "10m"
+                                    },
+                                    "battery_percentage": {
+                                        "description": "Porcentaje de batería",
+                                        "type": "string",
+                                        "example": "85%"
+                                    },
+                                    "type_status": {
+                                        "description": "Tipo de estado",
+                                        "type": "string",
+                                        "example": "ACTIVE"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Punto GPS creado correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Punto GPS creado correctamente"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "user_id": {
+                                                    "type": "integer"
+                                                },
+                                                "latitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "longitude": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "recorded_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "accuracy": {
+                                                    "type": "string"
+                                                },
+                                                "battery_percentage": {
+                                                    "type": "string"
+                                                },
+                                                "type_status": {
+                                                    "type": "string"
+                                                },
+                                                "created_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "updated_at": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error al crear punto GPS"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/login": {
             "post": {
                 "tags": [
@@ -1449,6 +1758,10 @@
         {
             "name": "Visitas de Campo",
             "description": "Visitas de Campo"
+        },
+        {
+            "name": "Puntos GPS",
+            "description": "Puntos GPS"
         },
         {
             "name": "Autenticación",
