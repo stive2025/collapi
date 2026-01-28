@@ -213,4 +213,52 @@ class FieldTripController extends Controller
             );
         }
     }
+
+    /**
+     * Aprobar o desaprobar visita de campo para un crédito
+     *
+     * @param Request $request
+     * @param int $creditId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function toggleApproval(Request $request, int $creditId)
+    {
+        try {
+            $request->validate([
+                'approve' => 'required|boolean',
+            ]);
+
+            $credit = Credit::find($creditId);
+
+            if (!$credit) {
+                return ResponseBase::error('Crédito no encontrado', null, 404);
+            }
+
+            $credit->approve_field_trip = $request->input('approve');
+            $credit->save();
+
+            return ResponseBase::success(
+                [
+                    'credit_id' => $credit->id,
+                    'approve_field_trip' => $credit->approve_field_trip,
+                ],
+                $credit->approve_field_trip
+                    ? 'Visita de campo aprobada correctamente'
+                    : 'Visita de campo desaprobada correctamente'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar aprobación de visita de campo', [
+                'credit_id' => $creditId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return ResponseBase::error(
+                'Error al actualizar aprobación de visita de campo',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
 }

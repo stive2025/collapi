@@ -76,6 +76,11 @@ class CreditResource extends JsonResource
                             'type' => $contact->phone_type,
                             'calls_effective' => $contact->calls_effective,
                             'calls_not_effective' => $contact->calls_not_effective,
+                            'call_by_wweb' => $this->collectionCalls?->contains(fn($call) =>
+                                $call->phone_number === $contact->phone_number &&
+                                $call->state === 'CONTACTADO' &&
+                                $call->channel === 'WA'
+                            ) ?? false,
                         ])
                     ];
                 });
