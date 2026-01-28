@@ -159,21 +159,53 @@
                                                     "sync_id": {
                                                         "type": "string"
                                                     },
-                                                    "client_name": {
-                                                        "type": "string"
-                                                    },
-                                                    "client_ci": {
-                                                        "type": "string"
-                                                    },
-                                                    "direction": {
+                                                    "clients": {
                                                         "properties": {
-                                                            "address": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "name": {
                                                                 "type": "string"
                                                             },
-                                                            "reference": {
+                                                            "ci": {
                                                                 "type": "string"
                                                             },
                                                             "type": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    },
+                                                    "direction": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "client_id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "type": {
+                                                                "type": "string"
+                                                            },
+                                                            "address": {
+                                                                "type": "string"
+                                                            },
+                                                            "province": {
+                                                                "type": "string"
+                                                            },
+                                                            "canton": {
+                                                                "type": "string"
+                                                            },
+                                                            "parish": {
+                                                                "type": "string"
+                                                            },
+                                                            "neighborhood": {
+                                                                "type": "string"
+                                                            },
+                                                            "latitude": {
+                                                                "type": "string"
+                                                            },
+                                                            "longitude": {
                                                                 "type": "string"
                                                             }
                                                         },
@@ -411,17 +443,11 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "user_id",
                                     "latitude",
                                     "longitude",
                                     "recorded_at"
                                 ],
                                 "properties": {
-                                    "user_id": {
-                                        "description": "ID del usuario",
-                                        "type": "integer",
-                                        "example": 1
-                                    },
                                     "latitude": {
                                         "description": "Latitud (-90 a 90)",
                                         "type": "number",
