@@ -276,6 +276,17 @@ class CreditController extends Controller
                 ->pluck('count', 'management_tray')
                 ->toArray();
 
+            $firstDayOfMonth = date('Y-m-01');
+
+            $inactiveCount = Credit::query()
+                ->when($request->filled('user_id'), fn($q) => $q->where('user_id', $request->input('user_id')))
+                ->when($request->filled('business_id'), fn($q) => $q->where('business_id', $request->input('business_id')))
+                ->where('sync_status', 'INACTIVE')
+                ->where('last_sync_date', '>=', $firstDayOfMonth)
+                ->count();
+
+            $traysGrouped['INACTIVE'] = $inactiveCount;
+
             $totalCredits = $query->count();
 
             return ResponseBase::success(
