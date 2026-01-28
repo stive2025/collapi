@@ -163,9 +163,25 @@ class GpsPointController extends Controller
 
             $gpsPoints = $query->with('user')->paginate($perPage);
 
+            $data = collect($gpsPoints->items())->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'user_id' => $item->user_id,
+                    'latitude' => $item->latitude,
+                    'longitude' => $item->longitude,
+                    'hour' => $item->recorded_at->format('H:i:s'),
+                    'accuracy' => $item->accuracy,
+                    'battery_percentage' => $item->battery_percentage,
+                    'type_status' => $item->type_status,
+                    'user' => $item->user,
+                    'created_at' => $item->created_at,
+                    'updated_at' => $item->updated_at,
+                ];
+            });
+
             return ResponseBase::success(
                 [
-                    'data' => $gpsPoints->items(),
+                    'data' => $data,
                     'current_page' => $gpsPoints->currentPage(),
                     'last_page' => $gpsPoints->lastPage(),
                     'per_page' => $gpsPoints->perPage(),

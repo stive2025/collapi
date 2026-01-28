@@ -16,6 +16,10 @@ class GpsPoint extends Model
         'type_status',
     ];
 
+    protected $casts = [
+        'recorded_at' => 'datetime',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);
