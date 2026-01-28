@@ -131,6 +131,9 @@ Route::middleware(['check.token'])->group(function () {
     // Sincronización de convenios de pago
     Route::post('sync/agreements', [SyncController::class, 'syncAgreements']);
     Route::post('sync/agreements/update-details', [SyncController::class, 'updateAgreements']);
+
+    // Sincronización de clientes
+    Route::post('sync/clients', [SyncController::class, 'syncClients']);
     
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);

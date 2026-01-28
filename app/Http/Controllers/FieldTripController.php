@@ -50,14 +50,27 @@ class FieldTripController extends Controller
      *                 @OA\Items(
      *                     @OA\Property(property="credit_id", type="integer"),
      *                     @OA\Property(property="sync_id", type="string"),
-     *                     @OA\Property(property="client_name", type="string"),
-     *                     @OA\Property(property="client_ci", type="string"),
+     *                     @OA\Property(
+     *                         property="clients",
+     *                         type="object",
+     *                         @OA\Property(property="id", type="integer"),
+     *                         @OA\Property(property="name", type="string"),
+     *                         @OA\Property(property="ci", type="string"),
+     *                         @OA\Property(property="type", type="string"),
+     *                     ),
      *                     @OA\Property(
      *                         property="direction",
      *                         type="object",
+     *                         @OA\Property(property="id", type="integer"),
+     *                         @OA\Property(property="client_id", type="integer"),
+     *                         @OA\Property(property="type", type="string"),
      *                         @OA\Property(property="address", type="string"),
-     *                         @OA\Property(property="reference", type="string"),
-     *                         @OA\Property(property="type", type="string")
+     *                         @OA\Property(property="province", type="string"),
+     *                         @OA\Property(property="canton", type="string"),
+     *                         @OA\Property(property="parish", type="string"),
+     *                         @OA\Property(property="neighborhood", type="string"),
+     *                         @OA\Property(property="latitude", type="string"),
+     *                         @OA\Property(property="longitude", type="string"),
      *                     ),
      *                     @OA\Property(
      *                         property="managements",
