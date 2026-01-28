@@ -196,7 +196,16 @@ class CreditController extends Controller
         $query = Credit::query();
 
         $this->withClientsAndDirections($query);
-        $this->applyFilters($query);
+
+        if (request('management_tray') === 'INACTIVE') {
+            $firstDayOfMonth = date('Y-m-01');
+            $query->when(request()->filled('user_id'), fn($q) => $q->where('user_id', request('user_id')))
+                ->when(request()->filled('business_id'), fn($q) => $q->where('business_id', request('business_id')))
+                ->where('sync_status', 'INACTIVE')
+                ->where('last_sync_date', '>=', $firstDayOfMonth);
+        } else {
+            $this->applyFilters($query);
+        }
 
         if (request()->filled('with_managements') && request('with_managements') === 'true') {
             $query->with(['collectionManagements.client', 'collectionManagements.creator', 'collectionManagements.campain']);
