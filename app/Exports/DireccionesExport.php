@@ -36,7 +36,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
         $this->utilService = new UtilService();
     }
 
-   public function columnFormats(): array
+    public function columnFormats(): array
     {
         return [];
     }
@@ -189,17 +189,6 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
                     GROUP BY m.credit_id
                 ) as mg
             '), 'mg.credit_id', '=', 'cr.id')
-            ->leftJoin(DB::raw('
-                (
-                    SELECT m1.credit_id, m1.substate as last_substate
-                    FROM management m1
-                    INNER JOIN (
-                        SELECT credit_id, MAX(created_at) as max_date
-                        FROM management
-                        GROUP BY credit_id
-                    ) m2 ON m1.credit_id = m2.credit_id AND m1.created_at = m2.max_date
-                ) as last_mg
-            '), 'last_mg.credit_id', '=', 'cr.id')
             ->join('client_credit as cc', 'cc.credit_id', '=', 'cr.id')
             ->join('clients as cl', 'cl.id', '=', 'cc.client_id')
             ->leftJoin('collection_directions as cd_dom', function ($join) {
@@ -213,10 +202,7 @@ class DireccionesExport implements FromCollection,WithHeadings,WithColumnFormatt
             ->where('cr.business_id', $this->business_id)
             ->where('cr.user_id', $this->user_id)
             ->where('cr.sync_status', 'ACTIVE')
-            ->where(function ($query) {
-                $query->where('cr.management_status', 'VISITA CAMPO')
-                    ->orWhere('last_mg.last_substate', 'VISITA CAMPO');
-            })
+            ->where('cr.approve_field_trip', 1)
             ->whereIn('cr.agency', $agencies_array)
             ->orderBy('cr.sync_id')
             ->get();
