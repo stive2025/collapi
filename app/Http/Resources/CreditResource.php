@@ -48,6 +48,7 @@ class CreditResource extends JsonResource
             'management_status' => $this->management_status,
             'management_promise' => $this->management_promise,
             'management_tray' => $this->management_tray,
+            'approve_field_trip' => $this->approve_field_trip,
             'user_id' => $this->user_id,
             'agent_name' => $this->user?->name ?? null,
             'business_id' => $this->business_id,
