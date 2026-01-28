@@ -177,39 +177,42 @@
                                                         "type": "object"
                                                     },
                                                     "direction": {
-                                                        "properties": {
-                                                            "id": {
-                                                                "type": "integer"
+                                                        "type": "array",
+                                                        "items": {
+                                                            "properties": {
+                                                                "id": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "client_id": {
+                                                                    "type": "integer"
+                                                                },
+                                                                "type": {
+                                                                    "type": "string"
+                                                                },
+                                                                "address": {
+                                                                    "type": "string"
+                                                                },
+                                                                "province": {
+                                                                    "type": "string"
+                                                                },
+                                                                "canton": {
+                                                                    "type": "string"
+                                                                },
+                                                                "parish": {
+                                                                    "type": "string"
+                                                                },
+                                                                "neighborhood": {
+                                                                    "type": "string"
+                                                                },
+                                                                "latitude": {
+                                                                    "type": "string"
+                                                                },
+                                                                "longitude": {
+                                                                    "type": "string"
+                                                                }
                                                             },
-                                                            "client_id": {
-                                                                "type": "integer"
-                                                            },
-                                                            "type": {
-                                                                "type": "string"
-                                                            },
-                                                            "address": {
-                                                                "type": "string"
-                                                            },
-                                                            "province": {
-                                                                "type": "string"
-                                                            },
-                                                            "canton": {
-                                                                "type": "string"
-                                                            },
-                                                            "parish": {
-                                                                "type": "string"
-                                                            },
-                                                            "neighborhood": {
-                                                                "type": "string"
-                                                            },
-                                                            "latitude": {
-                                                                "type": "string"
-                                                            },
-                                                            "longitude": {
-                                                                "type": "string"
-                                                            }
-                                                        },
-                                                        "type": "object"
+                                                            "type": "object"
+                                                        }
                                                     },
                                                     "managements": {
                                                         "type": "array",

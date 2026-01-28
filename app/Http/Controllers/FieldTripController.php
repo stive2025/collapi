@@ -71,7 +71,8 @@ class FieldTripController extends Controller
      *                              @OA\Property(property="parish", type="string"),
      *                              @OA\Property(property="neighborhood", type="string"),
      *                              @OA\Property(property="latitude", type="string"),
-     *                              @OA\Property(property="longitude", type="string"),
+     *                              @OA\Property(property="longitude", type="string")
+     *                        )
      *                     ),
      *                     @OA\Property(
      *                         property="managements",
