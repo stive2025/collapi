@@ -207,7 +207,7 @@ class LegalExpenseController extends Controller
                 'prev_amount' => $prevLegalExpenses,
                 'post_amount' => $postAmount,
                 'detail' => $request->input('detail'),
-                'total_value' => $newTotalAmount,
+                'total_value' => $difference,
             ]);
 
             DB::commit();
