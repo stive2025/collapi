@@ -234,10 +234,10 @@ class CreditController extends Controller
                 
                 if ($pendingInvoice) {
                     $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
-                    $credit->management_collection_expenses = $invoiceValue;
+                    $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $invoiceValue;
                     $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
                 } else {
-                    $credit->management_collection_expenses = 0;
+                    $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
                 }
 
             } elseif (in_array($credit->collection_state, ['Convenio de pago', 'CONVENIO DE PAGO'])) {
@@ -248,14 +248,14 @@ class CreditController extends Controller
 
                 if ($pendingInvoice) {
                     $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
-                    $credit->management_collection_expenses = $invoiceValue;
+                    $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $invoiceValue;
                     $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
                 } else {
-                    $credit->management_collection_expenses = 0;
+                    $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
                 }
             } else {
                 // Para empresas que no son SEFIL_1 o SEFIL_2, o créditos Cancelados, establecer gastos de cobranza en 0
-                $credit->management_collection_expenses = 0;
+                $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
             }
 
             return $credit;
@@ -354,10 +354,10 @@ class CreditController extends Controller
 
             if ($pendingInvoice) {
                 $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
-                $credit->management_collection_expenses = $invoiceValue;
+                $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $invoiceValue;
                 $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
             } else {
-                $credit->management_collection_expenses = 0;
+                $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
             }
 
         } elseif (in_array($credit->collection_state, ['Convenio de pago', 'CONVENIO DE PAGO'])) {
@@ -368,14 +368,14 @@ class CreditController extends Controller
 
             if ($pendingInvoice) {
                 $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
-                $credit->management_collection_expenses = $invoiceValue;
+                $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $invoiceValue;
                 $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
             } else {
-                $credit->management_collection_expenses = 0;
+                $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
             }
         } else {
             // Para empresas que no son SEFIL_1 o SEFIL_2, o créditos Cancelados, establecer gastos de cobranza en 0
-            $credit->management_collection_expenses = 0;
+            $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
         }
 
         return ResponseBase::success(
