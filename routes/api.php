@@ -22,6 +22,7 @@ use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\SmsController;
 use App\Http\Controllers\FieldTripController;
 use App\Http\Controllers\GpsPointController;
+use App\Http\Controllers\LegalExpenseController;
 use App\Http\Controllers\PasswordController;
 use Illuminate\Support\Facades\Route;
 
@@ -134,6 +135,9 @@ Route::middleware(['check.token'])->group(function () {
 
     // Sincronización de clientes
     Route::post('sync/clients', [SyncController::class, 'syncClients']);
+
+    // Sincronización de gastos judiciales
+    Route::post('sync/legal-expenses', [SyncController::class, 'syncLegalExpenses']);
     
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);
@@ -145,6 +149,10 @@ Route::middleware(['check.token'])->group(function () {
     // Visitas de campo
     Route::get('field-trips', [FieldTripController::class, 'index']);
     Route::patch('field-trips/{creditId}/approval', [FieldTripController::class, 'toggleApproval']);
+
+    // Gastos judiciales
+    Route::get('legal-expenses', [LegalExpenseController::class, 'index']);
+    Route::patch('legal-expenses/{creditId}', [LegalExpenseController::class, 'update']);
 });
 
 // --------------------------------------------------------------------------------------------------------------

@@ -621,6 +621,216 @@
                 ]
             }
         },
+        "/api/legal-expenses": {
+            "get": {
+                "tags": [
+                    "Gastos Judiciales"
+                ],
+                "summary": "Listar gastos judiciales",
+                "description": "Obtiene listado de gastos judiciales, opcionalmente filtrado por credit_id",
+                "operationId": "getLegalExpensesList",
+                "parameters": [
+                    {
+                        "name": "credit_id",
+                        "in": "query",
+                        "description": "ID del crédito para filtrar",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "business_id",
+                        "in": "query",
+                        "description": "ID de la empresa",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de gastos judiciales obtenida correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Gastos judiciales obtenidos correctamente"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "credit_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "business_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "created_by": {
+                                                        "type": "integer"
+                                                    },
+                                                    "creator_name": {
+                                                        "type": "string"
+                                                    },
+                                                    "modify_date": {
+                                                        "type": "string",
+                                                        "format": "date"
+                                                    },
+                                                    "prev_amount": {
+                                                        "type": "number"
+                                                    },
+                                                    "post_amount": {
+                                                        "type": "number"
+                                                    },
+                                                    "detail": {
+                                                        "type": "string"
+                                                    },
+                                                    "total_value": {
+                                                        "type": "number"
+                                                    },
+                                                    "sync_id": {
+                                                        "type": "string"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string"
+                                                    },
+                                                    "updated_at": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/legal-expenses/{creditId}": {
+            "patch": {
+                "tags": [
+                    "Gastos Judiciales"
+                ],
+                "summary": "Actualizar gasto judicial",
+                "description": "Actualiza el legal_expenses y total_amount del crédito, e inserta un registro en legal_expenses",
+                "operationId": "updateLegalExpense",
+                "parameters": [
+                    {
+                        "name": "creditId",
+                        "in": "path",
+                        "description": "ID del crédito",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "post_amount",
+                                    "detail"
+                                ],
+                                "properties": {
+                                    "post_amount": {
+                                        "description": "Nuevo monto de gastos judiciales",
+                                        "type": "number"
+                                    },
+                                    "detail": {
+                                        "description": "Detalle del gasto",
+                                        "type": "string"
+                                    },
+                                    "created_by": {
+                                        "description": "ID del usuario que realiza el cambio",
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Gasto judicial actualizado correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Gasto judicial actualizado correctamente"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "credit_id": {
+                                                    "type": "integer"
+                                                },
+                                                "prev_legal_expenses": {
+                                                    "type": "number"
+                                                },
+                                                "new_legal_expenses": {
+                                                    "type": "number"
+                                                },
+                                                "new_total_amount": {
+                                                    "type": "number"
+                                                },
+                                                "legal_expense_id": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Crédito no encontrado"
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/login": {
             "post": {
                 "tags": [
@@ -1280,6 +1490,62 @@
                 ]
             }
         },
+        "/api/sync/legal-expenses": {
+            "post": {
+                "tags": [
+                    "Sincronización"
+                ],
+                "summary": "Sincronizar gastos judiciales",
+                "description": "Sincroniza gastos judiciales desde la API externa",
+                "operationId": "syncLegalExpenses",
+                "responses": {
+                    "200": {
+                        "description": "Sincronización completada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "synced": {
+                                                    "type": "integer"
+                                                },
+                                                "skipped": {
+                                                    "type": "integer"
+                                                },
+                                                "errors": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/users": {
             "get": {
                 "tags": [
@@ -1849,12 +2115,20 @@
             "description": "Puntos GPS"
         },
         {
+            "name": "Gastos Judiciales",
+            "description": "Gastos Judiciales"
+        },
+        {
             "name": "Autenticación",
             "description": "Autenticación"
         },
         {
             "name": "Gestiones",
             "description": "Gestiones"
+        },
+        {
+            "name": "Sincronización",
+            "description": "Sincronización"
         },
         {
             "name": "Usuarios",

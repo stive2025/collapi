@@ -820,4 +820,153 @@ class SyncController extends Controller
             );
         }
     }
+
+    /**
+     * Sincronizar gastos judiciales desde la API externa
+     *
+     * @OA\Post(
+     *     path="/api/sync/legal-expenses",
+     *     summary="Sincronizar gastos judiciales",
+     *     description="Sincroniza gastos judiciales desde la API externa",
+     *     operationId="syncLegalExpenses",
+     *     tags={"Sincronización"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Sincronización completada",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="total", type="integer"),
+     *                 @OA\Property(property="synced", type="integer"),
+     *                 @OA\Property(property="skipped", type="integer"),
+     *                 @OA\Property(property="errors", type="array", @OA\Items(type="string"))
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function syncLegalExpenses(Request $request)
+    {
+        try {
+            $apiUrl = "https://core.sefil.com.ec/api/public/api/gastos-judiciales";
+            $response = file_get_contents($apiUrl);
+            $expensesData = json_decode($response, true);
+
+            if (!is_array($expensesData)) {
+                return ResponseBase::error(
+                    'No se obtuvieron gastos judiciales de la API',
+                    [],
+                    400
+                );
+            }
+
+            $totalExpenses = count($expensesData);
+            $syncedCount = 0;
+            $skippedCount = 0;
+            $errors = [];
+
+            foreach ($expensesData as $index => $expenseData) {
+                try {
+                    $creditId = $expenseData['credito'] ?? null;
+                    if (!$creditId) {
+                        $errors[] = "Registro sin credito en índice {$index}";
+                        $skippedCount++;
+                        continue;
+                    }
+
+                    $credit = \App\Models\Credit::find($creditId);
+                    if (!$credit) {
+                        $errors[] = "Crédito con id '{$creditId}' no encontrado en índice {$index}";
+                        $skippedCount++;
+                        continue;
+                    }
+
+                    $createdBy = null;
+                    if (!empty($expenseData['byUser'])) {
+                        $user = \App\Models\User::where('name', $expenseData['byUser'])->first();
+                        $createdBy = $user ? $user->id : null;
+                    }
+
+                    $modifyDate = !empty($expenseData['modify'])
+                        ? \Carbon\Carbon::parse($expenseData['modify'])->format('Y-m-d')
+                        : null;
+
+                    $prevAmount = (float) ($expenseData['prevDate'] ?? 0);
+                    $postAmount = (float) ($expenseData['postDate'] ?? 0);
+                    $totalValue = (float) ($expenseData['total_value'] ?? 0);
+                    $detail = $expenseData['detail'] ?? null;
+                    $syncId = $expenseData['cartera'] ?? null;
+
+                    $existingExpense = \App\Models\LegalExpense::where('credit_id', $credit->id)
+                        ->where('prev_amount', $prevAmount)
+                        ->where('post_amount', $postAmount)
+                        ->where('detail', $detail)
+                        ->first();
+
+                    if ($existingExpense) {
+                        $skippedCount++;
+                        continue;
+                    }
+
+                    $legalExpense = \App\Models\LegalExpense::create([
+                        'credit_id' => $credit->id,
+                        'business_id' => $credit->business_id,
+                        'created_by' => $createdBy,
+                        'modify_date' => $modifyDate,
+                        'prev_amount' => $prevAmount,
+                        'post_amount' => $postAmount,
+                        'detail' => $detail,
+                        'total_value' => $totalValue,
+                        'sync_id' => $syncId,
+                    ]);
+
+                    $legalExpense->timestamps = false;
+                    if (!empty($expenseData['created_at'])) {
+                        $legalExpense->created_at = \Carbon\Carbon::parse($expenseData['created_at']);
+                    }
+                    if (!empty($expenseData['updated_at'])) {
+                        $legalExpense->updated_at = \Carbon\Carbon::parse($expenseData['updated_at']);
+                    }
+                    $legalExpense->save();
+                    $legalExpense->timestamps = true;
+
+                    $syncedCount++;
+
+                } catch (\Exception $e) {
+                    $errors[] = "Error procesando índice {$index}: {$e->getMessage()}";
+                    $skippedCount++;
+                    \Illuminate\Support\Facades\Log::error("Error sincronizando gasto judicial en índice {$index}", [
+                        'error' => $e->getMessage(),
+                        'data' => $expenseData ?? []
+                    ]);
+                }
+            }
+
+            return ResponseBase::success(
+                [
+                    'total' => $totalExpenses,
+                    'synced' => $syncedCount,
+                    'skipped' => $skippedCount,
+                    'errors' => !empty($errors) ? $errors : null
+                ],
+                "Sincronización completada: {$syncedCount} gastos judiciales sincronizados, {$skippedCount} omitidos"
+            );
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error en sincronización de gastos judiciales', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al sincronizar gastos judiciales',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
 }
