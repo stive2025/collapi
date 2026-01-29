@@ -852,7 +852,7 @@ class SyncController extends Controller
     public function syncLegalExpenses(Request $request)
     {
         try {
-            $apiUrl = "https://core.sefil.com.ec/api/public/api/gastos-judiciales";
+            $apiUrl = "https://core.sefil.com.ec/api/public/api/judicial";
             $response = file_get_contents($apiUrl);
             $expensesData = json_decode($response, true);
 
@@ -871,16 +871,16 @@ class SyncController extends Controller
 
             foreach ($expensesData as $index => $expenseData) {
                 try {
-                    $creditId = $expenseData['credito'] ?? null;
-                    if (!$creditId) {
-                        $errors[] = "Registro sin credito en índice {$index}";
+                    $syncId = $expenseData['sync_id'] ?? null;
+                    if (!$syncId) {
+                        $errors[] = "Registro sin sync_id en índice {$index}";
                         $skippedCount++;
                         continue;
                     }
 
-                    $credit = \App\Models\Credit::find($creditId);
+                    $credit = \App\Models\Credit::where('sync_id', $syncId)->first();
                     if (!$credit) {
-                        $errors[] = "Crédito con id '{$creditId}' no encontrado en índice {$index}";
+                        $errors[] = "Crédito con sync_id '{$syncId}' no encontrado en índice {$index}";
                         $skippedCount++;
                         continue;
                     }
@@ -899,7 +899,7 @@ class SyncController extends Controller
                     $postAmount = (float) ($expenseData['postDate'] ?? 0);
                     $totalValue = (float) ($expenseData['total_value'] ?? 0);
                     $detail = $expenseData['detail'] ?? null;
-                    $syncId = $expenseData['cartera'] ?? null;
+                    $cartera = $expenseData['cartera'] ?? null;
 
                     $existingExpense = \App\Models\LegalExpense::where('credit_id', $credit->id)
                         ->where('prev_amount', $prevAmount)
@@ -921,7 +921,7 @@ class SyncController extends Controller
                         'post_amount' => $postAmount,
                         'detail' => $detail,
                         'total_value' => $totalValue,
-                        'sync_id' => $syncId,
+                        'sync_id' => $cartera,
                     ]);
 
                     $legalExpense->timestamps = false;
