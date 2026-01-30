@@ -82,7 +82,10 @@ class AgreementController extends Controller
 
             // Validar que no exista un convenio previo activo (solo si el usuario no es admin)
             $user = $request->user();
-            if (!$user || $user->role !== 'admin') {
+
+            Log::info('Role del usuario: ' . $user->role);
+            
+            if ($user->role !== 'admin') {
                 $existingAgreement = Agreement::where('credit_id', $validated['credit_id'])
                     ->whereIn('status', ['PENDIENTE', 'AUTORIZADO'])
                     ->first();
