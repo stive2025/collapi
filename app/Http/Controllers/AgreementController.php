@@ -84,7 +84,7 @@ class AgreementController extends Controller
             $user = $request->user();
 
             Log::info('Role del usuario: ' . $user->role);
-            
+
             if ($user->role !== 'admin') {
                 $existingAgreement = Agreement::where('credit_id', $validated['credit_id'])
                     ->whereIn('status', ['PENDIENTE', 'AUTORIZADO'])
@@ -213,13 +213,19 @@ class AgreementController extends Controller
      */
     protected function creditHasAgreement(int $creditId, ?array $statuses = null): bool
     {
-        $query = Agreement::where('credit_id', $creditId);
+        $user = request()->user();
 
-        if (is_array($statuses) && count($statuses) > 0) {
-            $query->whereIn('status', $statuses);
+        Log::info('Role del usuario en checkCreditAgreement: ' . $user->role);
+
+        if($user->role !== 'admin'){
+            $query = Agreement::where('credit_id', $creditId);
+            if (is_array($statuses) && count($statuses) > 0) {
+                $query->whereIn('status', $statuses);
+            }
+            return $query->exists();
+        }else{
+            return false;
         }
-
-        return $query->exists();
     }
 
     /**
