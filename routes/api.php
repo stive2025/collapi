@@ -20,6 +20,7 @@ use App\Http\Controllers\StatisticController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\SmsController;
+use App\Http\Controllers\DirectionController;
 use App\Http\Controllers\FieldTripController;
 use App\Http\Controllers\GpsPointController;
 use App\Http\Controllers\LegalExpenseController;
@@ -37,6 +38,7 @@ Route::middleware(['check.token'])->group(function () {
     Route::apiResource('credits', CreditController::class);
     Route::apiResource('clients', ClientController::class);
     Route::apiResource('contacts', ContactController::class);
+    Route::apiResource('directions', DirectionController::class);
     Route::apiResource('gps-points', GpsPointController::class);
 
     // Rutas específicas de payments (deben ir ANTES del apiResource)
