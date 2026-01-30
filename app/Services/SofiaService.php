@@ -65,7 +65,8 @@ class SofiaService
 
         $referencia_banco = "";
         $precio_unitario = $rawValue / 1.15;
-        $precio_unitario = floor($precio_unitario * 100) / 100;
+        $precio_unitario = ceil($precio_unitario * 100) / 100;
+        $valor_total = $rawValue;
 
         $metodoPago = $request->input('metodo');
         $idBanco = $request->input('idBanco');
@@ -74,7 +75,7 @@ class SofiaService
         if ($metodoPago === 'TRANSFERENCIA') {
             $referencia_banco = [
                 "metodo" => $metodoPago,
-                "valor" => $precio_unitario * 1.15,
+                "valor" => $valor_total,
                 "infoTransferencia" => [
                     "cuentaBancaria" => [
                         "id" => $idBanco
@@ -85,7 +86,7 @@ class SofiaService
         } elseif (in_array($metodoPago, ['DEPOSITO', 'TARJETA_DEBITO'])) {
             $referencia_banco = [
                 "metodo" => "DEPOSITO",
-                "valor" => $precio_unitario * 1.15,
+                "valor" => $valor_total,
                 "infoDeposito" => [
                     "cuentaBancaria" => [
                         "id" => $idBanco
@@ -96,7 +97,7 @@ class SofiaService
         } else {
             $referencia_banco = [
                 "metodo" => "EFECTIVO",
-                "valor" => $precio_unitario * 1.15
+                "valor" => $valor_total
             ];
         }
 
@@ -144,7 +145,7 @@ class SofiaService
                 "pago" => [
                     [
                         "tipo" => $request->input('formaPago'),
-                        "valor" => $precio_unitario * 1.15,
+                        "valor" => $valor_total,
                         "plazo" => "30",
                         "unidad" => "DIAS"
                     ]
