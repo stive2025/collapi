@@ -181,12 +181,31 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
         $agentsCache = [];
         foreach ($this->campaigns as $index => $campaign) {
             if ($campaign['campaign_id'] && $creditIds->isNotEmpty()) {
-                $collectionCredits = DB::table('collection_credits')
-                    ->select('credit_id', 'user_id', DB::raw('MAX(id) as max_id'))
-                    ->whereIn('credit_id', $creditIds)
-                    ->where('campain_id', $campaign['campaign_id'])
-                    ->orderBy('date','desc')
-                    ->groupBy('credit_id', 'user_id')
+                // $collectionCredits = DB::table('collection_credits')
+                //     ->select('credit_id', 'user_id', DB::raw('MAX(id) as max_id'))
+                //     ->whereIn('credit_id', $creditIds)
+                //     ->where('campain_id', $campaign['campaign_id'])
+                //     ->orderBy('date','desc')
+                //     ->groupBy('credit_id', 'user_id')
+                //     ->get();
+
+                $collectionCredits = DB::table(DB::raw("
+                        (
+                            SELECT 
+                                credit_id,
+                                user_id,
+                                campain_id,
+                                date,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY credit_id, campain_id
+                                    ORDER BY date DESC, id DESC
+                                ) as rn
+                            FROM collection_credits
+                            WHERE credit_id IN (" . $creditIds->implode(',') . ")
+                            AND campain_id = {$campaign['campaign_id']}
+                        ) t
+                    "))
+                    ->where('rn', 1)
                     ->get();
 
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
