@@ -105,6 +105,7 @@ class CollectionCreditController extends Controller
     {
         try {
             $now = now();
+            $dateToday = date('Y-m-d', time() - 18000);
 
             $activeCampains = Campain::where('state', 'ACTIVE')->get();
 
@@ -119,13 +120,11 @@ class CollectionCreditController extends Controller
             $totalSaved = 0;
             $skippedCampains = [];
             $processedCampains = 0;
-            $now = now();
-            $today = $now->format('Y-m-d');
 
-            DB::transaction(function () use ($activeCampains, &$totalSaved, &$skippedCampains, &$processedCampains, $now, $today) {
+            DB::transaction(function () use ($activeCampains, &$totalSaved, &$skippedCampains, &$processedCampains, $now, $dateToday) {
                 foreach ($activeCampains as $campain) {
                     $existsToday = CollectionCredit::where('campain_id', $campain->id)
-                        ->whereDate('created_at', $today)
+                        ->whereDate('date', $dateToday)
                         ->exists();
 
                     if ($existsToday) {
@@ -150,7 +149,7 @@ class CollectionCreditController extends Controller
                         continue;
                     }
 
-                    $batchData = $activeCredits->map(function ($credit) use ($campain, $now) {
+                    $batchData = $activeCredits->map(function ($credit) use ($campain, $now,$dateToday) {
                         return [
                             'collection_state' => $credit->collection_state,
                             'days_past_due' => $credit->days_past_due,
@@ -168,6 +167,7 @@ class CollectionCreditController extends Controller
                             'credit_id' => $credit->id,
                             'campain_id' => $campain->id,
                             'user_id' => $credit->user_id,
+                            'date' => $dateToday,
                             'created_at' => $now,
                             'updated_at' => $now,
                         ];

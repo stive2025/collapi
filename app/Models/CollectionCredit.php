@@ -29,5 +29,6 @@ class CollectionCredit extends Model
         'credit_id',
         'campain_id',
         'user_id',
+        'date'
     ];
 }

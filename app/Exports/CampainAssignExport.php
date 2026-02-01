@@ -185,6 +185,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                     ->select('credit_id', 'user_id', DB::raw('MAX(id) as max_id'))
                     ->whereIn('credit_id', $creditIds)
                     ->where('campain_id', $campaign['campaign_id'])
+                    ->orderBy('date','desc')
                     ->groupBy('credit_id', 'user_id')
                     ->get();
 

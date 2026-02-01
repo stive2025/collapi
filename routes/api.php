@@ -140,6 +140,9 @@ Route::middleware(['check.token'])->group(function () {
 
     // Sincronización de gastos judiciales
     Route::post('sync/legal-expenses', [SyncController::class, 'syncLegalExpenses']);
+
+    // Sincronización de collection credits
+    Route::post('sync/collection-credits', [SyncController::class, 'syncCollectionCredits']);
     
     // Rutas para collection credits
     Route::get('collection-credits', [CollectionCreditController::class, 'index']);

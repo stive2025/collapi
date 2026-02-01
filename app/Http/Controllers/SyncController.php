@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Http\Responses\ResponseBase;
+use App\Models\CollectionCredit;
 use App\Models\CollectionSync;
+use App\Models\Credit;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class SyncController extends Controller
 {
@@ -964,6 +968,201 @@ class SyncController extends Controller
 
             return ResponseBase::error(
                 'Error al sincronizar gastos judiciales',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
+     * Sincronizar historial de créditos desde la API externa
+     *
+     * @OA\Post(
+     *     path="/api/sync/collection-credits",
+     *     summary="Sincronizar historial de créditos",
+     *     description="Sincroniza el historial de créditos desde la API externa para una fecha y campaña específica",
+     *     operationId="syncCollectionCredits",
+     *     tags={"Sincronización"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"start_date", "end_date"},
+     *             @OA\Property(property="start_date", type="string", format="date", example="2026-01-01", description="Fecha inicial (YYYY-MM-DD)"),
+     *             @OA\Property(property="end_date", type="string", format="date", example="2026-01-15", description="Fecha final (YYYY-MM-DD)")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Sincronización completada",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="total", type="integer"),
+     *                 @OA\Property(property="synced", type="integer"),
+     *                 @OA\Property(property="skipped", type="integer"),
+     *                 @OA\Property(property="errors", type="array", @OA\Items(type="string"))
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error al sincronizar"
+     *     )
+     * )
+     */
+    public function syncCollectionCredits(Request $request)
+    {
+        set_time_limit(3600);
+
+        try {
+            $validated = $request->validate([
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date',
+            ]);
+
+            $startDate = \Carbon\Carbon::parse($validated['start_date']);
+            $endDate = \Carbon\Carbon::parse($validated['end_date']);
+
+            $totalCredits = 0;
+            $syncedCount = 0;
+            $skippedCount = 0;
+            $errors = [];
+            $now = now();
+            $processedDates = [];
+
+            // Cachear usuarios por nombre
+            $usersCache = User::pluck('id', 'name')->toArray();
+
+            // Cachear créditos por sync_id y business_id
+            $creditsCache = Credit::select('id', 'sync_id', 'business_id')
+                ->get()
+                ->keyBy(function ($item) {
+                    return $item->sync_id . '_' . $item->business_id;
+                });
+
+            // Obtener registros existentes para el rango de fechas (credit_id + campain_id + date)
+            $existingRecords = CollectionCredit::whereBetween('date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+                ->select('credit_id', 'campain_id', 'date')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    $dateStr = $item->date instanceof \Carbon\Carbon ? $item->date->format('Y-m-d') : $item->date;
+                    return [$item->credit_id . '_' . $item->campain_id . '_' . $dateStr => true];
+                })
+                ->toArray();
+
+            // Iterar por cada fecha en el rango
+            $currentDate = $startDate->copy();
+            while ($currentDate->lte($endDate)) {
+                $fechaApi = $currentDate->format('Y/m/d');
+                $fechaDb = $currentDate->format('Y-m-d');
+
+                $apiUrl = "https://core.sefil.com.ec/api/public/api/reports-credits?fecha={$fechaApi}";
+
+                try {
+                    $response = @file_get_contents($apiUrl);
+                    $creditsData = json_decode($response, true);
+
+                    if (!is_array($creditsData)) {
+                        $errors[] = "No se obtuvieron datos para fecha {$fechaApi}";
+                        $currentDate->addDay();
+                        continue;
+                    }
+
+                    $totalCredits += count($creditsData);
+                    $batchData = [];
+
+                    foreach ($creditsData as $creditData) {
+                        $syncId = $creditData['sync_id'] ?? null;
+                        $businessId = $creditData['business_id'] ?? null;
+                        $campainId = $creditData['campain_id'] ?? null;
+
+                        if (!$syncId || !$businessId || !$campainId) {
+                            $skippedCount++;
+                            continue;
+                        }
+
+                        $cacheKey = $syncId . '_' . $businessId;
+                        $credit = $creditsCache->get($cacheKey);
+
+                        if (!$credit) {
+                            $skippedCount++;
+                            continue;
+                        }
+
+                        // Verificar si ya existe (credit_id + campain_id + date)
+                        $existKey = $credit->id . '_' . $campainId . '_' . $fechaDb;
+                        if (isset($existingRecords[$existKey])) {
+                            $skippedCount++;
+                            continue;
+                        }
+
+                        $userId = null;
+                        if (!empty($creditData['user']) && isset($usersCache[$creditData['user']])) {
+                            $userId = $usersCache[$creditData['user']];
+                        }
+
+                        $batchData[] = [
+                            'days_past_due' => (int) ($creditData['days_past_due'] ?? 0),
+                            'total_amount' => (float) ($creditData['total_amount'] ?? 0),
+                            'credit_id' => $credit->id,
+                            'campain_id' => $campainId,
+                            'user_id' => $userId,
+                            'date' => $fechaDb,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+
+                        // Marcar como existente para evitar duplicados
+                        $existingRecords[$existKey] = true;
+                    }
+
+                    // Insertar en lotes de 500
+                    if (!empty($batchData)) {
+                        $chunks = array_chunk($batchData, 500);
+                        foreach ($chunks as $chunk) {
+                            CollectionCredit::insert($chunk);
+                            $syncedCount += count($chunk);
+                        }
+                    }
+
+                    $processedDates[] = $fechaDb;
+
+                } catch (\Exception $e) {
+                    $errors[] = "Error en fecha {$fechaApi}: {$e->getMessage()}";
+                }
+
+                $currentDate->addDay();
+            }
+
+            return ResponseBase::success(
+                [
+                    'total' => $totalCredits,
+                    'synced' => $syncedCount,
+                    'skipped' => $skippedCount,
+                    'dates_processed' => count($processedDates),
+                    'errors' => !empty($errors) ? array_slice($errors, 0, 10) : null
+                ],
+                "Sincronización completada: {$syncedCount} registros sincronizados en " . count($processedDates) . " fechas"
+            );
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Error en sincronización de historial de créditos', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return ResponseBase::error(
+                'Error al sincronizar historial de créditos',
                 ['error' => $e->getMessage()],
                 500
             );
