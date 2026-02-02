@@ -239,22 +239,22 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
     {
         if (empty($creditIds)) return;
 
-        Log::info('AccountingExport: Cargando condonaciones', [
-            'total_credits' => count($creditIds),
-            'credit_ids' => $creditIds
-        ]);
+        // Log::info('AccountingExport: Cargando condonaciones', [
+        //     'total_credits' => count($creditIds),
+        //     'credit_ids' => $creditIds
+        // ]);
         
         $condonations = DB::table('condonations')
             ->whereIn('credit_id', $creditIds)
-            ->where('status', 'autorizado')
+            ->whereIn('status', ['autorizado', 'AUTORIZADO'])
             ->select('credit_id', 'amount')
             ->get();
 
-        Log::info('AccountingExport: Condonaciones cargadas', [
-            'total_credits' => count($creditIds),
-            'total_condonations' => $condonations->count(),
-            'condonations' => $condonations->toArray()
-        ]);
+        // Log::info('AccountingExport: Condonaciones cargadas', [
+        //     'total_credits' => count($creditIds),
+        //     'total_condonations' => $condonations->count(),
+        //     'condonations' => $condonations->toArray()
+        // ]);
 
         foreach ($condonations as $cond) {
             // Si ya existe una condonación para este crédito, sumar los montos
@@ -264,10 +264,6 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
                 $this->condonationsCache[$cond->credit_id] = floatval($cond->amount);
             }
         }
-
-        Log::info('AccountingExport: Cache de condonaciones', [
-            'cache' => $this->condonationsCache
-        ]);
     }
 
     private function getPaymentsQuery()
@@ -363,26 +359,20 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
 
     private function buildPaymentRow($payment, $amounts, $condonation)
     {
-        // Determine raw method from stored columns (null means unknown)
         $rawMethod = $payment->payment_method ?? $payment->payment_type ?? null;
-        // method used for display: fallback to 'efectivo' when unknown
         $method = $rawMethod ?? 'efectivo';
 
-        // Read stored institution/reference as-is
         $institution = $payment->financial_institution ?? null;
         $reference = $payment->payment_reference ?? null;
 
-        // If the raw method explicitly indicates 'efectivo' then institution and reference must be empty
         if (is_string($rawMethod) && strtolower(trim($rawMethod)) === 'efectivo') {
             $institution = '';
             $reference = '';
         } else {
-            // If institution is empty (no data) and method is unknown, treat as FACES
             if (empty($institution) && $rawMethod === null) {
                 $institution = 'FACES';
             }
 
-            // Normalize to empty strings instead of nulls for Excel
             $institution = $institution ?? '';
             $reference = $reference ?? '';
         }
@@ -523,9 +513,6 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             return null;
         }
 
-        // substr offset 20 (0-based) length 15 => characters 21..35 (1-based)
-        // Use 14 characters starting at offset 20 and format as 3-3-8
-
         $segment = substr($accessKey, 24, 15);
         Log::info('Formatting invoice access key segment', ['segment' => $segment]);
         
@@ -577,18 +564,14 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         ];
 
         foreach ($dataBox as $row) {
-            // Verificar que sea un array con datos numéricos (no las filas de totales o footer)
             if (is_array($row) && count($row) >= 23 && is_numeric($row[8])) {
                 $totals['condonacion'] += floatval($row[7]);  // CONDONACION
                 $totals['capital'] += floatval($row[8]);       // CAPITAL
                 $totals['interes'] += floatval($row[9]);       // INTERES
                 $totals['mora'] += floatval($row[10]);         // MORA
                 $totals['gestion_sefil'] += floatval($row[11]); // GESTIÓN COBRANZA SEFIL
-                // IVA: for payment rows this column is monetary tax; for invoice rows we show
-                // percentage in the column, so compute monetary tax as invoice_value - base_value
                 $ivaValue = floatval($row[12]);
                 $isInvoiceRow = (floatval($row[8]) == 0 && floatval($row[16]) > 0 && floatval($row[11]) >= 0);
-
                 if ($isInvoiceRow) {
                     $monetaryIva = floatval($row[16]) - floatval($row[11]);
                     $totals['iva'] += $monetaryIva;
