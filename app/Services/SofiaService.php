@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Container\Attributes\Log as AttributesLog;
 use Illuminate\Support\Facades\Log;
+use GuzzleHttp\Client;
 
 class SofiaService
 {
@@ -17,47 +18,56 @@ class SofiaService
     
     public function getConfig()
     {
-        $header = "Accept: application/json\r\n" .
-            "Authorization: Basic " . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA')) . "\r\n" .
-            "User-Agent: PostmanRuntime/7.36.0";
-
         $url = 'https://sofiasistema.sisofia.com.ec/services/configuracion?consultaParaDispositivosMoviles=false';
-
-        $options = [
-            'http' => [
-                'header' => $header,
-                'method' => 'GET',
-                'ignore_errors' => true,
-                'timeout' => 10,
-            ],
+        $headers = [
+            'Accept' => 'application/json',
+            'Authorization' => 'Basic ' . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA')),
+            'User-Agent' => 'PostmanRuntime/7.36.0',
         ];
 
-        $context = stream_context_create($options);
-        $result = @file_get_contents($url, false, $context);
+        $client = new Client([
+            'timeout' => 10,
+            'http_errors' => false
+        ]);
 
-        if ($result === false) {
-            $error = error_get_last();
-            Log::error('Sofia Config Error: ' . json_encode($error));
-            return [
-                'state' => 400,
-                'response' => null,
-                'error' => $error
-            ];
-        }
+        try {
+            $response = $client->request('GET', $url, [
+                'headers' => $headers
+            ]);
 
-        Log::info('Sofia Config Response: ' . $result);
+            $status = $response->getStatusCode();
+            $body = $response->getBody()->getContents();
 
-        $decoded = json_decode($result);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            Log::error('Sofia Config JSON decode error: ' . json_last_error_msg());
+            if ($status < 200 || $status >= 300) {
+                Log::error('Sofia Config Error: ' . $body);
+                return [
+                    'state' => $status,
+                    'response' => null,
+                    'error' => $body
+                ];
+            }
+
+            Log::info('Sofia Config Response: ' . $body);
+
+            $decoded = json_decode($body, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                Log::error('Sofia Config JSON decode error: ' . json_last_error_msg());
+                return [
+                    'state' => 500,
+                    'response' => null,
+                    'error' => 'Invalid JSON response: ' . json_last_error_msg()
+                ];
+            }
+
+            return $decoded;
+        } catch (\Throwable $e) {
+            Log::error('Sofia Config Exception: ' . $e->getMessage());
             return [
                 'state' => 500,
                 'response' => null,
-                'error' => 'Invalid JSON response: ' . json_last_error_msg()
+                'error' => $e->getMessage()
             ];
         }
-
-        return $decoded;
     }
 
     public function facturar($request, $value = null)
