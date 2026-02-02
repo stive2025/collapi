@@ -226,47 +226,81 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
         foreach ($this->campaigns as $index => $campaign) {
             if ($campaign['campaign_id'] && $creditIds->isNotEmpty()) {
+                /*
+                |--------------------------------------------------------------------------
+                | 1) Obtener últimos registros por crédito / mes
+                |--------------------------------------------------------------------------
+                */
                 $collectionCredits = DB::table(DB::raw("
-                        (
-                            SELECT 
-                                credit_id,
-                                user_id,
-                                campain_id,
-                                date,
-                                ROW_NUMBER() OVER (
-                                    PARTITION BY 
-                                        credit_id,
-                                        campain_id,
-                                        YEAR(date),
-                                        MONTH(date)
-                                    ORDER BY date DESC, id DESC
-                                ) as rn
-                            FROM collection_credits
-                            WHERE credit_id IN (" . $creditIds->implode(',') . ")
-                            AND campain_id = {$campaign['campaign_id']}
-                        ) t
-                    "))
-                    ->where('rn', 1)
-                    ->orderBy('date', 'desc')
-                    ->get();
+                    (
+                        SELECT 
+                            credit_id,
+                            user_id,
+                            campain_id,
+                            date,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY 
+                                    credit_id,
+                                    campain_id,
+                                    YEAR(date),
+                                    MONTH(date)
+                                ORDER BY date DESC, id DESC
+                            ) as rn
+                        FROM collection_credits
+                        WHERE credit_id IN (" . $creditIds->implode(',') . ")
+                        AND campain_id = {$campaign['campaign_id']}
+                    ) t
+                "))
+                ->where('rn', 1)
+                ->orderBy('date', 'desc')
+                ->get();
 
+                /*
+                |--------------------------------------------------------------------------
+                | 2) Cache de usuarios
+                |--------------------------------------------------------------------------
+                */
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
                 $users = DB::table('users')->whereIn('id', $userIds)->get()->keyBy('id');
-                
+
+                /*
+                |--------------------------------------------------------------------------
+                | 3) Calcular mes actual lógico (último mes real en DB)
+                |--------------------------------------------------------------------------
+                */
+                $maxDate = $collectionCredits->max('date');
+
+                $logicalNow = Carbon::parse($maxDate)->startOfMonth();
+
+                /*
+                |--------------------------------------------------------------------------
+                | 4) Definir últimos 3 meses (excluyendo el actual lógico)
+                |--------------------------------------------------------------------------
+                */
                 $targetMonths = [
-                    $now->copy()->subMonths(3)->format('Y-m'),
-                    $now->copy()->subMonths(2)->format('Y-m'),
-                    $now->copy()->subMonths(1)->format('Y-m'),
+                    $logicalNow->copy()->subMonths(3)->format('Y-m'),
+                    $logicalNow->copy()->subMonths(2)->format('Y-m'),
+                    $logicalNow->copy()->subMonths(1)->format('Y-m'),
                 ];
 
-                // 1️⃣ inicializar todos los créditos con ""
+                /*
+                |--------------------------------------------------------------------------
+                | 5) Inicializar estructura con ""
+                |--------------------------------------------------------------------------
+                */
+                $agentsCache = [];
+
                 foreach ($creditIds as $creditId) {
                     foreach ($targetMonths as $index => $month) {
                         $agentsCache[$creditId][$index] = '';
                     }
                 }
 
-                // 2️⃣ sobreescribir con datos reales
+                /*
+                |--------------------------------------------------------------------------
+                | 6) Sobrescribir con datos reales
+                |--------------------------------------------------------------------------
+                */
                 foreach ($collectionCredits as $cc) {
                     $creditId = $cc->credit_id;
 
@@ -274,7 +308,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
                     $index = array_search($monthKey, $targetMonths, true);
 
-                    // si no pertenece a los 3 meses objetivo → ignorar
                     if ($index === false) {
                         continue;
                     }
