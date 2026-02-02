@@ -264,57 +264,38 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
                 $users = DB::table('users')->whereIn('id', $userIds)->get()->keyBy('id');
 
-                /*
-                |--------------------------------------------------------------------------
-                | 3) Calcular mes actual lógico (último mes real en DB)
-                |--------------------------------------------------------------------------
-                */
-                $maxDate = $collectionCredits->max('date');
+                // Mes actual (NO se cuenta)
+                $now = Carbon::now()->startOfMonth();
 
-                $logicalNow = Carbon::parse($maxDate)->startOfMonth();
-
-                /*
-                |--------------------------------------------------------------------------
-                | 4) Definir últimos 3 meses (excluyendo el actual lógico)
-                |--------------------------------------------------------------------------
-                */
-                $targetMonths = [
-                    $logicalNow->copy()->subMonths(3)->format('Y-m'),
-                    $logicalNow->copy()->subMonths(2)->format('Y-m'),
-                    $logicalNow->copy()->subMonths(1)->format('Y-m'),
+                // Definir los últimos 3 meses completos
+                $months = [
+                    $now->copy()->subMonths(3)->format('Y-m'), // más antiguo
+                    $now->copy()->subMonths(2)->format('Y-m'),
+                    $now->copy()->subMonths(1)->format('Y-m'), // más reciente
                 ];
 
-                /*
-                |--------------------------------------------------------------------------
-                | 5) Inicializar estructura con ""
-                |--------------------------------------------------------------------------
-                */
-                $agentsCache = [];
-
-                foreach ($creditIds as $creditId) {
-                    foreach ($targetMonths as $index => $month) {
-                        $agentsCache[$creditId][$index] = '';
-                    }
-                }
-
-                /*
-                |--------------------------------------------------------------------------
-                | 6) Sobrescribir con datos reales
-                |--------------------------------------------------------------------------
-                */
                 foreach ($collectionCredits as $cc) {
                     $creditId = $cc->credit_id;
 
-                    $monthKey = Carbon::parse($cc->date)->format('Y-m');
+                    // Inicializar crédito con 3 posiciones vacías
+                    if (!isset($agentsCache[$creditId])) {
+                        $agentsCache[$creditId] = ["", "", ""];
+                    }
 
-                    $index = array_search($monthKey, $targetMonths, true);
+                    $date = Carbon::parse($cc->date)->startOfMonth()->format('Y-m');
 
-                    if ($index === false) {
+                    // Si el registro no pertenece a los últimos 3 meses, ignorar
+                    $monthIndex = array_search($date, $months, true);
+                    if ($monthIndex === false) {
                         continue;
                     }
 
+                    // Obtener nombre del agente
                     $user = $users->get($cc->user_id);
-                    $agentsCache[$creditId][$index] = $user ? $user->name : '';
+                    $agentName = $user ? $user->name : '';
+
+                    // Asignar en la posición correcta
+                    $agentsCache[$creditId][$monthIndex] = $agentName;
                 }
 
                 Log::info("Agents Cache for Campaign {$campaign['campaign_id']}: ", $agentsCache);
