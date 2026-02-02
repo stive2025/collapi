@@ -21,38 +21,47 @@ class SofiaService
                 "Accept: application/json\r\n" .
                 "Authorization: Basic " . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA'));
 
-        $datos_facturacion = [];
-
         $url = 'https://sofiasistema.sisofia.com.ec/services/configuracion?consultaParaDispositivosMoviles=false';
 
         $options = [
             'http' => [
                 'header' => $header,
                 'method' => 'GET',
-                'content' => json_encode($datos_facturacion),
+                // 'content' => json_encode($datos_facturacion), // No enviar content en GET
                 'ignore_errors' => true,
                 'timeout' => 10,
             ],
         ];
 
         $context = stream_context_create($options);
-
         $result = @file_get_contents($url, false, $context);
-        
-        Log::info('Sofia Config Response: ' . $result);
 
         if ($result === false) {
             $error = error_get_last();
-            return null;
+            Log::error('Sofia Config Error: ' . json_encode($error));
+            return [
+                'state' => 400,
+                'response' => null,
+                'error' => $error
+            ];
         }
+
+        Log::info('Sofia Config Response: ' . $result);
 
         $decoded = json_decode($result);
-
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return null;
+            Log::error('Sofia Config JSON decode error: ' . json_last_error_msg());
+            return [
+                'state' => 500,
+                'response' => null,
+                'error' => 'Invalid JSON response: ' . json_last_error_msg()
+            ];
         }
 
-        return $decoded;
+        return [
+            'state' => 200,
+            'response' => $decoded
+        ];
     }
 
     public function facturar($request, $value = null)
