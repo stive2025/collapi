@@ -74,9 +74,11 @@ class SofiaService
     {
         $fechaEmision = date('Y-m-d', time() - 18000);
 
-        $header = "Content-type: application/json\r\n" .
-                "Accept: application/json\r\n" .
-                "Authorization: Basic " . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA'));
+        $headers = [
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'Authorization' => 'Basic ' . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA')),
+        ];
 
         $rawValue = $value ?? $request->input('value');
         $rawValue = floatval($rawValue);
@@ -176,32 +178,30 @@ class SofiaService
 
         $url_ws_create_factura = 'https://sofiasistema.sisofia.com.ec/services/contribuyentes/' . env('RUC') . '/facturas';
 
-        $options = [
-            "http" => [
-                "header" => $header,
-                "method" => "POST",
-                "content" => json_encode($datos_facturacion),
-                "ignore_errors" => true,
-                "timeout" => 15
-            ],
-        ];
+        $client = new Client([
+            'timeout' => 15,
+            'http_errors' => false
+        ]);
 
         try {
-            $context = stream_context_create($options);
-            $resultado = @file_get_contents($url_ws_create_factura, false, $context);
+            $response = $client->request('POST', $url_ws_create_factura, [
+                'headers' => $headers,
+                'json' => $datos_facturacion
+            ]);
 
-            if ($resultado === false) {
-                $error = error_get_last();
+            $status = $response->getStatusCode();
+            $body = $response->getBody()->getContents();
 
+            if ($status < 200 || $status >= 300) {
                 return [
-                    "state" => 400,
+                    "state" => $status,
                     "response" => null,
                     "data" => $datos_facturacion,
-                    "error" => $error
+                    "error" => $body
                 ];
             }
 
-            $decoded = json_decode($resultado);
+            $decoded = json_decode($body);
             if (json_last_error() !== JSON_ERROR_NONE) {
                 return [
                     "state" => 500,
