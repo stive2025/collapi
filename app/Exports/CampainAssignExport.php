@@ -49,7 +49,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 '',
                 '',
                 '',
-                '',
                 'Información de agentes',
                 '',
                 '',
@@ -68,7 +67,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
             ],
             [
                 "CREDITO",
-                "ESTADO SINC.",
                 "CÉDULA CONTACTO",
                 "NOMBRE CONTACTO",
                 "CRÉDITO TIPO",
@@ -116,56 +114,24 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
         $creditIds = $credits->pluck('id');
 
-        // $clientsData = [];
-        // if ($creditIds->isNotEmpty()) {
-        //     $clientCredits = DB::table('client_credit')
-        //         ->whereIn('credit_id', $creditIds)
-        //         ->orderByRaw("CASE WHEN type = 'TITULAR' THEN 1 WHEN type = 'GARANTE' THEN 2 ELSE 3 END")
-        //         ->get()
-        //         ->groupBy('credit_id');
-
-        //     $clientIds = $clientCredits->flatten()->pluck('client_id')->unique();
-        //     $clients = DB::table('clients')
-        //         ->whereIn('id', $clientIds)
-        //         ->get()
-        //         ->keyBy('id');
-
-        //     foreach ($clientCredits as $creditId => $clientCreditList) {
-        //         $titular = $clientCreditList->firstWhere('type', 'TITULAR');
-        //         if ($titular) {
-        //             $client = $clients->get($titular->client_id);
-        //             $clientsData[$creditId] = [
-        //                 'ci' => $client->ci ?? '',
-        //                 'name' => $client->name ?? '',
-        //                 'type' => 'TITULAR'
-        //             ];
-        //         }
-        //     }
-        // }
-
         $clientsData = [];
 
         if ($creditIds->isNotEmpty()) {
-
-            // 1️⃣ Todas las relaciones cliente-crédito
             $clientCredits = DB::table('client_credit')
                 ->whereIn('credit_id', $creditIds)
                 ->get();
 
-            // 2️⃣ Clientes involucrados
             $clientIds = $clientCredits->pluck('client_id')->unique();
 
             $clients = DB::table('clients')
                 ->whereIn('id', $clientIds)
                 ->get()
                 ->keyBy('id');
-
-            // 3️⃣ Titulares por crédito
+            
             $titularesByCredit = $clientCredits
                 ->where('type', 'TITULAR')
                 ->keyBy('credit_id');
 
-            // 4️⃣ Créditos agrupados por cliente
             $creditsByClient = $clientCredits->groupBy('client_id');
 
             foreach ($titularesByCredit as $sourceCreditId => $titularRelation) {
@@ -175,14 +141,13 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                     continue;
                 }
 
-                // Créditos donde este cliente participa
                 $relatedCredits = $creditsByClient[$titularRelation->client_id];
 
                 foreach ($relatedCredits as $relation) {
                     $clientsData[$relation->credit_id] = [
                         'ci'   => $client->ci ?? '',
                         'name' => $client->name ?? '',
-                        'type' => $relation->type // TITULAR o GARANTE en ESE crédito
+                        'type' => $relation->type
                     ];
                 }
             }
@@ -229,11 +194,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
         foreach ($this->campaigns as $index => $campaign) {
             if ($campaign['campaign_id'] && $creditIds->isNotEmpty()) {
-                /*
-                |--------------------------------------------------------------------------
-                | 1) Obtener últimos registros por crédito / mes
-                |--------------------------------------------------------------------------
-                */
                 $collectionCredits = DB::table(DB::raw("
                     (
                         SELECT 
@@ -258,11 +218,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 ->orderBy('date', 'desc')
                 ->get();
 
-                /*
-                |--------------------------------------------------------------------------
-                | 2) Cache de usuarios
-                |--------------------------------------------------------------------------
-                */
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
                 $users = DB::table('users')->whereIn('id', $userIds)->get()->keyBy('id');
 
@@ -342,7 +297,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
             $lastPayment = $paymentsCache[$credit->id] ?? null;
 
-            //Información de gestiones
             $management_effective_count = DB::table('management')
                 ->where('credit_id', $credit->id)
                 ->whereIn('substate', ['COMPROMISO DE PAGO', 'OFERTA DE PAGO','CONVENIO DE PAGO','REGESTION DE OFERTA'])
@@ -444,7 +398,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFEB9C');
                 $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-                $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y' ];
+                $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
                 foreach ($columns as $col) {
                     $event->sheet->getDelegate()->getColumnDimension($col)->setWidth(20);
                 }
@@ -454,13 +408,13 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A5:Y5')->getFont()->setBold(true);
-        $sheet->getStyle('A5:Y5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
-        $sheet->getStyle('A5:Y5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A5:Y5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
-        $sheet->getStyle('A5:Y5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A5:X5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:X5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        $sheet->getStyle('A5:X5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A5:X5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
+        $sheet->getStyle('A5:X5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
-        $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
+        $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
         foreach ($columns as $col) {
             $sheet->getStyle("{$col}6:{$col}5000")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         }

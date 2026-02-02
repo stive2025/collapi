@@ -11,12 +11,11 @@ use App\Http\Responses\ResponseBase;
 use App\Models\Business;
 use App\Models\Campain;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ExportController extends Controller
 {
-    public function exportCondonaciones(Request $request)
+    public function exportCondonations(Request $request)
     {
         try {
             // No requiere validación estricta, los filtros se aplican en el export
@@ -30,6 +29,7 @@ class ExportController extends Controller
             );
         }
     }
+
     public function exportCampain(Request $request)
     {
         try {
