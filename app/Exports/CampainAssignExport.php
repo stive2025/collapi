@@ -206,6 +206,8 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                     ->orderBy('date', 'desc')
                     ->get();
 
+                Log::info(json_encode($collectionCredits));
+
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
                 $users = DB::table('users')->whereIn('id', $userIds)->get()->keyBy('id');
 
