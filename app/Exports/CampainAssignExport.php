@@ -328,7 +328,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
             $dataBox[] = [
                 $this->businessName . '-' . $credit->sync_id,
-                $credit->sync_status ?? '',
                 $clientData['ci'],
                 $clientData['name'],
                 $clientData['type'],
@@ -382,7 +381,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
 
-                $cells = "G4:I4";
+                $cells = "F4:H4";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(12);
@@ -390,7 +389,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('C6EFCE');
                 $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-                $cells = "O4:Q4";
+                $cells = "N4:P4";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(12);
