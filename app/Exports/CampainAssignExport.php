@@ -108,33 +108,77 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
         $creditIds = $credits->pluck('id');
 
+        // $clientsData = [];
+        // if ($creditIds->isNotEmpty()) {
+        //     $clientCredits = DB::table('client_credit')
+        //         ->whereIn('credit_id', $creditIds)
+        //         ->orderByRaw("CASE WHEN type = 'TITULAR' THEN 1 WHEN type = 'GARANTE' THEN 2 ELSE 3 END")
+        //         ->get()
+        //         ->groupBy('credit_id');
+
+        //     $clientIds = $clientCredits->flatten()->pluck('client_id')->unique();
+        //     $clients = DB::table('clients')
+        //         ->whereIn('id', $clientIds)
+        //         ->get()
+        //         ->keyBy('id');
+
+        //     foreach ($clientCredits as $creditId => $clientCreditList) {
+        //         $titular = $clientCreditList->firstWhere('type', 'TITULAR');
+        //         if ($titular) {
+        //             $client = $clients->get($titular->client_id);
+        //             $clientsData[$creditId] = [
+        //                 'ci' => $client->ci ?? '',
+        //                 'name' => $client->name ?? '',
+        //                 'type' => 'TITULAR'
+        //             ];
+        //         }
+        //     }
+        // }
+
         $clientsData = [];
+
         if ($creditIds->isNotEmpty()) {
+
+            // 1️⃣ Todas las relaciones cliente-crédito
             $clientCredits = DB::table('client_credit')
                 ->whereIn('credit_id', $creditIds)
-                ->orderByRaw("CASE WHEN type = 'TITULAR' THEN 1 WHEN type = 'GARANTE' THEN 2 ELSE 3 END")
-                ->get()
-                ->groupBy('credit_id');
+                ->get();
 
-            $clientIds = $clientCredits->flatten()->pluck('client_id')->unique();
+            // 2️⃣ Clientes involucrados
+            $clientIds = $clientCredits->pluck('client_id')->unique();
+
             $clients = DB::table('clients')
                 ->whereIn('id', $clientIds)
                 ->get()
                 ->keyBy('id');
 
-            foreach ($clientCredits as $creditId => $clientCreditList) {
-                $titular = $clientCreditList->firstWhere('type', 'TITULAR');
-                if ($titular) {
-                    $client = $clients->get($titular->client_id);
-                    $clientsData[$creditId] = [
-                        'ci' => $client->ci ?? '',
+            // 3️⃣ Titulares por crédito
+            $titularesByCredit = $clientCredits
+                ->where('type', 'TITULAR')
+                ->keyBy('credit_id');
+
+            // 4️⃣ Créditos agrupados por cliente
+            $creditsByClient = $clientCredits->groupBy('client_id');
+
+            foreach ($titularesByCredit as $sourceCreditId => $titularRelation) {
+
+                $client = $clients->get($titularRelation->client_id);
+                if (!$client) {
+                    continue;
+                }
+
+                // Créditos donde este cliente participa
+                $relatedCredits = $creditsByClient[$titularRelation->client_id];
+
+                foreach ($relatedCredits as $relation) {
+                    $clientsData[$relation->credit_id] = [
+                        'ci'   => $client->ci ?? '',
                         'name' => $client->name ?? '',
-                        'type' => 'TITULAR'
+                        'type' => $relation->type // TITULAR o GARANTE en ESE crédito
                     ];
                 }
             }
         }
-
         $paymentsCache = [];
         $managementsCache = [];
 
