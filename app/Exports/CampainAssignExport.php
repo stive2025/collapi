@@ -350,6 +350,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 ->count();
             
             $management_ineffective_count = DB::table('management')
+                ->where('credit_id', $credit->id)
                 ->whereNotIn('substate', ['COMPROMISO DE PAGO', 'OFERTA DE PAGO','CONVENIO DE PAGO','REGESTION DE OFERTA'])
                 ->whereBetween('created_at', [$from_date, $to_date])
                 ->count();
