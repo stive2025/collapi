@@ -1,4 +1,3 @@
-Route::get('exports/condonaciones', [ExportController::class, 'exportCondonaciones']);
 <?php
 
 use App\Http\Controllers\AgencieController;
