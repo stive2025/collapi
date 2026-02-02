@@ -184,30 +184,13 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
         $managementsCache = [];
 
         if ($creditIds->isNotEmpty()) {
-            $lastManagementSubquery = DB::table('management')
-                ->select(
-                    'credit_id',
-                    DB::raw('MAX(created_at) as last_created_at'),
-                    DB::raw('MAX(id) as max_id')
-                )
+            $managementsData = DB::table('management')
                 ->whereIn('credit_id', $creditIds)
-                ->groupBy('credit_id');
-
-            $managementsData = DB::table('management as m')
-                ->joinSub($lastManagementSubquery, 'lm', function ($join) {
-                    $join->on('m.credit_id', '=', 'lm.credit_id')
-                        ->on('m.created_at', '=', 'lm.last_created_at')
-                        ->on('m.id', '=', 'lm.max_id');
-                })
-                ->select(
-                    'm.credit_id',
-                    'm.created_at',
-                    'm.substate',
-                    'm.observation',
-                    'm.promise_date'
-                )
+                ->orderBy('credit_id')
+                ->orderByDesc('created_at')
                 ->get()
-                ->keyBy('credit_id');
+                ->groupBy('credit_id')
+                ->map(fn ($items) => $items->first());
 
             foreach ($managementsData as $creditId => $management) {
                 $managementsCache[$creditId] = $management;
