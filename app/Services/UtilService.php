@@ -124,8 +124,8 @@ class UtilService
         if ($date) {
             // Buscar si hay un registro para la fecha específica
             $syncOnDate = \App\Models\CollectionCredit::where('credit_id', $credit_id)
-                ->whereDate('created_at', $date)
-                ->orderBy('created_at', 'desc')
+                ->whereDate('date', $date)
+                ->orderBy('date', 'desc')
                 ->first();
 
             if ($syncOnDate) {
@@ -138,8 +138,8 @@ class UtilService
 
             // Si no hay registro para esa fecha, buscar el último registro anterior
             $lastSync = \App\Models\CollectionCredit::where('credit_id', $credit_id)
-                ->whereDate('created_at', '<', $date)
-                ->orderBy('created_at', 'desc')
+                ->whereDate('date', '<', $date)
+                ->orderBy('date', 'desc')
                 ->first();
 
             if ($lastSync) {
@@ -156,11 +156,12 @@ class UtilService
 
         // Sin fecha, devolver el último registro
         $lastSync = \App\Models\CollectionCredit::where('credit_id', $credit_id)
-            ->orderBy('created_at', 'desc')
+            ->orderBy('date', 'desc')
             ->first();
 
         return $lastSync;
     }
+
     public function getEffectiveManagements(int $credit_id, string $payment_date, ?int $days_past_due = null, ?int $campain_id = null){
         $adjustedPaymentDate = \Carbon\Carbon::parse($payment_date)->addHours(5)->format('Y-m-d H:i:s');
         $paymentDateCarbon = \Carbon\Carbon::parse($payment_date)->startOfDay();
