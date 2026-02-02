@@ -7,6 +7,7 @@ use App\Services\CatalogService;
 use App\Services\UtilService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -315,6 +316,8 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                     $user = $users->get($cc->user_id);
                     $agentsCache[$creditId][$index] = $user ? $user->name : '';
                 }
+
+                Log::info("Agents Cache for Campaign {$campaign['campaign_id']}: ", $agentsCache);
             }
         }
 
