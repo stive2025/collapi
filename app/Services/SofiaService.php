@@ -57,10 +57,7 @@ class SofiaService
             ];
         }
 
-        return [
-            'state' => 200,
-            'response' => $decoded
-        ];
+        return $decoded;
     }
 
     public function facturar($request, $value = null)
