@@ -347,13 +347,11 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 ->where('credit_id', $credit->id)
                 ->whereIn('substate', ['COMPROMISO DE PAGO', 'OFERTA DE PAGO','CONVENIO DE PAGO','REGESTION DE OFERTA'])
                 ->whereBetween('created_at', [$from_date, $to_date])
-                ->orderBy('created_at', 'desc')
                 ->count();
             
             $management_ineffective_count = DB::table('management')
                 ->whereNotIn('substate', ['COMPROMISO DE PAGO', 'OFERTA DE PAGO','CONVENIO DE PAGO','REGESTION DE OFERTA'])
                 ->whereBetween('created_at', [$from_date, $to_date])
-                ->orderBy('created_at', 'desc')
                 ->count();
 
             $lastManagementOfferDate = DB::table('management')
@@ -445,7 +443,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFEB9C');
                 $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-                $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'];
+                $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y' ];
                 foreach ($columns as $col) {
                     $event->sheet->getDelegate()->getColumnDimension($col)->setWidth(20);
                 }
@@ -455,13 +453,13 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A5:U5')->getFont()->setBold(true);
-        $sheet->getStyle('A5:U5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
-        $sheet->getStyle('A5:U5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A5:U5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
-        $sheet->getStyle('A5:U5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A5:Y5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:Y5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        $sheet->getStyle('A5:Y5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A5:Y5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
+        $sheet->getStyle('A5:Y5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
-        $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'];
+        $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
         foreach ($columns as $col) {
             $sheet->getStyle("{$col}6:{$col}5000")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         }
