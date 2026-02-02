@@ -253,31 +253,34 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
                 $users = DB::table('users')->whereIn('id', $userIds)->get()->keyBy('id');
                 
+                $targetMonths = [
+                    $now->copy()->subMonths(3)->format('Y-m'),
+                    $now->copy()->subMonths(2)->format('Y-m'),
+                    $now->copy()->subMonths(1)->format('Y-m'),
+                ];
+
+                // 1️⃣ inicializar todos los créditos con ""
+                foreach ($creditIds as $creditId) {
+                    foreach ($targetMonths as $index => $month) {
+                        $agentsCache[$creditId][$index] = '';
+                    }
+                }
+
+                // 2️⃣ sobreescribir con datos reales
                 foreach ($collectionCredits as $cc) {
                     $creditId = $cc->credit_id;
 
-                    $date = Carbon::parse($cc->date)->startOfMonth();
+                    $monthKey = Carbon::parse($cc->date)->format('Y-m');
 
-                    // ❌ excluir mes actual
-                    if ($date->equalTo($now)) {
+                    $index = array_search($monthKey, $targetMonths, true);
+
+                    // si no pertenece a los 3 meses objetivo → ignorar
+                    if ($index === false) {
                         continue;
                     }
 
-                    // inicializar array del crédito
-                    if (!isset($agentsCache[$creditId])) {
-                        $agentsCache[$creditId] = [];
-                    }
-
-                    // máximo 3 meses
-                    if (count($agentsCache[$creditId]) >= 3) {
-                        continue;
-                    }
-
-                    // obtener nombre del agente
                     $user = $users->get($cc->user_id);
-                    $agentName = $user ? $user->name : 'EN ESPERA';
-
-                    $agentsCache[$creditId][] = $agentName;
+                    $agentsCache[$creditId][$index] = $user ? $user->name : '';
                 }
             }
         }
