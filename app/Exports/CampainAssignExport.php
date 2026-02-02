@@ -84,6 +84,13 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 'P. ' . ($this->campaigns[0]['name'] ?? 'MES 1'),
                 'P. ' . ($this->campaigns[1]['name'] ?? 'MES 2'),
                 'P. ' . ($this->campaigns[2]['name'] ?? 'MES 3'),
+
+                //Información de gestiones
+                'CANTIDAD GESTIONES EFECTIVAS',
+                'CANTIDAD GESTIONES NO EFECTIVAS',
+                'FECHA OFERTA DE PAGO',
+                'FECHA ULT. REGESTIÓN',
+
                 "FECHA ÚLTIMA GESTIÓN",
                 "ESTADO ÚLTIMA GESTIÓN",
                 "FECHA ÚLTIMO COMPROMISO",
@@ -216,9 +223,9 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
         }
 
         $agentsCache = [];
-        $tmp = [];
-
         $now = Carbon::now()->startOfMonth();
+        $from_date = $now->copy()->subMonths(3);
+        $to_date   = $now->copy()->subSecond();
 
         foreach ($this->campaigns as $index => $campaign) {
             if ($campaign['campaign_id'] && $creditIds->isNotEmpty()) {
@@ -334,6 +341,34 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
             $lastManagementObservation = $lastManagement ? ($lastManagement->observation ?? '') : '';
 
             $lastPayment = $paymentsCache[$credit->id] ?? null;
+
+            //Información de gestiones
+            $management_effective_count = DB::table('management')
+                ->where('credit_id', $credit->id)
+                ->whereIn('substate', ['COMPROMISO DE PAGO', 'OFERTA DE PAGO','CONVENIO DE PAGO','REGESTION DE OFERTA'])
+                ->whereBetween('created_at', [$from_date, $to_date])
+                ->orderBy('created_at', 'desc')
+                ->count();
+            
+            $management_ineffective_count = DB::table('management')
+                ->whereNotIn('substate', ['COMPROMISO DE PAGO', 'OFERTA DE PAGO','CONVENIO DE PAGO','REGESTION DE OFERTA'])
+                ->whereBetween('created_at', [$from_date, $to_date])
+                ->orderBy('created_at', 'desc')
+                ->count();
+
+            $lastManagementOfferDate = DB::table('management')
+                ->select('created_at')
+                ->where('credit_id', $credit->id)
+                ->where('substate', ['OFERTA DE PAGO'])
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            $lastManagementRegestionDate = DB::table('management')
+                ->select('created_at')
+                ->where('credit_id', $credit->id)
+                ->where('substate', ['REGESTION DE OFERTA'])
+                ->orderBy('created_at', 'desc')
+                ->first();
             
             $lastPaymentDate = $lastPayment ?
                 \Carbon\Carbon::parse($lastPayment->payment_date)->format('Y-m-d') : '';
@@ -356,6 +391,10 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 number_format($paymentsPerMonthCache[$credit->id][0] ?? 0, 2),
                 number_format($paymentsPerMonthCache[$credit->id][1] ?? 0, 2),
                 number_format($paymentsPerMonthCache[$credit->id][2] ?? 0, 2),
+                $management_effective_count,
+                $management_ineffective_count,
+                $lastManagementOfferDate ? \Carbon\Carbon::parse($lastManagementOfferDate->created_at)->format('Y-m-d') : '',
+                $lastManagementRegestionDate ? \Carbon\Carbon::parse($lastManagementRegestionDate->created_at)->format('Y-m-d') : '',
                 $lastManagementDate,
                 $lastManagementState,
                 $lastManagementPromise,
