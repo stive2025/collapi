@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Container\Attributes\Log as AttributesLog;
 use Illuminate\Support\Facades\Log;
 
 class SofiaService
@@ -42,6 +43,8 @@ class SofiaService
             $error = error_get_last();
             return null;
         }
+
+        Log::info('Sofia Config Response: ' . $result);
 
         $decoded = json_decode($result);
 
