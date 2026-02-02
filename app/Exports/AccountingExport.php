@@ -239,6 +239,11 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
     {
         if (empty($creditIds)) return;
 
+        Log::info('AccountingExport: Cargando condonaciones', [
+            'total_credits' => count($creditIds),
+            'credit_ids' => $creditIds
+        ]);
+        
         $condonations = DB::table('condonations')
             ->whereIn('credit_id', $creditIds)
             ->where('status', 'autorizado')
