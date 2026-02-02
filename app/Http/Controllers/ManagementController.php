@@ -8,6 +8,10 @@ use App\Http\Resources\ManagementResource;
 use App\Http\Responses\ResponseBase;
 use App\Models\CollectionCall;
 use App\Models\Management;
+use App\Services\UtilService;
+use App\Models\Invoice;
+use App\Models\Business;
+use App\Models\Campain;
 use App\Services\WebSocketService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -375,7 +379,9 @@ class ManagementController extends Controller
                 $credit->management_promise = $management->promise_date;
                 $credit->save();
             }
-            
+
+            $this->maybeCreatePendingInvoice($management, $credit);
+
             try {
                 $ws = new WebSocketService();
                 $ws->sendManagementUpdate(
@@ -401,6 +407,46 @@ class ManagementController extends Controller
                 500
             );
         }
+    }
+
+    /**
+     * Crea un invoice pendiente si el business es manual, el collection_state es distinto de CONVENIO DE PAGO
+     * y el substate es OFERTA DE PAGO o CONVENIO DE PAGO.
+     */
+    private function maybeCreatePendingInvoice($management, $credit)
+    {
+        if (!$credit) return;
+
+        $campain = Campain::find($management->campain_id);
+        if (!$campain) return;
+
+        $business = $campain->business_id ? Business::find($campain->business_id) : null;
+        if (!$business || strtolower($campain->type) !== 'manual') return;
+
+        if (strtoupper($credit->collection_state) === 'CONVENIO DE PAGO') return;
+
+        $substate = strtoupper($management->substate);
+        if (!in_array($substate, ['OFERTA DE PAGO', 'CONVENIO DE PAGO'])) return;
+
+        $util = new UtilService();
+        $valor = $util->calculateManagementCollectionExpenses(
+            floatval($credit->total_amount ?? 0),
+            intval($credit->days_past_due ?? 0)
+        );
+
+        Invoice::create([
+            'invoice_value' => $valor,
+            'tax_value' => 0,
+            'invoice_institution' => null,
+            'invoice_method' => null,
+            'invoice_access_key' => null,
+            'invoice_number' => null,
+            'invoice_date' => now(),
+            'credit_id' => $credit->id,
+            'client_id' => $credit->clients()->first()->id ?? null,
+            'status' => 'pendiente',
+            'created_by' => $management->created_by
+        ]);
     }
 
     /**

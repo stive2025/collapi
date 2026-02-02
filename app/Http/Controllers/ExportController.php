@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Exports\CondonacionExport;
 use App\Exports\AccountingExport;
 use App\Exports\CampainExport;
 use App\Exports\CampainAssignExport;
@@ -16,6 +16,20 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ExportController extends Controller
 {
+    public function exportCondonaciones(Request $request)
+    {
+        try {
+            // No requiere validación estricta, los filtros se aplican en el export
+            $fileName = 'HistoricoCondonaciones-' . date('Ymd_His') . '.xlsx';
+            return Excel::download(new CondonacionExport(), $fileName);
+        } catch (\Exception $e) {
+            return ResponseBase::error(
+                'Error al exportar historial de condonaciones',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
     public function exportCampain(Request $request)
     {
         try {
