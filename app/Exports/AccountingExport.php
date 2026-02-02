@@ -246,7 +246,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         
         $condonations = DB::table('condonations')
             ->whereIn('credit_id', $creditIds)
-            ->whereIn('status', ['autorizado', 'AUTORIZADO'])
+            ->whereIn('status', ['autorizado', 'AUTORIZADA'])
             ->select('credit_id', 'amount')
             ->get();
 
