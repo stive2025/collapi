@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\Credit;
 use App\Services\CatalogService;
 use App\Services\UtilService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -212,6 +213,8 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                     $user = $users->get($cc->user_id);
                     $agentsCache[$cc->credit_id][$index] = $user ? $user->name : '';
                 }
+
+                Log::info(json_encode($agentsCache));
             }
         }
 
