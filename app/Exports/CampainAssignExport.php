@@ -189,7 +189,11 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                                 campain_id,
                                 date,
                                 ROW_NUMBER() OVER (
-                                    PARTITION BY credit_id, campain_id
+                                    PARTITION BY 
+                                        credit_id,
+                                        campain_id,
+                                        YEAR(date),
+                                        MONTH(date)
                                     ORDER BY date DESC, id DESC
                                 ) as rn
                             FROM collection_credits
@@ -198,6 +202,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                         ) t
                     "))
                     ->where('rn', 1)
+                    ->orderBy('date', 'desc')
                     ->get();
 
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
