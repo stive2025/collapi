@@ -39,7 +39,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
     public function headings(): array
     {
         return [
-            [''], // Fila vacía para el logo
             ['ASIGNACIÓN DE CAMPAÑA'],
             ['N/A: No Asignado       N/P: No Pago      N/D:No Definido     N/G: No Gestionado'],
             ['Cartera: ' . $this->businessName],
@@ -233,11 +232,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 foreach ($tmp as $creditId => $agents) {
                     $agentsCache[$creditId] = array_values(array_reverse($agents));
                 }
-
-                // foreach ($collectionCredits as $cc) {
-                //     $user = $users->get($cc->user_id);
-                //     $agentsCache[$cc->credit_id][$index] = $user ? $user->name : '';
-                // }
             }
         }
 
@@ -286,27 +280,27 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 \Carbon\Carbon::parse($lastPayment->payment_date)->format('Y-m-d') : '';
 
             $dataBox[] = [
-                $this->businessName . '-' . $credit->sync_id,        // 0 - CREDITO
-                $credit->sync_status ?? '',                           // 1 - ESTADO SINC.
-                $clientData['ci'],                                    // 2 - CÉDULA CONTACTO
-                $clientData['name'],                                  // 3 - NOMBRE CONTACTO
-                $clientData['type'],                                  // 4 - CRÉDITO TIPO
-                $credit->agency ?? '',                                // 5 - AGENCIA
-                $agentsCache[$credit->id][0] ?? '',                   // 6 - MES 1 (agente)
-                $agentsCache[$credit->id][1] ?? '',                   // 7 - MES 2 (agente)
-                $agentsCache[$credit->id][2] ?? '',                   // 8 - MES 3 (agente)
-                $state,                                               // 9 - ESTADO CARTERA
-                $credit->days_past_due ?? 0,                         // 10 - DIAS DE MORA
-                $range,                                               // 11 - RANGO
-                number_format($credit->total_amount ?? 0, 2),        // 12 - TOTAL PENDIENTE
-                $lastPaymentDate,                                     // 13 - FECHA ÚLTIMO PAGO/ABONO
-                number_format($paymentsPerMonthCache[$credit->id][0] ?? 0, 2),  // 14 - P. MES 1
-                number_format($paymentsPerMonthCache[$credit->id][1] ?? 0, 2),  // 15 - P. MES 2
-                number_format($paymentsPerMonthCache[$credit->id][2] ?? 0, 2),  // 16 - P. MES 3
-                $lastManagementDate,                                  // 17 - FECHA ÚLTIMA GESTIÓN
-                $lastManagementState,                                 // 18 - ESTADO ÚLTIMA GESTIÓN
-                $lastManagementPromise,                               // 19 - FECHA ÚLTIMO COMPROMISO
-                $lastManagementObservation                            // 20 - OBSERVACIÓN ÚLTIMA GESTIÓN
+                $this->businessName . '-' . $credit->sync_id,
+                $credit->sync_status ?? '',
+                $clientData['ci'],
+                $clientData['name'],
+                $clientData['type'],
+                $credit->agency ?? '',
+                $agentsCache[$credit->id][0] ?? '',
+                $agentsCache[$credit->id][1] ?? '',
+                $agentsCache[$credit->id][2] ?? '',
+                $state,
+                $credit->days_past_due ?? 0,
+                $range,
+                number_format($credit->total_amount ?? 0, 2),
+                $lastPaymentDate,
+                number_format($paymentsPerMonthCache[$credit->id][0] ?? 0, 2),
+                number_format($paymentsPerMonthCache[$credit->id][1] ?? 0, 2),
+                number_format($paymentsPerMonthCache[$credit->id][2] ?? 0, 2),
+                $lastManagementDate,
+                $lastManagementState,
+                $lastManagementPromise,
+                $lastManagementObservation
             ];
         }
 
@@ -317,35 +311,27 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                // Ajustar altura de fila del logo
-                $event->sheet->getDelegate()->getRowDimension(1)->setRowHeight(45);
+                $event->sheet->getDelegate()->getRowDimension(1)->setRowHeight(50);
                 
-                $positionLast = count($this->headings()[5]);
+                $positionLast = count($this->headings()[4]);
                 $column = Coordinate::stringFromColumnIndex($positionLast);
 
-                // Fila 1 - vacía para logo
                 $cells = "A1:{$column}1";
                 $event->sheet->mergeCells($cells);
+                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
+                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(16);
+                $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
-                // Fila 2 - título
                 $cells = "A2:{$column}2";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
-                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(14);
-                $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-                // Fila 3 - leyenda
                 $cells = "A3:{$column}3";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
 
-                // Fila 4 - cartera
-                $cells = "A4:{$column}4";
-                $event->sheet->mergeCells($cells);
-                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
-
-                // Fila 5 - secciones
-                $cells = "G5:I5";
+                $cells = "G4:I4";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(12);
@@ -353,7 +339,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('C6EFCE');
                 $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-                $cells = "O5:Q5";
+                $cells = "O4:Q4";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(12);
@@ -361,7 +347,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFEB9C');
                 $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-                $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'];
+                $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'];
                 foreach ($columns as $col) {
                     $event->sheet->getDelegate()->getColumnDimension($col)->setAutoSize(true);
                 }
@@ -371,20 +357,20 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A6:U6')->getFont()->setBold(true);
-        $sheet->getStyle('A6:U6')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
-        $sheet->getStyle('A6:U6')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A6:U6')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
-        $sheet->getStyle('A6:U6')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A5:U5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:U5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        $sheet->getStyle('A5:U5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A5:U5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
+        $sheet->getStyle('A5:U5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
         $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'];
         foreach ($columns as $col) {
-            $sheet->getStyle("{$col}7:{$col}5000")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("{$col}6:{$col}5000")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         }
 
         $styles = [];
         foreach ($columns as $col) {
-            $styles["{$col}6"] = ['font' => ['size' => 10]];
+            $styles["{$col}5"] = ['font' => ['size' => 10]];
         }
 
         return $styles;
@@ -402,9 +388,9 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
         $drawing->setName('Logo');
         $drawing->setDescription('Logo de la empresa');
         $drawing->setPath($logoPath);
-        $drawing->setHeight(50);
+        $drawing->setHeight(40);
         $drawing->setCoordinates('A1');
-        $drawing->setOffsetX(10);
+        $drawing->setOffsetX(5);
         $drawing->setOffsetY(5);
 
         return [$drawing];
