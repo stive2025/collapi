@@ -185,15 +185,27 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
         if ($creditIds->isNotEmpty()) {
             $lastManagementSubquery = DB::table('management')
-                ->select('credit_id', DB::raw('MAX(id) as max_id'))
+                ->select(
+                    'credit_id',
+                    DB::raw('MAX(created_at) as last_created_at'),
+                    DB::raw('MAX(id) as max_id')
+                )
                 ->whereIn('credit_id', $creditIds)
                 ->groupBy('credit_id');
 
             $managementsData = DB::table('management as m')
-                ->joinSub($lastManagementSubquery, 'lm', function($join) {
-                    $join->on('m.id', '=', 'lm.max_id');
+                ->joinSub($lastManagementSubquery, 'lm', function ($join) {
+                    $join->on('m.credit_id', '=', 'lm.credit_id')
+                        ->on('m.created_at', '=', 'lm.last_created_at')
+                        ->on('m.id', '=', 'lm.max_id');
                 })
-                ->select('m.credit_id', 'm.created_at', 'm.substate', 'm.observation', 'm.promise_date')
+                ->select(
+                    'm.credit_id',
+                    'm.created_at',
+                    'm.substate',
+                    'm.observation',
+                    'm.promise_date'
+                )
                 ->get()
                 ->keyBy('credit_id');
 
@@ -327,14 +339,19 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
             $state = $this->utilService->setState($credit->collection_state ?? '');
 
             $lastManagement = $managementsCache[$credit->id] ?? null;
+
             $lastManagementDate = $lastManagement ?
                 \Carbon\Carbon::parse($lastManagement->created_at)->format('Y-m-d') : '';
+
             $lastManagementState = $lastManagement ? ($lastManagement->substate ?? '') : '';
+
             $lastManagementPromise = $lastManagement && $lastManagement->promise_date ?
                 \Carbon\Carbon::parse($lastManagement->promise_date)->format('Y-m-d') : '';
+
             $lastManagementObservation = $lastManagement ? ($lastManagement->observation ?? '') : '';
 
             $lastPayment = $paymentsCache[$credit->id] ?? null;
+            
             $lastPaymentDate = $lastPayment ?
                 \Carbon\Carbon::parse($lastPayment->payment_date)->format('Y-m-d') : '';
 
