@@ -264,10 +264,8 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
                 $users = DB::table('users')->whereIn('id', $userIds)->get()->keyBy('id');
 
-                // Mes actual (NO se cuenta)
                 $now = Carbon::now()->startOfMonth();
 
-                // Definir los últimos 3 meses completos
                 $months = [
                     $now->copy()->subMonths(3)->format('Y-m'), // más antiguo
                     $now->copy()->subMonths(2)->format('Y-m'),
@@ -277,28 +275,22 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 foreach ($collectionCredits as $cc) {
                     $creditId = $cc->credit_id;
 
-                    // Inicializar crédito con 3 posiciones vacías
                     if (!isset($agentsCache[$creditId])) {
                         $agentsCache[$creditId] = ["", "", ""];
                     }
 
                     $date = Carbon::parse($cc->date)->startOfMonth()->format('Y-m');
 
-                    // Si el registro no pertenece a los últimos 3 meses, ignorar
                     $monthIndex = array_search($date, $months, true);
                     if ($monthIndex === false) {
                         continue;
                     }
 
-                    // Obtener nombre del agente
                     $user = $users->get($cc->user_id);
                     $agentName = $user ? $user->name : '';
 
-                    // Asignar en la posición correcta
                     $agentsCache[$creditId][$monthIndex] = $agentName;
                 }
-
-                Log::info("Agents Cache for Campaign {$campaign['campaign_id']}: ", $agentsCache);
             }
         }
 
@@ -353,9 +345,9 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $clientData['name'],
                 $clientData['type'],
                 $credit->agency ?? '',
-                $agentsCache[$credit->id][2] ?? '',
-                $agentsCache[$credit->id][1] ?? '',
                 $agentsCache[$credit->id][0] ?? '',
+                $agentsCache[$credit->id][1] ?? '',
+                $agentsCache[$credit->id][2] ?? '',
                 $state,
                 $credit->days_past_due ?? 0,
                 $range,
