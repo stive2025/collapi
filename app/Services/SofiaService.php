@@ -38,13 +38,13 @@ class SofiaService
         $context = stream_context_create($options);
 
         $result = @file_get_contents($url, false, $context);
+        
+        Log::info('Sofia Config Response: ' . $result);
 
         if ($result === false) {
             $error = error_get_last();
             return null;
         }
-
-        Log::info('Sofia Config Response: ' . $result);
 
         $decoded = json_decode($result);
 
