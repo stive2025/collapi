@@ -6,7 +6,6 @@ use App\Models\Credit;
 use App\Services\CatalogService;
 use App\Services\UtilService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -40,6 +39,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
     public function headings(): array
     {
         return [
+            [''], // Fila vacía para el logo
             ['ASIGNACIÓN DE CAMPAÑA'],
             ['N/A: No Asignado       N/P: No Pago      N/D:No Definido     N/G: No Gestionado'],
             ['Cartera: ' . $this->businessName],
@@ -73,21 +73,17 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 "NOMBRE CONTACTO",
                 "CRÉDITO TIPO",
                 "AGENCIA",
-
                 $this->campaigns[0]['name'] ?? 'MES 1',
                 $this->campaigns[1]['name'] ?? 'MES 2',
                 $this->campaigns[2]['name'] ?? 'MES 3',
-
                 "ESTADO CARTERA",
                 "DIAS DE MORA",
                 "RANGO",
                 "TOTAL PENDIENTE",
                 "FECHA ÚLTIMO PAGO/ABONO",
-
                 'P. ' . ($this->campaigns[0]['name'] ?? 'MES 1'),
                 'P. ' . ($this->campaigns[1]['name'] ?? 'MES 2'),
                 'P. ' . ($this->campaigns[2]['name'] ?? 'MES 3'),
-
                 "FECHA ÚLTIMA GESTIÓN",
                 "ESTADO ÚLTIMA GESTIÓN",
                 "FECHA ÚLTIMO COMPROMISO",
@@ -242,8 +238,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 //     $user = $users->get($cc->user_id);
                 //     $agentsCache[$cc->credit_id][$index] = $user ? $user->name : '';
                 // }
-
-                Log::info(json_encode($agentsCache));
             }
         }
 
@@ -323,34 +317,49 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-                $positionLast = count($this->headings()[4]);
+                // Ajustar altura de fila del logo
+                $event->sheet->getDelegate()->getRowDimension(1)->setRowHeight(45);
+                
+                $positionLast = count($this->headings()[5]);
                 $column = Coordinate::stringFromColumnIndex($positionLast);
 
+                // Fila 1 - vacía para logo
                 $cells = "A1:{$column}1";
                 $event->sheet->mergeCells($cells);
-                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
 
+                // Fila 2 - título
                 $cells = "A2:{$column}2";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
+                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(14);
+                $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
+                // Fila 3 - leyenda
                 $cells = "A3:{$column}3";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
 
-                $cells = "G4:I4";
+                // Fila 4 - cartera
+                $cells = "A4:{$column}4";
+                $event->sheet->mergeCells($cells);
+                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
+
+                // Fila 5 - secciones
+                $cells = "G5:I5";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(12);
                 $event->sheet->getDelegate()->getStyle($cells)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
                 $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('C6EFCE');
+                $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-                $cells = "O4:Q4";
+                $cells = "O5:Q5";
                 $event->sheet->mergeCells($cells);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
                 $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(12);
                 $event->sheet->getDelegate()->getStyle($cells)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
                 $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFEB9C');
+                $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
                 $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'];
                 foreach ($columns as $col) {
@@ -362,20 +371,20 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A5:U5')->getFont()->setBold(true);
-        $sheet->getStyle('A5:U5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
-        $sheet->getStyle('A5:U5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A5:U5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
-        $sheet->getStyle('A5:U5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A6:U6')->getFont()->setBold(true);
+        $sheet->getStyle('A6:U6')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        $sheet->getStyle('A6:U6')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A6:U6')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
+        $sheet->getStyle('A6:U6')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
         $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U'];
         foreach ($columns as $col) {
-            $sheet->getStyle("{$col}6:{$col}5000")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("{$col}7:{$col}5000")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
         }
 
         $styles = [];
         foreach ($columns as $col) {
-            $styles["{$col}5"] = ['font' => ['size' => 10]];
+            $styles["{$col}6"] = ['font' => ['size' => 10]];
         }
 
         return $styles;
