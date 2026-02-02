@@ -29,7 +29,7 @@ class SofiaService
                 'method' => 'GET',
                 // 'content' => json_encode($datos_facturacion), // No enviar content en GET
                 'ignore_errors' => true,
-                'timeout' => 10,
+                'timeout' => 100,
             ],
         ];
 
