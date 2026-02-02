@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\Credit;
 use App\Services\CatalogService;
 use App\Services\UtilService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -180,6 +181,10 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
         }
 
         $agentsCache = [];
+        $tmp = [];
+
+        $now = Carbon::now()->startOfMonth();
+
         foreach ($this->campaigns as $index => $campaign) {
             if ($campaign['campaign_id'] && $creditIds->isNotEmpty()) {
                 $collectionCredits = DB::table(DB::raw("
@@ -206,15 +211,37 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                     ->orderBy('date', 'desc')
                     ->get();
 
-                Log::info(json_encode($collectionCredits));
-
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
                 $users = DB::table('users')->whereIn('id', $userIds)->get()->keyBy('id');
 
                 foreach ($collectionCredits as $cc) {
+                    $creditId = $cc->credit_id;
+                    $date = Carbon::parse($cc->date)->startOfMonth();
+
+                    if ($date->equalTo($now)) {
+                        continue;
+                    }
+
+                    if (!isset($tmp[$creditId])) {
+                        $tmp[$creditId] = [];
+                    }
+
+                    if (count($tmp[$creditId]) >= 3) {
+                        continue;
+                    }
+
                     $user = $users->get($cc->user_id);
-                    $agentsCache[$cc->credit_id][$index] = $user ? $user->name : '';
+                    $tmp[$creditId][] = $user ? $user->name : 'EN ESPERA';
                 }
+
+                foreach ($tmp as $creditId => $agents) {
+                    $agentsCache[$creditId] = array_values(array_reverse($agents));
+                }
+
+                // foreach ($collectionCredits as $cc) {
+                //     $user = $users->get($cc->user_id);
+                //     $agentsCache[$cc->credit_id][$index] = $user ? $user->name : '';
+                // }
 
                 Log::info(json_encode($agentsCache));
             }
