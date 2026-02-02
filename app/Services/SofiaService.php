@@ -17,9 +17,9 @@ class SofiaService
     
     public function getConfig()
     {
-        $header = "Content-type: application/json\r\n" .
-                "Accept: application/json\r\n" .
-                "Authorization: Basic " . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA'));
+        $header = "Accept: application/json\r\n" .
+            "Authorization: Basic " . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA')) . "\r\n" .
+            "User-Agent: PostmanRuntime/7.36.0";
 
         $url = 'https://sofiasistema.sisofia.com.ec/services/configuracion?consultaParaDispositivosMoviles=false';
 
@@ -27,9 +27,8 @@ class SofiaService
             'http' => [
                 'header' => $header,
                 'method' => 'GET',
-                // 'content' => json_encode($datos_facturacion), // No enviar content en GET
                 'ignore_errors' => true,
-                'timeout' => 100,
+                'timeout' => 10,
             ],
         ];
 
