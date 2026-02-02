@@ -252,29 +252,32 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
                 $userIds = $collectionCredits->pluck('user_id')->unique()->filter();
                 $users = DB::table('users')->whereIn('id', $userIds)->get()->keyBy('id');
-
+                
                 foreach ($collectionCredits as $cc) {
                     $creditId = $cc->credit_id;
+
                     $date = Carbon::parse($cc->date)->startOfMonth();
 
+                    // ❌ excluir mes actual
                     if ($date->equalTo($now)) {
                         continue;
                     }
 
-                    if (!isset($tmp[$creditId])) {
-                        $tmp[$creditId] = [];
+                    // inicializar array del crédito
+                    if (!isset($agentsCache[$creditId])) {
+                        $agentsCache[$creditId] = [];
                     }
 
-                    if (count($tmp[$creditId]) >= 3) {
+                    // máximo 3 meses
+                    if (count($agentsCache[$creditId]) >= 3) {
                         continue;
                     }
 
+                    // obtener nombre del agente
                     $user = $users->get($cc->user_id);
-                    $tmp[$creditId][] = $user ? $user->name : 'EN ESPERA';
-                }
+                    $agentName = $user ? $user->name : 'EN ESPERA';
 
-                foreach ($tmp as $creditId => $agents) {
-                    $agentsCache[$creditId] = array_values(array_reverse($agents));
+                    $agentsCache[$creditId][] = $agentName;
                 }
             }
         }
