@@ -26,7 +26,8 @@ class SofiaService
         ];
 
         $client = new Client([
-            'timeout' => 10,
+            'timeout' => 30,
+            'connect_timeout' => 10,
             'http_errors' => false
         ]);
 
