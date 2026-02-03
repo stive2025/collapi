@@ -30,10 +30,12 @@ class SofiaService
             'connect_timeout' => 30,
             'http_errors' => false,
             'verify' => false,
+            'force_ip_resolve' => 'v4',
             'curl' => [
                 CURLOPT_SSL_VERIFYPEER => false,
                 CURLOPT_SSL_VERIFYHOST => false,
                 CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
+                CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
             ],
         ]);
 
