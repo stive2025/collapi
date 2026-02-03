@@ -397,31 +397,6 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FFEB9C');
                 $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-
-                $cells = "Q4:R4";
-                $event->sheet->mergeCells($cells);
-                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
-                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(12);
-                $event->sheet->getDelegate()->getStyle($cells)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
-                $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('98F527');
-                $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-
-                $cells = "S4:T4";
-                $event->sheet->mergeCells($cells);
-                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
-                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(12);
-                $event->sheet->getDelegate()->getStyle($cells)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
-                $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('F5EB27');
-                $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-
-                $cells = "U4:X4";
-                $event->sheet->mergeCells($cells);
-                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setBold(true);
-                $event->sheet->getDelegate()->getStyle($cells)->getFont()->setSize(12);
-                $event->sheet->getDelegate()->getStyle($cells)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
-                $event->sheet->getDelegate()->getStyle($cells)->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('27D6F5');
-                $event->sheet->getDelegate()->getStyle($cells)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-
                 $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
                 foreach ($columns as $col) {
                     $event->sheet->getDelegate()->getColumnDimension($col)->setWidth(20);
@@ -432,12 +407,30 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
 
     public function styles(Worksheet $sheet)
     {
-        $sheet->getStyle('A5:X5')->getFont()->setBold(true);
-        $sheet->getStyle('A5:X5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
-        $sheet->getStyle('A5:X5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle('A5:X5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
-        $sheet->getStyle('A5:X5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+        $sheet->getStyle('A5:P5')->getFont()->setBold(true);
+        $sheet->getStyle('A5:P5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        $sheet->getStyle('A5:P5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A5:P5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('FF9619');
+        $sheet->getStyle('A5:P5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
 
+        $sheet->getStyle('Q5:R5')->getFont()->setBold(true);
+        $sheet->getStyle('Q5:R5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        $sheet->getStyle('Q5:R5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('Q5:R5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('98F527');
+        $sheet->getStyle('Q5:R5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+
+        $sheet->getStyle('S5:T5')->getFont()->setBold(true);
+        $sheet->getStyle('S5:T5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        $sheet->getStyle('S5:T5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('S5:T5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('F5EB27');
+        $sheet->getStyle('S5:T5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+        
+        $sheet->getStyle('U5:X5')->getFont()->setBold(true);
+        $sheet->getStyle('U5:X5')->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THICK);
+        $sheet->getStyle('U5:X5')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('U5:X5')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)->getStartColor()->setARGB('27D6F5');
+        $sheet->getStyle('U5:X5')->getAlignment()->setVertical(\PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER);
+        
         $columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X'];
         foreach ($columns as $col) {
             $sheet->getStyle("{$col}6:{$col}5000")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
