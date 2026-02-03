@@ -19,6 +19,14 @@ class SofiaService
     public function getConfig()
     {
         $url = 'https://sofiasistema.sisofia.com.ec/services/configuracion?consultaParaDispositivosMoviles=false';
+
+        // Debug: verificar credenciales
+        Log::info('Sofia credentials check', [
+            'user' => env('USER_SOFIA'),
+            'pass_exists' => !empty(env('PASSWORD_SOFIA')),
+            'url' => $url
+        ]);
+
         $headers = [
             'Accept' => 'application/json',
             'Authorization' => 'Basic ' . base64_encode(env('USER_SOFIA') . ':' . env('PASSWORD_SOFIA')),
@@ -28,7 +36,8 @@ class SofiaService
         $client = new Client([
             'timeout' => 30,
             'connect_timeout' => 30,
-            'http_errors' => true
+            'http_errors' => true,
+            'verify' => false, // Deshabilitar verificación SSL temporalmente
         ]);
 
         try {
