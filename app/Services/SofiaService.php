@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Container\Attributes\Log as AttributesLog;
 use Illuminate\Support\Facades\Log;
 use GuzzleHttp\Client;
 
@@ -21,7 +20,7 @@ class SofiaService
         $url = 'https://sofiasistema.sisofia.com.ec/services/configuracion?consultaParaDispositivosMoviles=false';
 
         // Debug: verificar credenciales
-        Log::info('Sofia credentials check', [
+        Log::error('Sofia credentials check', [
             'user' => env('USER_SOFIA'),
             'pass_exists' => !empty(env('PASSWORD_SOFIA')),
             'url' => $url
