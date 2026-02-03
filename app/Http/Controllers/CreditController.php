@@ -385,6 +385,73 @@ class CreditController extends Controller
     }
 
     /**
+     * Copy a credit to another business with all its client relationships
+     */
+    public function copyToBusiness(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'credit_id' => ['required', 'integer', 'exists:credits,id'],
+                'business_id' => ['required', 'integer', 'exists:businesses,id'],
+                'suffix' => ['required', 'string', 'max:50'],
+                'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            ]);
+
+            $originalCredit = Credit::with('clients')->findOrFail($validated['credit_id']);
+
+            // Generar nuevo sync_id con el sufijo
+            $newSyncId = $validated['suffix'] . $originalCredit->sync_id;
+
+            // Verificar que no exista un crédito con el mismo sync_id en la empresa destino
+            $existingCredit = Credit::where('sync_id', $newSyncId)
+                ->where('business_id', $validated['business_id'])
+                ->first();
+
+            if ($existingCredit) {
+                return ResponseBase::error(
+                    'Ya existe un crédito con el sync_id ' . $newSyncId . ' en la empresa destino',
+                    [],
+                    400
+                );
+            }
+
+            // Crear copia del crédito
+            $newCreditData = $originalCredit->toArray();
+            unset($newCreditData['id'], $newCreditData['created_at'], $newCreditData['updated_at'], $newCreditData['clients']);
+            $newCreditData['business_id'] = $validated['business_id'];
+            $newCreditData['sync_id'] = $newSyncId;
+
+            if (isset($validated['user_id'])) {
+                $newCreditData['user_id'] = $validated['user_id'];
+            }
+
+            $newCredit = Credit::create($newCreditData);
+
+            // Copiar relaciones client_credit
+            $clientRelations = [];
+            foreach ($originalCredit->clients as $client) {
+                $clientRelations[$client->id] = ['type' => $client->pivot->type];
+            }
+            $newCredit->clients()->attach($clientRelations);
+
+            $newCredit->load('clients', 'business', 'user');
+
+            return ResponseBase::success(
+                new CreditResource($newCredit),
+                'Crédito copiado exitosamente a la nueva empresa'
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            return ResponseBase::error(
+                'Error al copiar el crédito',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    /**
      * Update the specified resource in storage.
      */
     public function update(Request $request, Credit $credit)

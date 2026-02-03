@@ -109,6 +109,8 @@ Route::middleware(['check.token'])->group(function () {
     // Monitor de usuarios
     Route::get('monitor', [UserController::class, 'monitor']);
     Route::get('number-trays', [CreditController::class, 'indexNumberTrays']);
+    // Copiar crédito a otra empresa
+    Route::post('credits/copy-to-business', [CreditController::class, 'copyToBusiness']);
 
     // Estadísticas
     Route::get('statistics/payments-with-management', [StatisticController::class, 'getPaymentsWithManagement']);
