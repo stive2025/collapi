@@ -96,12 +96,10 @@ class WebSocketService
     {
         try {
             if ($this->isConnected()) {
-                Log::warning('WebSocket already connected');
                 return true;
             }
 
             $this->client = new Client($this->url, $this->options);
-            Log::info('WebSocket connected successfully', ['url' => $this->url]);
             return true;
         } catch (Exception $e) {
             Log::error('WebSocket connection failed', [
@@ -146,7 +144,6 @@ class WebSocketService
     {
         try {
             if (!$this->isConnected()) {
-                Log::warning('Cannot receive message: WebSocket not connected');
                 return null;
             }
 
@@ -258,12 +255,10 @@ class WebSocketService
                     call_user_func($callback, $message, $this);
                 }
 
-                // Check timeout
                 if ($timeout > 0 && (time() - $startTime) >= $timeout) {
                     break;
                 }
 
-                // Small delay to prevent CPU spinning
                 usleep(10000); // 10ms
             } catch (Exception $e) {
                 // Try to reconnect
@@ -354,17 +349,14 @@ class WebSocketService
                     'nro_calls_acum' => 0,
                 ];
             } else {
-                // For management/call events, calculate metrics
                 $campain = Campain::find($campainId);
                 $campainIdValue = $campainId;
                 $campainName = $campain ? $campain->name : 'Unknown';
                 $metrics = $this->calculateUserMetrics($userId, $campainId);
             }
 
-            // Calculate time in state
             $timeState = $this->calculateTimeState($user);
 
-            // Build message
             $message = [
                 'type' => 'user_update',
                 'name' => $user->name,
@@ -376,7 +368,6 @@ class WebSocketService
                 'data' => $metrics
             ];
 
-            // Send message
             $sent = $this->send($message);
 
             if ($sent) {
