@@ -86,12 +86,12 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 //Información de gestiones
                 'CANTIDAD GESTIONES EFECTIVAS',
                 'CANTIDAD GESTIONES NO EFECTIVAS',
-                'FECHA OFERTA DE PAGO',
-                'FECHA ULT. REGESTIÓN',
+                'FECHA REGISTRO DE OFERTA DE PAGO',
+                'FECHA DE OFERTA CLIENTE',
 
                 "FECHA ÚLTIMA GESTIÓN",
                 "ESTADO ÚLTIMA GESTIÓN",
-                "FECHA ÚLTIMO COMPROMISO",
+                "ÚLTIMA FECHA PARA REGESTIÓN",
                 "OBSERVACIÓN ÚLTIMA GESTIÓN"
             ]
         ];
@@ -310,18 +310,18 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 ->count();
 
             $lastManagementOfferDate = DB::table('management')
-                ->select('created_at')
+                ->select('created_at','promise_date')
                 ->where('credit_id', $credit->id)
                 ->where('substate', ['OFERTA DE PAGO'])
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            $lastManagementRegestionDate = DB::table('management')
-                ->select('created_at')
-                ->where('credit_id', $credit->id)
-                ->where('substate', ['REGESTION DE OFERTA'])
-                ->orderBy('created_at', 'desc')
-                ->first();
+            // $lastManagementRegestionDate = DB::table('management')
+            //     ->select('created_at')
+            //     ->where('credit_id', $credit->id)
+            //     ->where('substate', ['REGESTION DE OFERTA'])
+            //     ->orderBy('created_at', 'desc')
+            //     ->first();
             
             $lastPaymentDate = $lastPayment ?
                 \Carbon\Carbon::parse($lastPayment->payment_date)->format('Y-m-d') : '';
@@ -346,7 +346,7 @@ class CampainAssignExport implements FromCollection, WithHeadings, WithEvents, W
                 $management_effective_count,
                 $management_ineffective_count,
                 $lastManagementOfferDate ? \Carbon\Carbon::parse($lastManagementOfferDate->created_at)->format('Y-m-d') : '',
-                $lastManagementRegestionDate ? \Carbon\Carbon::parse($lastManagementRegestionDate->created_at)->format('Y-m-d') : '',
+                $lastManagementOfferDate ? \Carbon\Carbon::parse($lastManagementOfferDate->promise_date)->format('Y-m-d') : '',
                 $lastManagementDate,
                 $lastManagementState,
                 $lastManagementPromise,
