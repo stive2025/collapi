@@ -18,8 +18,7 @@ class SofiaService
     public function getConfig()
     {
         $url = 'https://sofiasistema.sisofia.com.ec/services/configuracion?consultaParaDispositivosMoviles=false';
-
-        // Debug: verificar credenciales
+        
         Log::error('Sofia credentials check', [
             'user' => env('USER_SOFIA'),
             'pass_exists' => !empty(env('PASSWORD_SOFIA')),
