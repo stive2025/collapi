@@ -137,11 +137,21 @@ class StatisticController extends Controller
     public function getStadisticsByUserID(Request $request){
         $request->validate([
             'user_id' => 'required|integer|exists:users,id',
-            'campain_id' => 'required|integer|exists:campains,id',
         ]);
 
         $user = \App\Models\User::select('id', 'name')->find($request->user_id);
-        $campainId = $request->campain_id;
+
+        // Buscar campaña activa de tipo api
+        $activeCampain = \App\Models\Campain::where('state', 'ACTIVE')
+            ->where('type', 'api')
+            ->select('id')
+            ->first();
+
+        if (!$activeCampain) {
+            return ResponseBase::error('No hay campaña activa de tipo API', null, 404);
+        }
+
+        $campainId = $activeCampain->id;
 
         $paymentsData = \App\Models\CollectionPayment::where('collection_payments.campain_id', $campainId)
             ->where('collection_payments.with_management', 'SI')
