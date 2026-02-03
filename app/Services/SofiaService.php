@@ -28,12 +28,29 @@ class SofiaService
         $client = new Client([
             'timeout' => 30,
             'connect_timeout' => 30,
-            'http_errors' => false
+            'http_errors' => false,
+            'verify' => false,
+            'curl' => [
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false,
+                CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
+            ],
         ]);
-        
+
+        // Log para debug en Hostinger
+        Log::info('Sofia getConfig - Iniciando petición', [
+            'url' => $url,
+            'user' => env('USER_SOFIA'),
+            'server_ip' => $_SERVER['SERVER_ADDR'] ?? 'unknown',
+        ]);
+
         try {
             $response = $client->request('GET', $url, [
                 'headers' => $headers
+            ]);
+
+            Log::info('Sofia getConfig - Respuesta recibida', [
+                'status' => $response->getStatusCode(),
             ]);
 
             $status = $response->getStatusCode();
