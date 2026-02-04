@@ -59,7 +59,6 @@ class ListadoLlamadasSheet implements FromCollection, WithHeadings, WithTitle, S
                 'c.sync_id',
                 'cc.credit_id',
                 'cc.state',
-                'cc.efectivity',
                 'cc.duration',
                 'cc.phone_number',
                 'cc.created_at',
@@ -71,12 +70,15 @@ class ListadoLlamadasSheet implements FromCollection, WithHeadings, WithTitle, S
         $dataBox = [];
 
         foreach ($calls as $call) {
+            // Determinar efectividad basada en el estado
+            $efectividad = $this->getEfectividad($call->state);
+
             $dataBox[] = [
                 $call->id,
                 $call->sync_id,
                 $call->credit_id,
                 $call->state ?? '',
-                $call->efectivity ?? '',
+                $efectividad,
                 $call->duration ?? 0,
                 $call->phone_number ?? '',
                 $call->created_at,
@@ -90,5 +92,14 @@ class ListadoLlamadasSheet implements FromCollection, WithHeadings, WithTitle, S
         $dataBox[] = ['Hora y fecha:', date('Y/m/d H:i:s')];
 
         return collect($dataBox);
+    }
+
+    private function getEfectividad($state)
+    {
+        $efectivos = ['CONTACTADO'];
+        if (in_array(strtoupper($state ?? ''), $efectivos)) {
+            return 'EFECTIVA';
+        }
+        return 'NO EFECTIVA';
     }
 }
