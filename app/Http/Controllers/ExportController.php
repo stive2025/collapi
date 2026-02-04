@@ -70,6 +70,15 @@ class ExportController extends Controller
     public function exportAccounting(Request $request)
     {
         try {
+            // Convertir business_ids de JSON string a array si viene como string
+            $businessIds = $request->input('business_ids');
+            if (is_string($businessIds)) {
+                $decoded = json_decode($businessIds, true);
+                if (is_array($decoded)) {
+                    $request->merge(['business_ids' => $decoded]);
+                }
+            }
+
             $validated = $request->validate([
                 'business_ids' => ['required', 'array'],
                 'business_ids.*' => ['integer', 'exists:businesses,id'],
