@@ -30,7 +30,7 @@ class DirectionRequest extends FormRequest
 
         if ($this->isMethod('post')) {
             $rules['client_id'] = array_merge(['required'], (array) $rules['client_id']);
-            $rules['direction'] = array_merge(['required'], (array) $rules['direction']);
+            $rules['address'] = array_merge(['required'], (array) $rules['address']);
             $rules['type'] = array_merge(['required'], (array) $rules['type']);
         } else {
             foreach ($rules as $key => $r) {

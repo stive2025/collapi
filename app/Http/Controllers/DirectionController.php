@@ -180,7 +180,7 @@ class DirectionController extends Controller
      *         @OA\JsonContent(
      *             required={"client_id", "direction", "type"},
      *             @OA\Property(property="client_id", type="integer", example=1, description="ID del cliente"),
-     *             @OA\Property(property="direction", type="string", maxLength=500, example="Av. Principal 123", description="Direccion completa"),
+     *             @OA\Property(property="address", type="string", maxLength=500, example="Av. Principal 123", description="Direccion completa"),
      *             @OA\Property(property="type", type="string", maxLength=50, example="DOMICILIO", description="Tipo de direccion (DOMICILIO, TRABAJO, etc.)"),
      *             @OA\Property(property="province", type="string", maxLength=100, example="Pichincha", description="Provincia"),
      *             @OA\Property(property="canton", type="string", maxLength=100, example="Quito", description="Canton"),
@@ -201,7 +201,7 @@ class DirectionController extends Controller
      *                 type="object",
      *                 @OA\Property(property="id", type="integer"),
      *                 @OA\Property(property="client_id", type="integer"),
-     *                 @OA\Property(property="direction", type="string"),
+     *                 @OA\Property(property="address", type="string"),
      *                 @OA\Property(property="type", type="string"),
      *                 @OA\Property(property="province", type="string"),
      *                 @OA\Property(property="canton", type="string"),

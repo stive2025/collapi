@@ -631,7 +631,7 @@
                                         "type": "integer",
                                         "example": 1
                                     },
-                                    "direction": {
+                                    "address": {
                                         "description": "Direccion completa",
                                         "type": "string",
                                         "maxLength": 500,
@@ -708,7 +708,7 @@
                                                 "client_id": {
                                                     "type": "integer"
                                                 },
-                                                "direction": {
+                                                "address": {
                                                     "type": "string"
                                                 },
                                                 "type": {
@@ -2431,6 +2431,96 @@
                                 }
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/sync/collection-credits": {
+            "post": {
+                "tags": [
+                    "Sincronización"
+                ],
+                "summary": "Sincronizar historial de créditos",
+                "description": "Sincroniza el historial de créditos desde la API externa para una fecha y campaña específica",
+                "operationId": "syncCollectionCredits",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "start_date",
+                                    "end_date"
+                                ],
+                                "properties": {
+                                    "start_date": {
+                                        "description": "Fecha inicial (YYYY-MM-DD)",
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-01-01"
+                                    },
+                                    "end_date": {
+                                        "description": "Fecha final (YYYY-MM-DD)",
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-01-15"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Sincronización completada",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "synced": {
+                                                    "type": "integer"
+                                                },
+                                                "skipped": {
+                                                    "type": "integer"
+                                                },
+                                                "errors": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Error de validación"
+                    },
+                    "500": {
+                        "description": "Error al sincronizar"
                     }
                 },
                 "security": [

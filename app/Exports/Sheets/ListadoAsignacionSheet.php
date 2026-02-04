@@ -57,15 +57,15 @@ class ListadoAsignacionSheet implements FromCollection, WithHeadings, WithTitle,
 
     public function collection()
     {
-        // Obtener el primer registro de collection_credits por credit_id
+        // Obtener el último registro (más reciente) de collection_credits por credit_id
         $subquery = DB::table('collection_credits')
-            ->select('credit_id', DB::raw('MIN(id) as min_id'))
+            ->select('credit_id', DB::raw('MAX(id) as max_id'))
             ->where('campain_id', $this->campainId)
             ->groupBy('credit_id');
 
         $credits = DB::table('collection_credits as cc')
-            ->joinSub($subquery, 'first_cc', function ($join) {
-                $join->on('cc.id', '=', 'first_cc.min_id');
+            ->joinSub($subquery, 'latest_cc', function ($join) {
+                $join->on('cc.id', '=', 'latest_cc.max_id');
             })
             ->join('credits as c', 'c.id', '=', 'cc.credit_id')
             ->leftJoin('users as u', 'u.id', '=', 'cc.user_id')
