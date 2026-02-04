@@ -71,6 +71,8 @@ class FieldTripController extends Controller
      *                 @OA\Items(
      *                     @OA\Property(property="id", type="integer"),
      *                     @OA\Property(property="field_trip_id", type="integer"),
+     *                     @OA\Property(property="days_past_due", type="integer"),
+     *                     @OA\Property(property="collection_state", type="string"),
      *                     @OA\Property(property="amount", type="number"),
      *                     @OA\Property(property="address", type="string"),
      *                     @OA\Property(property="campain_id", type="integer"),
@@ -118,7 +120,7 @@ class FieldTripController extends Controller
      *                         @OA\Items(
      *                             @OA\Property(property="id", type="integer"),
      *                             @OA\Property(property="credit_id", type="string"),
-     *                             @OA\Property(property="user_id", type="string"),
+     *                             @OA\Property(property="user_name", type="string"),
      *                             @OA\Property(property="state", type="string"),
      *                             @OA\Property(property="substate", type="string"),
      *                             @OA\Property(property="promise_date", type="string"),
@@ -261,10 +263,12 @@ class FieldTripController extends Controller
                             $clientName = $mgClient ? $mgClient->name : null;
                         }
 
+                        $user = \App\Models\User::find($management->created_by);
+
                         return [
                             'id' => $management->id,
                             'credit_id' => (string) $management->credit_id,
-                            'user_id' => (string) $management->created_by,
+                            'user_name' => $user ? (string) $user->name : null,
                             'state' => $management->state,
                             'substate' => $management->substate,
                             'promise_date' => $management->promise_date,
@@ -279,6 +283,8 @@ class FieldTripController extends Controller
                 return [
                     'id' => $credit->id,
                     'field_trip_id' => $credit->id,
+                    'days_past_due' => $credit->days_past_due,
+                    'collection_state' => $credit->collection_state,
                     'clients' => $clients,
                     'amount' => (float) ($credit->total_amount ?? 0),
                     'address' => $direction ? $direction->direction : null,
