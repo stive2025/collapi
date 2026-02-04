@@ -57,7 +57,6 @@ class ListadoAsignacionSheet implements FromCollection, WithHeadings, WithTitle,
 
     public function collection()
     {
-        // Obtener el último registro (más reciente) de collection_credits por credit_id
         $subquery = DB::table('collection_credits')
             ->select('credit_id', DB::raw('MAX(id) as max_id'))
             ->where('campain_id', $this->campainId)
@@ -107,11 +106,6 @@ class ListadoAsignacionSheet implements FromCollection, WithHeadings, WithTitle,
                 $rango
             ];
         }
-
-        // Footer
-        $dataBox[] = [''];
-        $dataBox[] = ['Generado por:', $this->userName];
-        $dataBox[] = ['Hora y fecha:', date('Y/m/d H:i:s')];
 
         return collect($dataBox);
     }

@@ -195,12 +195,7 @@ class ListadoGestionesSheet implements FromCollection, WithHeadings, WithTitle, 
                 $ultimaLlamadaDuracionMin
             ];
         }
-
-        // Footer
-        $dataBox[] = [''];
-        $dataBox[] = ['Generado por:', $this->userName];
-        $dataBox[] = ['Hora y fecha:', date('Y/m/d H:i:s')];
-
+        
         return collect($dataBox);
     }
 
