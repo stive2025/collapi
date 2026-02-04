@@ -50,17 +50,28 @@ class ListadoLlamadasSheet implements FromCollection, WithHeadings, WithTitle, S
 
     public function collection()
     {
+        // Obtener fechas de la campaña
+        $campain = \App\Models\Campain::find($this->campainId);
+        $startDate = $campain ? $campain->begin_time : null;
+        $endDate = $campain ? $campain->end_time : null;
+
         $creditIds = DB::table('collection_credits')
             ->where('campain_id', $this->campainId)
             ->pluck('credit_id')
             ->unique()
             ->toArray();
 
-        $calls = DB::table('collection_calls as cc')
+        $query = DB::table('collection_calls as cc')
             ->join('credits as c', 'c.id', '=', 'cc.credit_id')
             ->leftJoin('users as u', 'u.id', '=', 'cc.created_by')
-            ->whereIn('cc.credit_id', $creditIds)
-            ->select(
+            ->whereIn('cc.credit_id', $creditIds);
+
+        // Filtrar por fechas de la campaña
+        if ($startDate && $endDate) {
+            $query->whereBetween('cc.created_at', [$startDate, $endDate]);
+        }
+
+        $calls = $query->select(
                 'cc.id',
                 'c.sync_id',
                 'cc.credit_id',
