@@ -631,32 +631,48 @@ class SyncController extends Controller
     }
 
     /**
-     * Sincronizar clientes desde la API externa para créditos sin relación en client_credit
+     * Sincronizar clientes desde la API externa para créditos específicos
      */
     public function syncClients(Request $request)
     {
         try {
-            $creditsWithoutClients = \App\Models\Credit::whereDoesntHave('clients')->get();
+            $validated = $request->validate([
+                'sync_ids' => ['required', 'array', 'min:1'],
+                'sync_ids.*' => ['required', 'string'],
+            ]);
 
-            if ($creditsWithoutClients->isEmpty()) {
-                return ResponseBase::success(
-                    ['total' => 0, 'synced' => 0, 'skipped' => 0],
-                    'No hay créditos sin clientes para sincronizar'
+            $syncIds = $validated['sync_ids'];
+
+            $credits = \App\Models\Credit::whereIn('sync_id', $syncIds)->get();
+
+            if ($credits->isEmpty()) {
+                return ResponseBase::error(
+                    'No se encontraron créditos con los sync_ids proporcionados',
+                    ['sync_ids' => $syncIds],
+                    404
                 );
             }
 
-            $totalCredits = $creditsWithoutClients->count();
+            $creditsBySyncId = $credits->keyBy('sync_id');
             $syncedCount = 0;
             $skippedCount = 0;
             $errors = [];
 
-            foreach ($creditsWithoutClients as $credit) {
+            // Recorrer cada sync_id y hacer llamada individual a la API
+            foreach ($syncIds as $syncId) {
+                $credit = $creditsBySyncId[$syncId] ?? null;
+                if (!$credit) {
+                    $errors[] = "Crédito no encontrado para sync_id '{$syncId}'";
+                    $skippedCount++;
+                    continue;
+                }
+
                 try {
-                    $apiUrl = "https://core.sefil.com.ec/api/public/api/contactosyncs?sync_id={$credit->sync_id}";
+                    $apiUrl = "https://core.sefil.com.ec/api/public/api/contactosyncs?sync_id={$syncId}";
                     $response = @file_get_contents($apiUrl);
 
                     if ($response === false) {
-                        $errors[] = "No se pudo obtener datos para sync_id '{$credit->sync_id}'";
+                        $errors[] = "No se pudo obtener datos para sync_id '{$syncId}'";
                         $skippedCount++;
                         continue;
                     }
@@ -664,139 +680,18 @@ class SyncController extends Controller
                     $clientsData = json_decode($response, true);
 
                     if (!is_array($clientsData) || empty($clientsData)) {
-                        $errors[] = "Sin datos de clientes para sync_id '{$credit->sync_id}'";
+                        $errors[] = "Sin datos de clientes para sync_id '{$syncId}'";
                         $skippedCount++;
                         continue;
                     }
 
-                    foreach ($clientsData as $clientData) {
-                        $ci = $clientData['documento'] ?? null;
-                        if (!$ci) {
-                            continue;
-                        }
-
-                        $client = \App\Models\Client::where('ci', $ci)->first();
-
-                        if (!$client) {
-                            $client = \App\Models\Client::create([
-                                'ci' => $ci,
-                                'name' => $clientData['fullName'] ?? null,
-                                'gender' => $clientData['sexo'] ?? null,
-                                'civil_status' => $clientData['estado_civil'] ?? null,
-                                'economic_activity' => $clientData['sector_economico'] ?? null,
-                            ]);
-                        }
-
-                        $existingRelation = \Illuminate\Support\Facades\DB::table('client_credit')
-                            ->where('client_id', $client->id)
-                            ->where('credit_id', $credit->id)
-                            ->exists();
-
-                        if (!$existingRelation) {
-                            \Illuminate\Support\Facades\DB::table('client_credit')->insert([
-                                'client_id' => $client->id,
-                                'credit_id' => $credit->id,
-                                'type' => $clientData['type'] ?? 'TITULAR',
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ]);
-                        }
-
-                        if (!empty($clientData['direccion_domicilio'])) {
-                            $direccionDom = json_decode($clientData['direccion_domicilio'], true);
-                            if (is_array($direccionDom)) {
-                                $existingDomicilio = \App\Models\CollectionDirection::where('client_id', $client->id)
-                                    ->where('type', 'DOMICILIO')
-                                    ->first();
-
-                                if (!$existingDomicilio) {
-                                    \App\Models\CollectionDirection::create([
-                                        'client_id' => $client->id,
-                                        'address' => $direccionDom['address'] ?? null,
-                                        'type' => 'DOMICILIO',
-                                        'province' => $direccionDom['province'] ?? null,
-                                        'canton' => $direccionDom['canton'] ?? null,
-                                        'parish' => $direccionDom['parroquia'] ?? null,
-                                        'neighborhood' => $direccionDom['neighborhood'] ?? null,
-                                        'latitude' => $direccionDom['latitude'] ?? null,
-                                        'longitude' => $direccionDom['length'] ?? null,
-                                    ]);
-                                }
-                            }
-                        }
-
-                        if (!empty($clientData['direccion_trabajo'])) {
-                            $direccionTrabajo = json_decode($clientData['direccion_trabajo'], true);
-                            if (is_array($direccionTrabajo)) {
-                                $existingTrabajo = \App\Models\CollectionDirection::where('client_id', $client->id)
-                                    ->where('type', 'TRABAJO')
-                                    ->first();
-
-                                if (!$existingTrabajo) {
-                                    \App\Models\CollectionDirection::create([
-                                        'client_id' => $client->id,
-                                        'address' => $direccionTrabajo['address'] ?? null,
-                                        'type' => 'TRABAJO',
-                                        'province' => $direccionTrabajo['province'] ?? null,
-                                        'canton' => $direccionTrabajo['canton'] ?? null,
-                                        'parish' => $direccionTrabajo['parroquia'] ?? null,
-                                        'neighborhood' => $direccionTrabajo['neighborhood'] ?? null,
-                                        'latitude' => $direccionTrabajo['latitude'] ?? null,
-                                        'longitude' => $direccionTrabajo['length'] ?? null,
-                                    ]);
-                                }
-                            }
-                        }
-
-                        if (!empty($clientData['mobile_phones'])) {
-                            $phones = explode(',', $clientData['mobile_phones']);
-                            foreach ($phones as $phone) {
-                                $phone = trim($phone);
-                                if (!empty($phone)) {
-                                    $existingContact = \App\Models\CollectionContact::where('client_id', $client->id)
-                                        ->where('phone_number', $phone)
-                                        ->first();
-
-                                    if (!$existingContact) {
-                                        \App\Models\CollectionContact::create([
-                                            'client_id' => $client->id,
-                                            'phone_number' => $phone,
-                                            'phone_type' => 'CELULAR',
-                                            'phone_status' => 'ACTIVE',
-                                        ]);
-                                    }
-                                }
-                            }
-                        }
-
-                        if (!empty($clientData['landline_phones'])) {
-                            $phones = explode(',', $clientData['landline_phones']);
-                            foreach ($phones as $phone) {
-                                $phone = trim($phone);
-                                if (!empty($phone)) {
-                                    $existingContact = \App\Models\CollectionContact::where('client_id', $client->id)
-                                        ->where('phone_number', $phone)
-                                        ->first();
-
-                                    if (!$existingContact) {
-                                        \App\Models\CollectionContact::create([
-                                            'client_id' => $client->id,
-                                            'phone_number' => $phone,
-                                            'phone_type' => 'FIJO',
-                                            'phone_status' => 'ACTIVE',
-                                        ]);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
+                    $this->processClientData($clientsData, $credit);
                     $syncedCount++;
 
                 } catch (\Exception $e) {
-                    $errors[] = "Error procesando sync_id '{$credit->sync_id}': {$e->getMessage()}";
+                    $errors[] = "Error procesando sync_id '{$syncId}': {$e->getMessage()}";
                     $skippedCount++;
-                    \Illuminate\Support\Facades\Log::error("Error sincronizando clientes para sync_id {$credit->sync_id}", [
+                    \Illuminate\Support\Facades\Log::error("Error sincronizando clientes para sync_id {$syncId}", [
                         'error' => $e->getMessage(),
                     ]);
                 }
@@ -804,7 +699,7 @@ class SyncController extends Controller
 
             return ResponseBase::success(
                 [
-                    'total_credits' => $totalCredits,
+                    'total_requested' => count($syncIds),
                     'synced' => $syncedCount,
                     'skipped' => $skippedCount,
                     'errors' => !empty($errors) ? $errors : null
@@ -823,6 +718,134 @@ class SyncController extends Controller
                 ['error' => $e->getMessage()],
                 500
             );
+        }
+    }
+
+    /**
+     * Procesar datos de clientes para un crédito específico
+     */
+    private function processClientData(array $clientsData, $credit)
+    {
+        foreach ($clientsData as $clientData) {
+            $ci = $clientData['documento'] ?? null;
+            if (!$ci) {
+                continue;
+            }
+
+            $client = \App\Models\Client::where('ci', $ci)->first();
+
+            if (!$client) {
+                $client = \App\Models\Client::create([
+                    'ci' => $ci,
+                    'name' => $clientData['fullName'] ?? null,
+                    'gender' => $clientData['sexo'] ?? null,
+                    'civil_status' => $clientData['estado_civil'] ?? null,
+                    'economic_activity' => $clientData['sector_economico'] ?? null,
+                ]);
+            }
+
+            $existingRelation = \Illuminate\Support\Facades\DB::table('client_credit')
+                ->where('client_id', $client->id)
+                ->where('credit_id', $credit->id)
+                ->exists();
+
+            if (!$existingRelation) {
+                \Illuminate\Support\Facades\DB::table('client_credit')->insert([
+                    'client_id' => $client->id,
+                    'credit_id' => $credit->id,
+                    'type' => $clientData['type'] ?? 'TITULAR',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            if (!empty($clientData['direccion_domicilio'])) {
+                $direccionDom = json_decode($clientData['direccion_domicilio'], true);
+                if (is_array($direccionDom)) {
+                    $existingDomicilio = \App\Models\CollectionDirection::where('client_id', $client->id)
+                        ->where('type', 'DOMICILIO')
+                        ->first();
+
+                    if (!$existingDomicilio) {
+                        \App\Models\CollectionDirection::create([
+                            'client_id' => $client->id,
+                            'address' => $direccionDom['address'] ?? null,
+                            'type' => 'DOMICILIO',
+                            'province' => $direccionDom['province'] ?? null,
+                            'canton' => $direccionDom['canton'] ?? null,
+                            'parish' => $direccionDom['parroquia'] ?? null,
+                            'neighborhood' => $direccionDom['neighborhood'] ?? null,
+                            'latitude' => $direccionDom['latitude'] ?? null,
+                            'longitude' => $direccionDom['length'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            if (!empty($clientData['direccion_trabajo'])) {
+                $direccionTrabajo = json_decode($clientData['direccion_trabajo'], true);
+                if (is_array($direccionTrabajo)) {
+                    $existingTrabajo = \App\Models\CollectionDirection::where('client_id', $client->id)
+                        ->where('type', 'TRABAJO')
+                        ->first();
+
+                    if (!$existingTrabajo) {
+                        \App\Models\CollectionDirection::create([
+                            'client_id' => $client->id,
+                            'address' => $direccionTrabajo['address'] ?? null,
+                            'type' => 'TRABAJO',
+                            'province' => $direccionTrabajo['province'] ?? null,
+                            'canton' => $direccionTrabajo['canton'] ?? null,
+                            'parish' => $direccionTrabajo['parroquia'] ?? null,
+                            'neighborhood' => $direccionTrabajo['neighborhood'] ?? null,
+                            'latitude' => $direccionTrabajo['latitude'] ?? null,
+                            'longitude' => $direccionTrabajo['length'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            if (!empty($clientData['mobile_phones'])) {
+                $phones = explode(',', $clientData['mobile_phones']);
+                foreach ($phones as $phone) {
+                    $phone = trim($phone);
+                    if (!empty($phone)) {
+                        $existingContact = \App\Models\CollectionContact::where('client_id', $client->id)
+                            ->where('phone_number', $phone)
+                            ->first();
+
+                        if (!$existingContact) {
+                            \App\Models\CollectionContact::create([
+                                'client_id' => $client->id,
+                                'phone_number' => $phone,
+                                'phone_type' => 'CELULAR',
+                                'phone_status' => 'ACTIVE',
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            if (!empty($clientData['landline_phones'])) {
+                $phones = explode(',', $clientData['landline_phones']);
+                foreach ($phones as $phone) {
+                    $phone = trim($phone);
+                    if (!empty($phone)) {
+                        $existingContact = \App\Models\CollectionContact::where('client_id', $client->id)
+                            ->where('phone_number', $phone)
+                            ->first();
+
+                        if (!$existingContact) {
+                            \App\Models\CollectionContact::create([
+                                'client_id' => $client->id,
+                                'phone_number' => $phone,
+                                'phone_type' => 'FIJO',
+                                'phone_status' => 'ACTIVE',
+                            ]);
+                        }
+                    }
+                }
+            }
         }
     }
 
