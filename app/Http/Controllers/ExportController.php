@@ -71,21 +71,22 @@ class ExportController extends Controller
     {
         try {
             $validated = $request->validate([
-                'business_id' => ['required', 'integer', 'exists:businesses,id'],
+                'business_ids' => ['required', 'array'],
+                'business_ids.*' => ['integer', 'exists:businesses,id'],
                 'group' => ['required', 'string', 'in:true,false'],
                 'start_date' => ['required_without:month_name', 'date'],
                 'end_date' => ['required_without:month_name', 'date'],
                 'month_name' => ['required_without_all:start_date,end_date', 'string']
             ]);
 
-            $businessId = $validated['business_id'];
+            $businessIds = $validated['business_ids'];
             $group = $validated['group'];
             $startDate = $validated['start_date'] ?? null;
             $endDate = $validated['end_date'] ?? null;
             $monthName = $validated['month_name'] ?? null;
 
-            $business = Business::findOrFail($businessId);
-            $businessName = strtoupper($business->name);
+            $businesses = Business::whereIn('id', $businessIds)->get();
+            $businessName = $businesses->pluck('name')->map(fn($n) => strtoupper($n))->implode('-');
 
             $user = $request->user();
             $userName = $user ? $user->name : 'Sistema';
@@ -103,7 +104,7 @@ class ExportController extends Controller
             $fileName = 'Contabilidad-dia_' . $day . '-' . $monthNameCurrent . '-' . $businessName . '.xlsx';
 
             return Excel::download(
-                new AccountingExport($businessId, $group, $startDate, $endDate, $monthName, $businessName, $userName),
+                new AccountingExport($businessIds, $group, $startDate, $endDate, $monthName, $businessName, $userName),
                 $fileName
             );
 

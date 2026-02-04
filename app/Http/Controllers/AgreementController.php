@@ -80,10 +80,7 @@ class AgreementController extends Controller
                 return ResponseBase::error('Crédito no encontrado', null, 404);
             }
 
-            // Validar que no exista un convenio previo activo (solo si el usuario no es admin)
             $user = $request->user();
-
-            Log::info('Role del usuario: ' . $user->role);
 
             if ($user->role !== 'admin') {
                 $existingAgreement = Agreement::where('credit_id', $validated['credit_id'])
@@ -100,7 +97,6 @@ class AgreementController extends Controller
                 }
             }
 
-            // Validar que el crédito no tenga una condonación activa
             $activeCondonation = \App\Models\Condonation::where('credit_id', $validated['credit_id'])
                 ->whereIn('status', ['PENDIENTE', 'APLICADA'])
                 ->first();
@@ -124,8 +120,7 @@ class AgreementController extends Controller
                     $paidFees++;
                 }
             }
-
-            // Verificar si el usuario es admin
+            
             $isAdmin = in_array(strtolower($user->role), ['admin', 'superadmin']);
 
             $agreementData = [
@@ -146,11 +141,10 @@ class AgreementController extends Controller
 
                 $credit->update([
                     'collection_state' => 'CONVENIO DE PAGO',
-                    'pending_fees' => $totalFees - $paidFees,
-                    'paid_fees' => $paidFees,
+                    // 'pending_fees' => $totalFees - $paidFees,
+                    // 'paid_fees' => $paidFees,
                 ]);
             } else {
-                // No admin: status pendiente, no actualiza el crédito
                 $agreementData['status'] = 'PENDIENTE';
             }
 
@@ -214,9 +208,6 @@ class AgreementController extends Controller
     protected function creditHasAgreement(int $creditId, ?array $statuses = null): bool
     {
         $user = request()->user();
-
-        Log::info('Role del usuario en checkCreditAgreement: ' . $user->role);
-
         if($user->role !== 'admin'){
             $query = Agreement::where('credit_id', $creditId);
             if (is_array($statuses) && count($statuses) > 0) {

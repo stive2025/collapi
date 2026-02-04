@@ -20,7 +20,7 @@ use Maatwebsite\Excel\Concerns\WithColumnWidths;
 
 class AccountingExport implements FromCollection, WithHeadings, WithCustomStartCell, WithEvents, WithDrawings, ShouldAutoSize, WithStyles, WithColumnWidths
 {
-    protected $businessId;
+    protected $businessIds;
     protected $group;
     protected $startDate;
     protected $endDate;
@@ -29,9 +29,9 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
     protected $userName;
     protected $utilService;
 
-    public function __construct($businessId, $group, $startDate, $endDate, $monthName, $businessName, $userName)
+    public function __construct($businessIds, $group, $startDate, $endDate, $monthName, $businessName, $userName)
     {
-        $this->businessId = $businessId;
+        $this->businessIds = is_array($businessIds) ? $businessIds : [$businessIds];
         $this->group = $group;
         $this->startDate = $startDate;
         $this->endDate = $endDate;
@@ -225,7 +225,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             $dataBox = $this->processUngroupedPayments($payments);
         }
 
-        $this->addInvoices($dataBox, $this->businessId);
+        $this->addInvoices($dataBox, $this->businessIds);
         usort($dataBox, fn($a, $b) => strtotime($a[6]) - strtotime($b[6]));
 
         $this->addTotalsAndFooter($dataBox);
@@ -269,7 +269,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
     private function getPaymentsQuery()
     {
         $query = DB::table('collection_payments as cp')
-            ->where('cp.business_id', $this->businessId);
+            ->whereIn('cp.business_id', $this->businessIds);
 
         if ($this->monthName) {
             $monthNumber = $this->utilService->getMonthNumber($this->monthName);
@@ -435,7 +435,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
         return $amount;
     }
 
-    private function addInvoices(&$dataBox, $businessId)
+    private function addInvoices(&$dataBox, $businessIds)
     {
         $invoicesQuery = DB::table('invoices as i')
             ->join('credits as c', 'c.id', '=', 'i.credit_id')
@@ -445,7 +445,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
                 $join->on('cl.id', '=', 'cc.client_id')
                     ->where('cc.type', '=', 'TITULAR');
             })
-            ->where('c.business_id', $businessId)
+            ->whereIn('c.business_id', $businessIds)
             ->whereIn('i.status', ['finalizado', 'anulado']);
 
         if ($this->monthName) {
