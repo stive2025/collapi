@@ -18,7 +18,7 @@ class DirectionRequest extends FormRequest
     {
         $rules = [
             'client_id' => ['nullable', 'integer', 'exists:clients,id'],
-            'direction' => ['nullable', 'string', 'max:500'],
+            'address' => ['nullable', 'string', 'max:500'],
             'type' => ['nullable', 'string', 'max:50'],
             'province' => ['nullable', 'string', 'max:100'],
             'canton' => ['nullable', 'string', 'max:100'],
@@ -53,8 +53,8 @@ class DirectionRequest extends FormRequest
         return [
             'client_id.required' => 'El cliente es obligatorio.',
             'client_id.exists' => 'El cliente especificado no existe.',
-            'direction.required' => 'La dirección es obligatoria.',
-            'direction.max' => 'La dirección no puede exceder 500 caracteres.',
+            'address.required' => 'La dirección es obligatoria.',
+            'address.max' => 'La dirección no puede exceder 500 caracteres.',
             'type.required' => 'El tipo de dirección es obligatorio.',
             'type.max' => 'El tipo no puede exceder 50 caracteres.',
             'province.max' => 'La provincia no puede exceder 100 caracteres.',
