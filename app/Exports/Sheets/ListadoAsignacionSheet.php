@@ -57,7 +57,16 @@ class ListadoAsignacionSheet implements FromCollection, WithHeadings, WithTitle,
 
     public function collection()
     {
+        // Obtener el primer registro de collection_credits por credit_id
+        $subquery = DB::table('collection_credits')
+            ->select('credit_id', DB::raw('MIN(id) as min_id'))
+            ->where('campain_id', $this->campainId)
+            ->groupBy('credit_id');
+
         $credits = DB::table('collection_credits as cc')
+            ->joinSub($subquery, 'first_cc', function ($join) {
+                $join->on('cc.id', '=', 'first_cc.min_id');
+            })
             ->join('credits as c', 'c.id', '=', 'cc.credit_id')
             ->leftJoin('users as u', 'u.id', '=', 'cc.user_id')
             ->where('cc.campain_id', $this->campainId)
@@ -75,8 +84,6 @@ class ListadoAsignacionSheet implements FromCollection, WithHeadings, WithTitle,
                 'cc.days_past_due',
                 'c.agency'
             )
-            ->distinct('cc.credit_id')
-            ->groupBy('cc.credit_id')
             ->get();
 
         $dataBox = [];
