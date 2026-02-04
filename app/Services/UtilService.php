@@ -54,7 +54,7 @@ class UtilService
             return "K) 361-720";
         }else if($days_past_due>=721 & $days_past_due<=1080){
             return "L) 721-1080";
-        }else if($days_past_due>1081){
+        }else if($days_past_due>=1081){
             return "M) Más de 1080";
         }
     }
