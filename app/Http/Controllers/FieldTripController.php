@@ -14,6 +14,27 @@ use Illuminate\Support\Facades\Log;
 class FieldTripController extends Controller
 {
     /**
+     * Convertir un valor a array si es necesario
+     */
+    private function toArray($value)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            if (str_starts_with($trimmed, '[') && str_ends_with($trimmed, ']')) {
+                $decoded = json_decode($trimmed, true);
+                return is_array($decoded) ? $decoded : [$value];
+            }
+            return explode(',', $value);
+        }
+
+        return [$value];
+    }
+
+    /**
      * Display a listing of the resource.
      * Devuelve créditos con management_status VISITA CAMPO o cuya última gestión sea VISITA CAMPO
      * 
@@ -139,6 +160,32 @@ class FieldTripController extends Controller
                 ->where('user_id', $userId)
                 ->where('sync_status', 'ACTIVE')
                 ->where('approve_field_trip', 1)
+                ->when($request->filled('collection_state'), function ($q) use ($request) {
+                    $value = $request->query('collection_state');
+                    if (is_array($value) || (is_string($value) && (str_starts_with(trim($value), '[') || str_contains($value, ',')))) {
+                        return $q->whereIn('collection_state', $this->toArray($value));
+                    }
+                    return $q->where('collection_state', $value);
+                })
+                ->when($request->filled('agencies'), function ($q) use ($request) {
+                    $value = $request->query('agencies');
+                    if (is_array($value) || (is_string($value) && (str_starts_with(trim($value), '[') || str_contains($value, ',')))) {
+                        return $q->whereIn('agency', $this->toArray($value));
+                    }
+                    return $q->where('agency', $value);
+                })
+                ->when($request->filled('days_past_due_min'), fn($q) =>
+                    $q->where('days_past_due', '>=', $request->query('days_past_due_min'))
+                )
+                ->when($request->filled('days_past_due_max'), fn($q) =>
+                    $q->where('days_past_due', '<=', $request->query('days_past_due_max'))
+                )
+                ->when($request->filled('total_amount_min'), fn($q) =>
+                    $q->where('total_amount', '>=', $request->query('total_amount_min'))
+                )
+                ->when($request->filled('total_amount_max'), fn($q) =>
+                    $q->where('total_amount', '<=', $request->query('total_amount_max'))
+                )
                 ->with(['clients.directions', 'clients.collectionContacts'])
                 ->get();
 
