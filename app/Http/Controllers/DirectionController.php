@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DirectionRequest;
 use App\Http\Resources\CollectionDirectionResource;
+use Illuminate\Support\Facades\Log;
 use App\Http\Responses\ResponseBase;
 use App\Models\CollectionDirection;
 use Illuminate\Http\Request;
@@ -225,7 +226,7 @@ class DirectionController extends Controller
     {
         try {
             $data = $request->validated();
-
+            Log::info('Creating direction with data: ', $data);
             $direction = CollectionDirection::create($data);
 
             return ResponseBase::success(
