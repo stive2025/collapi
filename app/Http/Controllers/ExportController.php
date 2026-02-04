@@ -7,6 +7,7 @@ use App\Exports\CampainExport;
 use App\Exports\CampainAssignExport;
 use App\Exports\DireccionesExport;
 use App\Exports\PaymentsConsolidatedExport;
+use App\Exports\ResumeCampainExport;
 use App\Http\Responses\ResponseBase;
 use App\Models\Business;
 use App\Models\Campain;
@@ -254,6 +255,39 @@ class ExportController extends Controller
         } catch (\Exception $e) {
             return ResponseBase::error(
                 'Error al exportar pagos consolidados',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
+
+    public function exportResumeCampain(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'campain_id' => ['required', 'integer', 'exists:campains,id']
+            ]);
+
+            $campainId = $validated['campain_id'];
+
+            $campain = Campain::findOrFail($campainId);
+            $campainName = strtoupper($campain->name);
+
+            $user = $request->user();
+            $userName = $user ? $user->name : 'Sistema';
+
+            $fileName = 'ResumenCampaña-' . $campainName . '-' . date('Ymd_His') . '.xlsx';
+
+            return Excel::download(
+                new ResumeCampainExport($campainId, $userName),
+                $fileName
+            );
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return ResponseBase::validationError($e->errors());
+        } catch (\Exception $e) {
+            return ResponseBase::error(
+                'Error al exportar resumen de campaña',
                 ['error' => $e->getMessage()],
                 500
             );
