@@ -638,10 +638,10 @@ class SyncController extends Controller
         try {
             $validated = $request->validate([
                 'sync_ids' => ['required', 'array', 'min:1'],
-                'sync_ids.*' => ['required', 'string'],
             ]);
 
-            $syncIds = $validated['sync_ids'];
+            // Convertir a strings para la consulta
+            $syncIds = array_map('strval', $validated['sync_ids']);
 
             $credits = \App\Models\Credit::whereIn('sync_id', $syncIds)->get();
 
