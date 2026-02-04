@@ -78,7 +78,7 @@ class ListadoGestionesSheet implements FromCollection, WithHeadings, WithTitle, 
 
     public function collection()
     {
-        $managements = DB::table('managements as m')
+        $managements = DB::table('management as m')
             ->join('credits as c', 'c.id', '=', 'm.credit_id')
             ->leftJoin('users as u', 'u.id', '=', 'm.created_by')
             ->leftJoin('clients as cl', 'cl.id', '=', 'm.client_id')
