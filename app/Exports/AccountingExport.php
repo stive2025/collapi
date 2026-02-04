@@ -283,6 +283,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             DB::raw('(SELECT c.sync_id FROM credits c WHERE c.id = cp.credit_id) as sync_id'),
             DB::raw('(SELECT c.agency FROM credits c WHERE c.id = cp.credit_id) as agency'),
             DB::raw('(SELECT c.collection_state FROM credits c WHERE c.id = cp.credit_id) as collection_state'),
+            DB::raw('(SELECT b.name FROM businesses b WHERE b.id = cp.business_id) as business_name'),
             DB::raw('(SELECT cl.name FROM clients cl
                 INNER JOIN client_credit cc ON cc.client_id = cl.id
                 WHERE cc.credit_id = cp.credit_id AND cc.type = "TITULAR"
@@ -381,7 +382,7 @@ class AccountingExport implements FromCollection, WithHeadings, WithCustomStartC
             $payment->agency,
             $payment->client_ci,
             $payment->client_name,
-            $this->businessName . '-' . $payment->sync_id,
+            strtoupper($payment->business_name) . '-' . $payment->sync_id,
             ($payment->payment_number !== null ? $payment->payment_number : 'FACES'),
             $payment->payment_deposit_date,
             $payment->payment_date,
