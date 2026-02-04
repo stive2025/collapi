@@ -50,10 +50,16 @@ class ListadoLlamadasSheet implements FromCollection, WithHeadings, WithTitle, S
 
     public function collection()
     {
+        $creditIds = DB::table('collection_credits')
+            ->where('campain_id', $this->campainId)
+            ->pluck('credit_id')
+            ->unique()
+            ->toArray();
+
         $calls = DB::table('collection_calls as cc')
             ->join('credits as c', 'c.id', '=', 'cc.credit_id')
             ->leftJoin('users as u', 'u.id', '=', 'cc.created_by')
-            ->where('cc.campain_id', $this->campainId)
+            ->whereIn('cc.credit_id', $creditIds)
             ->select(
                 'cc.id',
                 'c.sync_id',
