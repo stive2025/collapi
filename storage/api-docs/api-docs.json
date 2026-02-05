@@ -1026,6 +1026,62 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "collection_state",
+                        "in": "query",
+                        "description": "Estado de cobranza (puede ser un valor o lista separada por comas)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "Vencido,Castigado"
+                        }
+                    },
+                    {
+                        "name": "agencies",
+                        "in": "query",
+                        "description": "Agencias (puede ser un valor o lista separada por comas)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "QUITO,GUAYAQUIL"
+                        }
+                    },
+                    {
+                        "name": "days_past_due_min",
+                        "in": "query",
+                        "description": "Días de mora mínimo",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "days_past_due_max",
+                        "in": "query",
+                        "description": "Días de mora máximo",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "total_amount_min",
+                        "in": "query",
+                        "description": "Monto total mínimo",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
+                    },
+                    {
+                        "name": "total_amount_max",
+                        "in": "query",
+                        "description": "Monto total máximo",
+                        "required": false,
+                        "schema": {
+                            "type": "number"
+                        }
                     }
                 ],
                 "responses": {
@@ -1188,6 +1244,28 @@
                                                                     "type": "string"
                                                                 },
                                                                 "updated_at": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "type": "object"
+                                                        }
+                                                    },
+                                                    "payments": {
+                                                        "description": "Pagos del crédito en los últimos 12 meses",
+                                                        "type": "array",
+                                                        "items": {
+                                                            "properties": {
+                                                                "payment_reference": {
+                                                                    "type": "string"
+                                                                },
+                                                                "payment_value": {
+                                                                    "type": "number"
+                                                                },
+                                                                "payment_date": {
+                                                                    "type": "string",
+                                                                    "format": "date"
+                                                                },
+                                                                "payment_type": {
                                                                     "type": "string"
                                                                 }
                                                             },
