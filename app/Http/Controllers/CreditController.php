@@ -194,7 +194,7 @@ class CreditController extends Controller
     public function index()
     {
         $query = Credit::query();
-
+        
         $this->withClientsAndDirections($query);
 
         if (request('management_tray') === 'INACTIVE') {
@@ -217,9 +217,8 @@ class CreditController extends Controller
 
         $credits = $query->paginate(request('per_page', 15));
 
-        // Calcular management_collection_expenses solo para SEFIL_1 y SEFIL_2
-        $credits->getCollection()->transform(function ($credit) {
-            // Verificar si la empresa del crédito es SEFIL_1 o SEFIL_2 y el estado no es Cancelado ni Convenio de pago
+        $utilService = $this->utilService;
+        $credits->getCollection()->transform(function ($credit) use ($utilService) {
             $shouldCalculateExpenses = false;
             if ($credit->business &&
                 in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2']) &&
@@ -231,17 +230,23 @@ class CreditController extends Controller
                 $pendingInvoice = \App\Models\Invoice::where('credit_id', $credit->id)
                     ->where('status', 'pendiente')
                     ->first();
-                
+
                 if ($pendingInvoice) {
                     $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
                     $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $invoiceValue;
+                    $credit->invoice_value = $invoiceValue;
                     $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
                 } else {
-                    $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
+                    $calculatedExpenses = $utilService->calculateManagementCollectionExpenses(
+                        floatval($credit->total_amount ?? 0),
+                        intval($credit->days_past_due ?? 0)
+                    );
+                    $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $calculatedExpenses;
+                    $credit->invoice_value = $calculatedExpenses;
+                    $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
                 }
 
             } elseif (in_array($credit->collection_state, ['Convenio de pago', 'CONVENIO DE PAGO'])) {
-                // Para Convenio de pago, buscar facturas pendientes y sumar su valor
                 $pendingInvoice = \App\Models\Invoice::where('credit_id', $credit->id)
                     ->where('status', 'pendiente')
                     ->first();
@@ -249,13 +254,15 @@ class CreditController extends Controller
                 if ($pendingInvoice) {
                     $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
                     $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $invoiceValue;
+                    $credit->invoice_value = $invoiceValue;
                     $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
                 } else {
                     $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
+                    $credit->invoice_value = 0;
                 }
             } else {
-                // Para empresas que no son SEFIL_1 o SEFIL_2, o créditos Cancelados, establecer gastos de cobranza en 0
                 $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
+                $credit->invoice_value = 0;
             }
 
             return $credit;
@@ -330,8 +337,7 @@ class CreditController extends Controller
             'user',
             'business'
         ]);
-
-        // Calcular management_collection_expenses solo para SEFIL_1 y SEFIL_2 y el estado no es Cancelado ni Convenio de pago
+        
         $shouldCalculateExpenses = false;
         if ($credit->business &&
             in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2']) &&
@@ -344,24 +350,22 @@ class CreditController extends Controller
                 ->where('status', 'pendiente')
                 ->first();
 
-            // $currentExpenses = floatval($credit->management_collection_expenses ?? 0);
-            // $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
-            //     $credit->total_amount ?? 0,
-            //     $credit->days_past_due ?? 0
-            // );
-            // $credit->management_collection_expenses = $currentExpenses + $calculatedExpenses;
-            // $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
-
             if ($pendingInvoice) {
                 $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
                 $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $invoiceValue;
+                $credit->invoice_value = $invoiceValue;
                 $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
             } else {
-                $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
+                $calculatedExpenses = $this->utilService->calculateManagementCollectionExpenses(
+                    floatval($credit->total_amount ?? 0),
+                    intval($credit->days_past_due ?? 0)
+                );
+                $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $calculatedExpenses;
+                $credit->invoice_value = $calculatedExpenses;
+                $credit->total_amount = floatval($credit->total_amount ?? 0) + $calculatedExpenses;
             }
 
         } elseif (in_array($credit->collection_state, ['Convenio de pago', 'CONVENIO DE PAGO'])) {
-            // Para Convenio de pago, buscar facturas pendientes y sumar su valor
             $pendingInvoice = \App\Models\Invoice::where('credit_id', $credit->id)
                 ->where('status', 'pendiente')
                 ->first();
@@ -369,13 +373,15 @@ class CreditController extends Controller
             if ($pendingInvoice) {
                 $invoiceValue = floatval($pendingInvoice->invoice_value ?? 0);
                 $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0) + $invoiceValue;
+                $credit->invoice_value = $invoiceValue;
                 $credit->total_amount = floatval($credit->total_amount ?? 0) + $invoiceValue;
             } else {
                 $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
+                $credit->invoice_value = 0;
             }
         } else {
-            // Para empresas que no son SEFIL_1 o SEFIL_2, o créditos Cancelados, establecer gastos de cobranza en 0
             $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
+            $credit->invoice_value = 0;
         }
 
         return ResponseBase::success(
