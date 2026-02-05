@@ -849,34 +849,6 @@ class SyncController extends Controller
         }
     }
 
-    /**
-     * Sincronizar gastos judiciales desde la API externa
-     *
-     * @OA\Post(
-     *     path="/api/sync/legal-expenses",
-     *     summary="Sincronizar gastos judiciales",
-     *     description="Sincroniza gastos judiciales desde la API externa",
-     *     operationId="syncLegalExpenses",
-     *     tags={"Sincronización"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Sincronización completada",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="total", type="integer"),
-     *                 @OA\Property(property="synced", type="integer"),
-     *                 @OA\Property(property="skipped", type="integer"),
-     *                 @OA\Property(property="errors", type="array", @OA\Items(type="string"))
-     *             )
-     *         )
-     *     )
-     * )
-     */
     public function syncLegalExpenses(Request $request)
     {
         try {
@@ -998,50 +970,6 @@ class SyncController extends Controller
         }
     }
 
-    /**
-     * Sincronizar historial de créditos desde la API externa
-     *
-     * @OA\Post(
-     *     path="/api/sync/collection-credits",
-     *     summary="Sincronizar historial de créditos",
-     *     description="Sincroniza el historial de créditos desde la API externa para una fecha y campaña específica",
-     *     operationId="syncCollectionCredits",
-     *     tags={"Sincronización"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"start_date", "end_date"},
-     *             @OA\Property(property="start_date", type="string", format="date", example="2026-01-01", description="Fecha inicial (YYYY-MM-DD)"),
-     *             @OA\Property(property="end_date", type="string", format="date", example="2026-01-15", description="Fecha final (YYYY-MM-DD)")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Sincronización completada",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="total", type="integer"),
-     *                 @OA\Property(property="synced", type="integer"),
-     *                 @OA\Property(property="skipped", type="integer"),
-     *                 @OA\Property(property="errors", type="array", @OA\Items(type="string"))
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Error de validación"
-     *     ),
-     *     @OA\Response(
-     *         response=500,
-     *         description="Error al sincronizar"
-     *     )
-     * )
-     */
     public function syncCollectionCredits(Request $request)
     {
         set_time_limit(3600);

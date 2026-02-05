@@ -243,53 +243,6 @@ class DirectionController extends Controller
         }
     }
 
-    /**
-     * Obtener una direccion especifica
-     *
-     * @OA\Get(
-     *     path="/api/directions/{id}",
-     *     summary="Obtener direccion",
-     *     description="Obtiene una direccion por su ID",
-     *     operationId="getDirection",
-     *     tags={"Direcciones"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         description="ID de la direccion",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Direccion obtenida correctamente",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Direccion obtenida correctamente"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="id", type="integer"),
-     *                 @OA\Property(property="client_id", type="integer"),
-     *                 @OA\Property(property="direction", type="string"),
-     *                 @OA\Property(property="type", type="string"),
-     *                 @OA\Property(property="province", type="string"),
-     *                 @OA\Property(property="canton", type="string"),
-     *                 @OA\Property(property="parish", type="string"),
-     *                 @OA\Property(property="neighborhood", type="string"),
-     *                 @OA\Property(property="latitude", type="string"),
-     *                 @OA\Property(property="longitude", type="string"),
-     *                 @OA\Property(property="client_name", type="string"),
-     *                 @OA\Property(property="client_ci", type="string")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Direccion no encontrada"
-     *     )
-     * )
-     */
     public function show(CollectionDirection $direction)
     {
         try {
@@ -308,54 +261,6 @@ class DirectionController extends Controller
         }
     }
 
-    /**
-     * Actualizar una direccion
-     *
-     * @OA\Put(
-     *     path="/api/directions/{id}",
-     *     summary="Actualizar direccion",
-     *     description="Actualiza una direccion existente",
-     *     operationId="updateDirection",
-     *     tags={"Direcciones"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         description="ID de la direccion",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="direction", type="string", maxLength=500, example="Av. Principal 456"),
-     *             @OA\Property(property="type", type="string", maxLength=50, example="TRABAJO"),
-     *             @OA\Property(property="province", type="string", maxLength=100, example="Guayas"),
-     *             @OA\Property(property="canton", type="string", maxLength=100, example="Guayaquil"),
-     *             @OA\Property(property="parish", type="string", maxLength=100, example="Tarqui"),
-     *             @OA\Property(property="neighborhood", type="string", maxLength=255, example="Kennedy"),
-     *             @OA\Property(property="latitude", type="string", maxLength=50, example="-2.1894"),
-     *             @OA\Property(property="longitude", type="string", maxLength=50, example="-79.8891")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Direccion actualizada correctamente",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Direccion actualizada correctamente")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Direccion no encontrada"
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Error de validacion"
-     *     )
-     * )
-     */
     public function update(DirectionRequest $request, CollectionDirection $direction)
     {
         try {
@@ -373,38 +278,7 @@ class DirectionController extends Controller
             );
         }
     }
-
-    /**
-     * Eliminar una direccion
-     *
-     * @OA\Delete(
-     *     path="/api/directions/{id}",
-     *     summary="Eliminar direccion",
-     *     description="Elimina una direccion",
-     *     operationId="deleteDirection",
-     *     tags={"Direcciones"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         description="ID de la direccion",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Direccion eliminada correctamente",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Direccion eliminada correctamente")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Direccion no encontrada"
-     *     )
-     * )
-     */
+    
     public function destroy(CollectionDirection $direction)
     {
         try {
