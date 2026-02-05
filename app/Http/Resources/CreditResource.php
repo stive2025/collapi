@@ -41,6 +41,7 @@ class CreditResource extends JsonResource
             'safe' => $this->safe,
             'management_collection_expenses' => $this->management_collection_expenses,
             'collection_expenses' => $this->collection_expenses,
+            'invoice_value' => $this->invoice_value,
             'legal_expenses' => $this->legal_expenses,
             'other_values' => $this->other_values,
             'sync_status' => $this->sync_status,
