@@ -219,6 +219,24 @@ class CreditController extends Controller
 
         $utilService = $this->utilService;
         $credits->getCollection()->transform(function ($credit) use ($utilService) {
+            // Verificar si ya existe un invoice finalizado
+            $finalizedInvoice = \App\Models\Invoice::where('credit_id', $credit->id)
+                ->where('status', 'finalizado')
+                ->first();
+
+            // Verificar si tiene un convenio anulado
+            $hasAnnulledAgreement = \App\Models\Agreement::where('credit_id', $credit->id)
+                ->where('status', 'ANULADO')
+                ->exists();
+
+            // Si tiene invoice finalizado y NO tiene convenio anulado, no calcular
+            if ($finalizedInvoice && !$hasAnnulledAgreement) {
+                $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
+                $credit->invoice_value = 0;
+                return $credit;
+            }
+
+            // Calcular gastos de cobranza
             $shouldCalculateExpenses = false;
             if ($credit->business &&
                 in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2']) &&
@@ -338,6 +356,27 @@ class CreditController extends Controller
             'business'
         ]);
         
+        // Verificar si ya existe un invoice finalizado
+        $finalizedInvoice = \App\Models\Invoice::where('credit_id', $credit->id)
+            ->where('status', 'finalizado')
+            ->first();
+
+        // Verificar si tiene un convenio anulado
+        $hasAnnulledAgreement = \App\Models\Agreement::where('credit_id', $credit->id)
+            ->where('status', 'ANULADO')
+            ->exists();
+
+        // Si tiene invoice finalizado y NO tiene convenio anulado, no calcular
+        if ($finalizedInvoice && !$hasAnnulledAgreement) {
+            $credit->management_collection_expenses = floatval($credit->management_collection_expenses ?? 0);
+            $credit->invoice_value = 0;
+            return ResponseBase::success(
+                new CreditResource($credit),
+                'Crédito obtenido correctamente'
+            );
+        }
+
+        // Calcular gastos de cobranza
         $shouldCalculateExpenses = false;
         if ($credit->business &&
             in_array($credit->business->name, ['SEFIL_1', 'SEFIL_2']) &&
