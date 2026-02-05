@@ -16,6 +16,76 @@
     ],
     "paths": {
         "/api": {},
+        "/api/agencies": {
+            "get": {
+                "tags": [
+                    "Agencias"
+                ],
+                "summary": "Listar agencias",
+                "description": "Obtiene el listado de todas las agencias, con opción de filtrar por nombre",
+                "operationId": "getAgenciesList",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "description": "Filtrar por nombre de agencia (búsqueda parcial)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista de agencias obtenida correctamente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Agencias obtenidas correctamente"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "name": {
+                                                        "type": "string",
+                                                        "example": "QUITO"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autenticado"
+                    },
+                    "500": {
+                        "description": "Error interno del servidor"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/businesses": {
             "get": {
                 "tags": [
@@ -3170,6 +3240,10 @@
         }
     },
     "tags": [
+        {
+            "name": "Agencias",
+            "description": "Agencias"
+        },
         {
             "name": "Empresas",
             "description": "Empresas"
