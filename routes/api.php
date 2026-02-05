@@ -172,6 +172,3 @@ Route::get('exports/payments-consolidated', [ExportController::class, 'exportPay
 Route::get('exports/condonations', [ExportController::class, 'exportCondonations']);
 Route::get('exports/resume-campain', [ExportController::class, 'exportResumeCampain']);
 Route::get('exports/resume-payments-with-management', [ExportController::class, 'exportResumePaymentsWithManagement']);
-Route::get('test-sofia',function(){
-    return response()->json(['status'=>'ok','message'=>'La conexión es exitosa.']);
-});

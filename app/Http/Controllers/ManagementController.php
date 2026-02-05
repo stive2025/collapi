@@ -434,19 +434,23 @@ class ManagementController extends Controller
             intval($credit->days_past_due ?? 0)
         );
 
-        Invoice::create([
-            'invoice_value' => $valor,
-            'tax_value' => 0,
-            'invoice_institution' => null,
-            'invoice_method' => null,
-            'invoice_access_key' => null,
-            'invoice_number' => null,
-            'invoice_date' => now(),
-            'credit_id' => $credit->id,
-            'client_id' => $credit->clients()->first()->id ?? null,
-            'status' => 'pendiente',
-            'created_by' => $management->created_by
-        ]);
+        Invoice::updateOrCreate(
+            [
+                'credit_id' => $credit->id,
+                'status' => 'pendiente'
+            ],
+            [
+                'invoice_value' => $valor,
+                'tax_value' => 0,
+                'invoice_institution' => null,
+                'invoice_method' => null,
+                'invoice_access_key' => null,
+                'invoice_number' => null,
+                'invoice_date' => now(),
+                'client_id' => $credit->clients()->first()->id ?? null,
+                'created_by' => $management->created_by
+            ]
+        );
     }
 
     /**

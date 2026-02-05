@@ -58,7 +58,6 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
         }
     }
 
-    // ─── Drawing ─────────────────────────────────────────────────────────────
     public function drawings()
     {
         $drawing = new Drawing();
@@ -75,30 +74,25 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
         return 'A1';
     }
 
-    // ─── AfterSheet: merges, estilos, formatos numéricos ─────────────────────
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet   = $event->getDelegate();
-                $lastCol = 'AF';
+                $lastCol = 'AG';
 
-                // ── 1. TÍTULO (Row 1) ──────────────────────────────────────
                 $sheet->mergeCells('C1:' . $lastCol . '1');
                 $sheet->getStyle('C1')->applyFromArray([
                     'font'      => ['bold' => true, 'size' => 16],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
                 ]);
 
-                // ── 2. INFO HEADER labels B3:B7 (negrita) ─────────────────
                 $sheet->getStyle('B3:B7')->getFont()->setBold(true);
 
-                // Periodo value → azul + negrita
                 $sheet->getStyle('D3')->applyFromArray([
                     'font' => ['bold' => true, 'color' => ['rgb' => '0000FF']],
                 ]);
 
-                // ── 3. ESTILO NARANJA en headers (rows 9-10) ──────────────
                 $orangeStyle = [
                     'font' => ['bold' => true, 'size' => 9],
                     'fill' => [
@@ -119,7 +113,6 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
                 ];
                 $sheet->getStyle('A9:' . $lastCol . '10')->applyFromArray($orangeStyle);
 
-                // Borde exterior grueso en bloque header
                 $sheet->getStyle('A9:' . $lastCol . '10')->applyFromArray([
                     'borders' => [
                         'outline' => [
@@ -132,26 +125,22 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
                 $sheet->getRowDimension(9)->setRowHeight(20);
                 $sheet->getRowDimension(10)->setRowHeight(28);
 
-                // ── 4. MERGEOS en fila 9 ───────────────────────────────────
-                $sheet->mergeCells('A9:A10');   // Agencia
-                $sheet->mergeCells('B9:E9');    // CARTERA ASIGNADA
-                $sheet->mergeCells('F9:F10');   // Cartera Preventiva
+                $sheet->mergeCells('B9:B10');
+                $sheet->mergeCells('C9:F9');
+                $sheet->mergeCells('G9:G10');
 
-                // Cada rango: 2 columnas empezando en G (col 7)
                 for ($i = 0; $i < 11; $i++) {
-                    $c1 = Coordinate::stringFromColumnIndex(7 + $i * 2);
-                    $c2 = Coordinate::stringFromColumnIndex(7 + $i * 2 + 1);
+                    $c1 = Coordinate::stringFromColumnIndex(8 + $i * 2);
+                    $c2 = Coordinate::stringFromColumnIndex(8 + $i * 2 + 1);
                     $sheet->mergeCells($c1 . '9:' . $c2 . '9');
                 }
 
-                $sheet->mergeCells('AC9:AF9');  // CARTERA RECUPERADA
+                $sheet->mergeCells('AD9:AG9');
 
-                // ── 5. DATOS: bordes, centrado, fila TOTAL ─────────────────
                 $dataStart = 11;
-                $totalRow  = $dataStart + $this->agencyCount;  // fila TOTAL
+                $totalRow  = $dataStart + $this->agencyCount;
 
                 if ($this->agencyCount > 0) {
-                    // Bordes finos en datos + TOTAL
                     $sheet->getStyle('A' . $dataStart . ':' . $lastCol . $totalRow)->applyFromArray([
                         'borders' => [
                             'allBorders' => [
@@ -161,13 +150,11 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
                         ],
                     ]);
 
-                    // Centrar columnas numéricas (B en adelante)
-                    $sheet->getStyle('B' . $dataStart . ':' . $lastCol . $totalRow)->applyFromArray([
+                    $sheet->getStyle('C' . $dataStart . ':' . $lastCol . $totalRow)->applyFromArray([
                         'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
                     ]);
                 }
 
-                // Fila TOTAL: negrita + fondo gris + borde inferior doble
                 $sheet->getStyle('A' . $totalRow . ':' . $lastCol . $totalRow)->applyFromArray([
                     'font' => ['bold' => true],
                     'fill' => [
@@ -182,60 +169,64 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
                     ],
                 ]);
 
-                // ── 6. FORMATO NUMÉRICO ────────────────────────────────────
                 $pctFmt    = '0.00"%"';
                 $numFmt    = '#,##0.00';
                 $moneyFmt  = '"$ "#,##0.00';
 
-                // Porcentajes: C, E (asignado), AD, AF (recuperado)
-                foreach (['C', 'E'] as $col) {
+                foreach (['D', 'F'] as $col) {
                     $sheet->getStyle($col . $dataStart . ':' . $col . $totalRow)
                         ->getNumberFormat()->setFormatCode($pctFmt);
                 }
-                $sheet->getStyle('AD' . $dataStart . ':AD' . $totalRow)
+                $sheet->getStyle('AE' . $dataStart . ':AE' . $totalRow)
                     ->getNumberFormat()->setFormatCode($pctFmt);
-                $sheet->getStyle('AF' . $dataStart . ':AF' . $totalRow)
+                $sheet->getStyle('AG' . $dataStart . ':AG' . $totalRow)
                     ->getNumberFormat()->setFormatCode($pctFmt);
 
-                // Monto asignado (D)
-                $sheet->getStyle('D' . $dataStart . ':D' . $totalRow)
+                $sheet->getStyle('E' . $dataStart . ':E' . $totalRow)
                     ->getNumberFormat()->setFormatCode($numFmt);
 
-                // Total recuperado por rango: cols H(8), J(10), L(12)… AB(28)
                 for ($i = 0; $i < 11; $i++) {
-                    $col = Coordinate::stringFromColumnIndex(8 + $i * 2);
+                    $col = Coordinate::stringFromColumnIndex(9 + $i * 2);
                     $sheet->getStyle($col . $dataStart . ':' . $col . $totalRow)
                         ->getNumberFormat()->setFormatCode($numFmt);
                 }
 
-                // Monto recuperado (AE) → con signo $
-                $sheet->getStyle('AE' . $dataStart . ':AE' . $totalRow)
+                $sheet->getStyle('AF' . $dataStart . ':AF' . $totalRow)
                     ->getNumberFormat()->setFormatCode($moneyFmt);
 
-                // ── 7. COSTOS / VALOR / TOTAL A PAGAR ──────────────────────────
                 $costosExcelRow      = $totalRow + 2;
                 $valorExcelRow       = $totalRow + 3;
                 $totalAPagarExcelRow = $totalRow + 4;
                 $formulaCols = ['G', 'H', 'J', 'L', 'N', 'P', 'S', 'U', 'W', 'Y', 'AA', 'AC'];
 
-                // COSTOS – etiqueta + placeholders 0 (el usuario los edita en Excel)
                 $sheet->setCellValue("A{$costosExcelRow}", 'COSTOS');
+                $costosValues = [
+                    'G'  => 0.75,
+                    'H'  => 0.85,
+                    'J'  => 0.95,
+                    'L'  => 1.05,
+                    'N'  => 1.15,
+                    'P'  => 1.50,
+                    'S'  => 0.09,
+                    'U'  => 0.124,
+                    'W'  => 0.13,
+                    'Y'  => 0.14,
+                    'AA' => 0.17,
+                    'AC' => 0.17,
+                ];
                 foreach ($formulaCols as $col) {
-                    $sheet->setCellValue("{$col}{$costosExcelRow}", 0);
+                    $sheet->setCellValue("{$col}{$costosExcelRow}", $costosValues[$col] ?? 0);
                 }
 
-                // VALOR – fórmulas = COSTOS × TOTAL
                 $sheet->setCellValue("A{$valorExcelRow}", 'VALOR');
                 foreach ($formulaCols as $col) {
                     $sheet->setCellValue("{$col}{$valorExcelRow}", "={$col}{$costosExcelRow}*{$col}{$totalRow}");
                 }
 
-                // TOTAL A PAGAR – suma de la fila VALOR
                 $sheet->setCellValue("A{$totalAPagarExcelRow}", 'TOTAL A PAGAR');
                 $sumParts = array_map(fn($col) => "{$col}{$valorExcelRow}", $formulaCols);
                 $sheet->setCellValue("B{$totalAPagarExcelRow}", '=' . implode('+', $sumParts));
 
-                // Estilos: negrita + fondo claro + bordes para las 3 filas
                 foreach ([$costosExcelRow, $valorExcelRow, $totalAPagarExcelRow] as $sRow) {
                     $sheet->getStyle('A' . $sRow . ':' . $lastCol . $sRow)->applyFromArray([
                         'font' => ['bold' => true],
@@ -253,12 +244,10 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
                     ]);
                 }
 
-                // Etiquetas columna A: alineadas a la izquierda
                 foreach ([$costosExcelRow, $valorExcelRow, $totalAPagarExcelRow] as $sRow) {
                     $sheet->getStyle('A' . $sRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
                 }
 
-                // TOTAL A PAGAR: borde inferior doble + fondo más oscuro
                 $sheet->getStyle('A' . $totalAPagarExcelRow . ':' . $lastCol . $totalAPagarExcelRow)->applyFromArray([
                     'fill' => [
                         'fillType'  => Fill::FILL_SOLID,
@@ -272,13 +261,11 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
                     ],
                 ]);
 
-                // Formato numérico: VALOR con decimales, TOTAL A PAGAR con signo $
                 foreach ($formulaCols as $col) {
                     $sheet->getStyle($col . $valorExcelRow)->getNumberFormat()->setFormatCode('#,##0.00');
                 }
                 $sheet->getStyle('B' . $totalAPagarExcelRow)->getNumberFormat()->setFormatCode('"$ "#,##0.00');
-
-                // ── 8. FOOTER labels negrita ────────────────────────────────────
+                
                 $footerRow = $totalRow + 6;
                 $sheet->getStyle('A' . $footerRow)->getFont()->setBold(true);
                 $sheet->getStyle('A' . ($footerRow + 1))->getFont()->setBold(true);
@@ -286,10 +273,8 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
         ];
     }
 
-    // ─── Data ─────────────────────────────────────────────────────────────────
     public function collection()
     {
-        // ── 0. Filas de encabezado (rows 1-10) ─────────────────────────────────
         $dayNames   = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
         $monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
         $elaboratedDate = strtolower($dayNames[(int) date('w')])
@@ -298,6 +283,7 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
             . ' de ' . date('Y');
 
         $groupHeaders = [
+            '',
             'Agencia',
             'CARTERA ASIGNADA',
             '', '', '',
@@ -313,6 +299,7 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
         $groupHeaders[] = '';
 
         $detailHeaders = [
+            '',
             '',
             'No. Créditos',
             '%',
@@ -330,19 +317,18 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
         $detailHeaders[] = '%';
 
         $headerRows = [
-            ['', '', 'REPORTE MENSUAL DE GESTIONES DE CALL CENTER / COBRANZAS'], // Row 1
-            [''],                                                                // Row 2
-            ['', 'Periodo:',     '', $this->period],                             // Row 3
-            ['', 'Generado:',    '', $this->userName],                           // Row 4
-            ['', 'EMPRESA:',     '', $this->businessName],                       // Row 5
-            ['', 'Responsable:', '', $this->userName],                           // Row 6
-            ['', 'Elaborado:',   '', $elaboratedDate],                           // Row 7
-            [''],                                                                // Row 8
-            $groupHeaders,                                                       // Row 9
-            $detailHeaders,                                                      // Row 10
+            ['', '', 'REPORTE MENSUAL DE GESTIONES DE CALL CENTER / COBRANZAS'],
+            [''],
+            ['', 'Periodo:',     '', $this->period],
+            ['', 'Generado:',    '', $this->userName],
+            ['', 'EMPRESA:',     '', $this->businessName],
+            ['', 'Responsable:', '', $this->userName],
+            ['', 'Elaborado:',   '', $elaboratedDate],
+            [''],
+            $groupHeaders,
+            $detailHeaders,
         ];
 
-        // ── 1. Créditos asignados (collection_credits) ────────────────────────
         $allCredits = DB::table('collection_credits as cc')
             ->join('credits as c', 'c.id', '=', 'cc.credit_id')
             ->where('cc.campain_id', $this->campainId)
@@ -355,16 +341,13 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
             ->groupBy('cc.credit_id', 'c.agency')
             ->get();
 
-        // ── 2. Agencias ordenadas ──────────────────────────────────────────────
         $agencies = $allCredits->pluck('agency')->unique()->sort()->values()->toArray();
         $this->agencyCount = count($agencies);
 
-        // ── 3. Totales globales (dias > 0) ─────────────────────────────────────
         $assignedAll      = $allCredits->filter(fn($c) => (int)$c->days_past_due > 0);
         $totalNroCreditos = $assignedAll->count();
         $totalMonto       = (float) $assignedAll->sum('total_amount');
 
-        // ── 4. Pagos con gestión ───────────────────────────────────────────────
         $creditIds = $allCredits->pluck('credit_id')->toArray();
 
         $allPayments = DB::table('collection_payments as cp')
@@ -385,12 +368,10 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
 
         $paymentsByAgency = $allPayments->groupBy('agency');
 
-        // ── 5. Preventivos por agencia ─────────────────────────────────────────
         $preventiveByAgency = $allCredits
             ->filter(fn($c) => (int)$c->days_past_due === 0)
             ->groupBy('agency');
-
-        // ── 6. Construir filas ─────────────────────────────────────────────────
+        
         $dataReporte      = [];
         $totalCounts      = array_fill(0, 11, 0);
         $totalAmounts     = array_fill(0, 11, 0.0);
@@ -403,7 +384,6 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
             $nroCreditos   = $agencyAssigned->count();
             $montoAsignado = (float) $agencyAssigned->sum('total_amount');
 
-            // Preventivas con gestión efectiva
             $preventiveIds = isset($preventiveByAgency[$agency])
                 ? $preventiveByAgency[$agency]->pluck('credit_id')->toArray()
                 : [];
@@ -428,7 +408,6 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
             }
             $totalPreventivas += $gestiones_preventivas;
 
-            // Clasificar pagos por rango
             $agencyPayments = $paymentsByAgency[$agency] ?? collect();
             $rangeCounts    = [];
             $rangeAmounts   = [];
@@ -436,7 +415,7 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
             foreach ($this->ranges as $i => $range) {
                 $filtered = $agencyPayments->filter(
                     fn($p) => (int)$p->days_past_due_auto >= $range['min']
-                           && (int)$p->days_past_due_auto <= $range['max']
+                        && (int)$p->days_past_due_auto <= $range['max']
                 );
 
                 $grouped         = $filtered->groupBy('payment_reference');
@@ -458,41 +437,40 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
             $totalCreditos    = array_sum($rangeCounts);
             $totalMontoPagado = array_sum($rangeAmounts);
 
-            // Fila: índices [28]=No.Créditos rec, [29]=% placeholder, [30]=Monto rec, [31]=% placeholder
             $row = [
-                strtoupper($agency),                                                          // [0]  A
-                $nroCreditos,                                                                 // [1]  B
-                $totalNroCreditos > 0 ? round(($nroCreditos / $totalNroCreditos) * 100, 2) : 0, // [2]  C
-                round($montoAsignado, 2),                                                     // [3]  D
-                $totalMonto > 0 ? round(($montoAsignado / $totalMonto) * 100, 2) : 0,        // [4]  E
-                $gestiones_preventivas,                                                       // [5]  F
+                '',
+                strtoupper($agency),
+                $nroCreditos,
+                $totalNroCreditos > 0 ? round(($nroCreditos / $totalNroCreditos) * 100, 2) : 0,
+                round($montoAsignado, 2),
+                $totalMonto > 0 ? round(($montoAsignado / $totalMonto) * 100, 2) : 0,
+                $gestiones_preventivas,
             ];
 
             foreach ($this->ranges as $i => $range) {
-                $row[] = $rangeCounts[$i];              // No. Créditos del rango
-                $row[] = round($rangeAmounts[$i], 2);   // Total recuperado del rango
+                $row[] = $rangeCounts[$i];
+                $row[] = round($rangeAmounts[$i], 2);
             }
 
-            $row[] = $totalCreditos;            // [28] AC
-            $row[] = 0;                         // [29] AD – placeholder, se calcula después
-            $row[] = round($totalMontoPagado, 2); // [30] AE
-            $row[] = 0;                         // [31] AF – placeholder
+            $row[] = $totalCreditos;
+            $row[] = 0;
+            $row[] = round($totalMontoPagado, 2);
+            $row[] = 0;
 
             $dataReporte[] = $row;
         }
 
-        // ── 7. Calcular % distribución CARTERA RECUPERADA ─────────────────────
         $grandCreditos = array_sum($totalCounts);
         $grandMonto    = array_sum($totalAmounts);
 
         foreach ($dataReporte as &$row) {
-            $row[29] = $grandCreditos > 0 ? round(($row[28] / $grandCreditos) * 100, 2) : 0;
-            $row[31] = $grandMonto    > 0 ? round(($row[30] / $grandMonto)    * 100, 2) : 0;
+            $row[30] = $grandCreditos > 0 ? round(($row[29] / $grandCreditos) * 100, 2) : 0;
+            $row[32] = $grandMonto    > 0 ? round(($row[31] / $grandMonto)    * 100, 2) : 0;
         }
         unset($row);
 
-        // ── 8. Fila TOTAL ──────────────────────────────────────────────────────
         $totalRow = [
+            '',
             'TOTAL',
             $totalNroCreditos,
             100,
@@ -513,16 +491,10 @@ class ResumePaymentsWithManagement implements FromCollection, WithCustomStartCel
 
         $dataReporte[] = $totalRow;
 
-        // ── 9. COSTOS / VALOR / TOTAL A PAGAR (placeholders; se rellenan en AfterSheet)
-        $dataReporte[] = [''];   // spacer        (totalRow + 1)
-        $dataReporte[] = [''];   // COSTOS        (totalRow + 2)
-        $dataReporte[] = [''];   // VALOR         (totalRow + 3)
-        $dataReporte[] = [''];   // TOTAL A PAGAR (totalRow + 4)
-
-        // ── 10. Footer ─────────────────────────────────────────────────────────
-        $dataReporte[] = [''];   // spacer        (totalRow + 5)
-        $dataReporte[] = ['Generado por:', $this->userName];
-        $dataReporte[] = ['Hora y fecha:', date('Y/m/d H:i:s')];
+        $dataReporte[] = [''];
+        $dataReporte[] = [''];
+        $dataReporte[] = [''];
+        $dataReporte[] = [''];
 
         return collect(array_merge($headerRows, $dataReporte));
     }
