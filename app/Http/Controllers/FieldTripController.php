@@ -59,6 +59,48 @@ class FieldTripController extends Controller
      *         required=true,
      *         @OA\Schema(type="integer")
      *     ),
+     *     @OA\Parameter(
+     *         name="collection_state",
+     *         in="query",
+     *         description="Estado de cobranza (puede ser un valor o lista separada por comas)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Vencido,Castigado")
+     *     ),
+     *     @OA\Parameter(
+     *         name="agencies",
+     *         in="query",
+     *         description="Agencias (puede ser un valor o lista separada por comas)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="QUITO,GUAYAQUIL")
+     *     ),
+     *     @OA\Parameter(
+     *         name="days_past_due_min",
+     *         in="query",
+     *         description="Días de mora mínimo",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="days_past_due_max",
+     *         in="query",
+     *         description="Días de mora máximo",
+     *         required=false,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Parameter(
+     *         name="total_amount_min",
+     *         in="query",
+     *         description="Monto total mínimo",
+     *         required=false,
+     *         @OA\Schema(type="number")
+     *     ),
+     *     @OA\Parameter(
+     *         name="total_amount_max",
+     *         in="query",
+     *         description="Monto total máximo",
+     *         required=false,
+     *         @OA\Schema(type="number")
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Lista de visitas de campo obtenida correctamente",
@@ -129,6 +171,17 @@ class FieldTripController extends Controller
      *                             @OA\Property(property="type", type="string", example="field_visit"),
      *                             @OA\Property(property="created_at", type="string"),
      *                             @OA\Property(property="updated_at", type="string")
+     *                         )
+     *                     ),
+     *                     @OA\Property(
+     *                         property="payments",
+     *                         type="array",
+     *                         description="Pagos del crédito en los últimos 12 meses",
+     *                         @OA\Items(
+     *                             @OA\Property(property="payment_reference", type="string"),
+     *                             @OA\Property(property="payment_value", type="number"),
+     *                             @OA\Property(property="payment_date", type="string", format="date"),
+     *                             @OA\Property(property="payment_type", type="string")
      *                         )
      *                     )
      *                 )
@@ -280,6 +333,19 @@ class FieldTripController extends Controller
                         ];
                     });
 
+                $payments = \App\Models\CollectionPayment::where('credit_id', $credit->id)
+                    ->where('payment_date', '>=', now()->subMonths(12))
+                    ->orderBy('payment_date', 'desc')
+                    ->get()
+                    ->map(function ($payment) {
+                        return [
+                            'payment_reference' => $payment->payment_reference,
+                            'payment_value' => (float) $payment->payment_value,
+                            'payment_date' => $payment->payment_date,
+                            'payment_type' => $payment->payment_type,
+                        ];
+                    });
+
                 return [
                     'id' => $credit->id,
                     'field_trip_id' => $credit->id,
@@ -289,6 +355,7 @@ class FieldTripController extends Controller
                     'amount' => (float) ($credit->total_amount ?? 0),
                     'address' => $direction ? $direction->direction : null,
                     'managements' => $managements,
+                    'payments' => $payments,
                     'campain_id' => ($campain != null) ? $campain->id : null,
                 ];
             });
