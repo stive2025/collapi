@@ -940,6 +940,9 @@
                                                     "collection_state": {
                                                         "type": "string"
                                                     },
+                                                    "agency": {
+                                                        "type": "string"
+                                                    },
                                                     "amount": {
                                                         "type": "number"
                                                     },
