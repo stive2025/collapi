@@ -12,6 +12,46 @@ class AgencieController extends Controller
 {
     /**
      * Display a listing of the resource.
+     *
+     * @OA\Get(
+     *     path="/api/agencies",
+     *     summary="Listar agencias",
+     *     description="Obtiene el listado de todas las agencias, con opción de filtrar por nombre",
+     *     operationId="getAgenciesList",
+     *     tags={"Agencias"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="name",
+     *         in="query",
+     *         description="Filtrar por nombre de agencia (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de agencias obtenida correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Agencias obtenidas correctamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="name", type="string", example="QUITO")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autenticado"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor"
+     *     )
+     * )
      */
     public function index(Request $request)
     {
