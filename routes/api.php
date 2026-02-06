@@ -156,6 +156,7 @@ Route::middleware(['check.token'])->group(function () {
     // Visitas de campo
     Route::get('field-trips', [FieldTripController::class, 'index']);
     Route::patch('field-trips/{creditId}/approval', [FieldTripController::class, 'toggleApproval']);
+    Route::patch('request-field-trips/{creditId}', [FieldTripController::class, 'requestFieldTrip']);
 
     // Gastos judiciales
     Route::get('legal-expenses', [LegalExpenseController::class, 'index']);
