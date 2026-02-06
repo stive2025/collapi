@@ -410,7 +410,7 @@ class FieldTripController extends Controller
 
             $newStatus = $approve ? 'VISITA APROBADA' : 'VISITA NO APROBADA';
             $credit->management_status = $newStatus;
-            $credit->promise_date = date('Y-m-d',time()-18000);
+            $credit->management_promise = date('Y-m-d',time()-18000);
             $credit->save();
             
             $titular = $credit->clients()->wherePivot('type', 'TITULAR')->first();
@@ -461,6 +461,42 @@ class FieldTripController extends Controller
         }
     }
 
+    /**
+     * Solicitar visita de campo para un crédito
+     *
+     * @OA\Patch(
+     *     path="/api/request-field-trips/{creditId}",
+     *     summary="Solicitar visita de campo",
+     *     description="Cambia el management_tray a GESTIONADO y el management_status a SOLICITADO VISITA CAMPO",
+     *     operationId="requestFieldTrip",
+     *     tags={"Visitas de Campo"},
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(
+     *         name="creditId",
+     *         in="path",
+     *         description="ID del crédito",
+     *         required=true,
+     *         @OA\Schema(type="integer")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Visita de campo solicitada correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Visita de campo solicitada correctamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="credit_id", type="integer"),
+     *                 @OA\Property(property="management_tray", type="string", example="GESTIONADO"),
+     *                 @OA\Property(property="management_status", type="string", example="SOLICITADO VISITA CAMPO")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Crédito no encontrado"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
+     * )
+     */
     public function requestFieldTrip(int $creditId)
     {
         try {
