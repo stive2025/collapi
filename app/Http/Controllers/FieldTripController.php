@@ -8,6 +8,7 @@ use App\Models\Credit;
 use App\Models\CollectionDirection;
 use App\Models\Management;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -395,6 +396,7 @@ class FieldTripController extends Controller
         try {
             $request->validate([
                 'approve' => 'required|boolean',
+                'observation' => 'nullable|string',
             ]);
 
             $credit = Credit::find($creditId);
@@ -408,24 +410,36 @@ class FieldTripController extends Controller
 
             $newStatus = $approve ? 'VISITA APROBADA' : 'VISITA NO APROBADA';
             $credit->management_status = $newStatus;
+            $credit->promise_date = date('Y-m-d',time()-18000);
+            $credit->save();
+            
+            $titular = $credit->clients()->wherePivot('type', 'TITULAR')->first();
 
-            $lastManagement = Management::where('credit_id', $creditId)
-                ->where('substate', 'VISITA CAMPO')
-                ->orderBy('created_at', 'desc')
+            $campain = Campain::where('business_id', $credit->business_id)
+                ->where('state', 'ACTIVE')
                 ->first();
 
-            if ($lastManagement) {
-                $lastManagement->substate = $newStatus;
-                $lastManagement->save();
-            }
-
-            $credit->save();
+            $management = Management::create([
+                'state' => $approve ? 'EFECTIVO' : 'NO EFECTIVO',
+                'substate' => $newStatus,
+                'observation' => $request->input('observation'),
+                'promise_date' => date('Y-m-d',time()-18000),
+                'created_by' => Auth::user()->id,
+                'credit_id' => $credit->id,
+                'client_id' => $titular ? $titular->id : null,
+                'days_past_due' => $credit->days_past_due,
+                'pending_fees' => $credit->pending_fees,
+                'paid_fees' => $credit->paid_fees,
+                'managed_amount' => $credit->total_amount,
+                'campain_id' => $campain ? $campain->id : null,
+            ]);
 
             return ResponseBase::success(
                 [
                     'credit_id' => $credit->id,
                     'approve_field_trip' => $credit->approve_field_trip,
                     'management_status' => $credit->management_status,
+                    'management_id' => $management->id,
                 ],
                 $approve
                     ? 'Visita de campo aprobada correctamente'
