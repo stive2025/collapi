@@ -460,4 +460,39 @@ class FieldTripController extends Controller
             );
         }
     }
+
+    public function requestFieldTrip(int $creditId)
+    {
+        try {
+            $credit = Credit::find($creditId);
+
+            if (!$credit) {
+                return ResponseBase::error('Crédito no encontrado', null, 404);
+            }
+
+            $credit->management_tray = 'GESTIONADO';
+            $credit->management_status = 'SOLICITADO VISITA CAMPO';
+            $credit->save();
+
+            return ResponseBase::success(
+                [
+                    'credit_id' => $credit->id,
+                    'management_tray' => $credit->management_tray,
+                    'management_status' => $credit->management_status,
+                ],
+                'Visita de campo solicitada correctamente'
+            );
+        } catch (\Exception $e) {
+            Log::error('Error al solicitar visita de campo', [
+                'credit_id' => $creditId,
+                'message' => $e->getMessage(),
+            ]);
+
+            return ResponseBase::error(
+                'Error al solicitar visita de campo',
+                ['error' => $e->getMessage()],
+                500
+            );
+        }
+    }
 }
