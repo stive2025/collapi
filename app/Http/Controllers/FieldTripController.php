@@ -409,6 +409,7 @@ class FieldTripController extends Controller
             $credit->approve_field_trip = $approve;
 
             $newStatus = $approve ? 'VISITA APROBADA' : 'VISITA NO APROBADA';
+            $credit->management_tray = 'PENDIENTE';
             $credit->management_status = $newStatus;
             $credit->management_promise = date('Y-m-d',time()-18000);
             $credit->save();
