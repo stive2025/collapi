@@ -103,19 +103,31 @@ class StoreManagementRequest extends FormRequest
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            if ($lastManagement && $lastManagement->substate === 'VISITA CAMPO') {
+            if ($lastManagement && ($lastManagement->substate === 'VISITA CAMPO' || $lastManagement->substate === 'VISITA APROBADA')) {
                 $allowedSubstates = ['NOTIFICADO', 'ENTREGADO AVISO DE COBRANZA', 'NO NOTIFICADO','DIRECCIÓN INCORRECTA','NO LOCALIZABLE','CAMBIO DE DOMICILIO'];
 
                 if (!in_array($this->substate, $allowedSubstates)) {
                     throw new HttpResponseException(
                         ResponseBase::error(
-                            'Cuando la última gestión fue VISITA CAMPO, el subestado solo puede ser: NOTIFICADO, ENTREGADO AVISO DE COBRANZA, NO NOTIFICADO, DIRECCIÓN INCORRECTA, NO LOCALIZABLE o CAMBIO DE DOMICILIO',
+                            'Cuando la última gestión fue VISITA CAMPO o VISITA APROBADA, el subestado solo puede ser: NOTIFICADO, ENTREGADO AVISO DE COBRANZA, NO NOTIFICADO, DIRECCIÓN INCORRECTA, NO LOCALIZABLE o CAMBIO DE DOMICILIO',
                             [],
                             400
                         )
                     );
                 }
             }
+
+            $credit = \App\Models\Credit::find($this->credit_id);
+            if ($credit && $credit->management_status === 'SOLICITADO VISITA CAMPO') {
+                throw new HttpResponseException(
+                    ResponseBase::error(
+                        'No se puede registrar una gestión porque el crédito está pendiente de aprobación de visita de campo',
+                        [],
+                        400
+                    )
+                );
+            }
+
         });
     }
 
