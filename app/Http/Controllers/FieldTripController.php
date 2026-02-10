@@ -102,6 +102,13 @@ class FieldTripController extends Controller
      *         required=false,
      *         @OA\Schema(type="number")
      *     ),
+     *     @OA\Parameter(
+     *         name="neighborhood",
+     *         in="query",
+     *         description="Filtrar por barrio (puede ser un valor o lista separada por comas)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="COLINAS LOJANAS,CHONTACRUZ")
+     *     ),
      *     @OA\Response(
      *         response=200,
      *         description="Lista de visitas de campo obtenida correctamente",
@@ -243,6 +250,16 @@ class FieldTripController extends Controller
                 ->when($request->filled('total_amount_max'), fn($q) =>
                     $q->where('total_amount', '<=', $request->query('total_amount_max'))
                 )
+                ->when($request->filled('neighborhood'), function ($q) use ($request) {
+                    $value = $request->query('neighborhood');
+                    $q->whereHas('clients.directions', function ($dq) use ($value) {
+                        if (is_array($value) || (is_string($value) && (str_starts_with(trim($value), '[') || str_contains($value, ',')))) {
+                            $dq->whereIn('neighborhood', $this->toArray($value));
+                        } else {
+                            $dq->where('neighborhood', $value);
+                        }
+                    });
+                })
                 ->with(['clients.directions', 'clients.collectionContacts'])
                 ->get();
 
