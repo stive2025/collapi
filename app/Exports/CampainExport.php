@@ -118,6 +118,11 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
                 "),
                 'c.days_past_due as dias_vencidos',
                 'c.management_tray as tray',
+                'mg.cantidad_gestiones_efectivas',
+                'mg.cantidad_gestiones_no_efectivas',
+                DB::raw("DATE_FORMAT(mg.fecha_oferta_pago, '%d/%m/%Y %H:%i:%s') as fecha_oferta_pago"),
+                DB::raw("DATE_FORMAT(mg.fecha_regestion_oferta, '%d/%m/%Y %H:%i:%s') as fecha_regestion_oferta"),
+                'mg.status_management',
                 DB::raw("
                     CASE
                         WHEN c.management_status = 'SOLICITADO VISITA CAMPO' THEN 'Pendiente de aprobación de visita campo'
@@ -126,11 +131,6 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
                         ELSE 'No aplica'
                     END as es_visita_campo
                 "),
-                'mg.cantidad_gestiones_efectivas',
-                'mg.cantidad_gestiones_no_efectivas',
-                DB::raw("DATE_FORMAT(mg.fecha_oferta_pago, '%d/%m/%Y %H:%i:%s') as fecha_oferta_pago"),
-                DB::raw("DATE_FORMAT(mg.fecha_regestion_oferta, '%d/%m/%Y %H:%i:%s') as fecha_regestion_oferta"),
-                'mg.status_management',
                 DB::raw("DATE_FORMAT(mg.fecha_ultima_gestion, '%d/%m/%Y %H:%i:%s') as fecha_ultima_gestion"),
                 DB::raw("DATE_FORMAT(c.management_promise, '%d/%m/%Y %H:%i:%s') as promise"),
                 'cl.name as Cliente_nombre',
