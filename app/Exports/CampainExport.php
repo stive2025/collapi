@@ -58,6 +58,7 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
             'fecha_oferta_pago',
             'fecha_ult_regestion',
             'status_management',
+            'es_visita_campo',
             'fecha_ultima_gestion',
             'promise',
             'name',
@@ -117,6 +118,14 @@ class CampainExport implements FromCollection, WithHeadings, WithColumnFormattin
                 "),
                 'c.days_past_due as dias_vencidos',
                 'c.management_tray as tray',
+                DB::raw("
+                    CASE
+                        WHEN c.management_status = 'SOLICITADO VISITA CAMPO' THEN 'Pendiente de aprobación de visita campo'
+                        WHEN c.management_status = 'VISITA APROBADA' THEN 'Aprobado para visita campo'
+                        WHEN c.management_status = 'VISITA NO APROBADA' THEN 'No aprobado para visita campo'
+                        ELSE 'No aplica'
+                    END as es_visita_campo
+                "),
                 'mg.cantidad_gestiones_efectivas',
                 'mg.cantidad_gestiones_no_efectivas',
                 DB::raw("DATE_FORMAT(mg.fecha_oferta_pago, '%d/%m/%Y %H:%i:%s') as fecha_oferta_pago"),
